@@ -1,0 +1,41 @@
+﻿@model CRMOzem.Core.ViewModels.BillingCycleReportViewModel
+
+@{
+    ViewData["Title"] = $"{Model.MonthName} {Model.Year} Ekstre Detayları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="text-center">@Model.MonthName @Model.Year Ekstre Detayları</h2>
+    <hr />
+
+    <h4 class="text-muted">Toplam Tutar: <strong>@Model.TotalAmount.ToString("C")</strong></h4>
+
+    <table class="table table-bordered mt-3">
+        <thead class="table-dark">
+            <tr>
+                <th>Tarih</th>
+                <th>Kategori</th>
+                <th>Açıklama</th>
+                <th>Ödeme Yöntemi</th>
+                <th>Tutar (₺)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var expense in Model.ExpenseDetails)
+            {
+                <tr>
+                    <td>@expense.Date.ToString("dd.MM.yyyy")</td>
+                    <td>@expense.Category</td>
+                    <td>@expense.Description</td>
+                    <td>@expense.PaymentMethod</td>
+                    <td>@expense.Amount.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="text-center mt-4">
+        <a asp-action="Index" class="btn btn-outline-secondary">⬅️ Geri Dön</a>
+    </div>
+</div>

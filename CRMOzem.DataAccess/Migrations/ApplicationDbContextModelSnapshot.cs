@@ -30,7 +30,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("BillingCycleDay")
+                    b.Property<int>("BillingCycleWeek")
                         .HasColumnType("int");
 
                     b.Property<string>("CardNumber")

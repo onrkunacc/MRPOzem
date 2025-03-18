@@ -20,5 +20,7 @@ namespace CRMOzem.Business.Interfaces
         Task<bool> UpdateExpenseAsync(ExpenseDetail expense);
         Task<List<MonthlyExpenseSummaryViewModel>> GetMonthlyExpensesAsync(string userId = null);
         Task<decimal> GetCurrentMonthExpenseAsync(string userId);
+        Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId);
+
     }
 }

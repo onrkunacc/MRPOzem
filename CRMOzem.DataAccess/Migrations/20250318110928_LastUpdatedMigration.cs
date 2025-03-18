@@ -5,13 +5,13 @@
 namespace CRMOzem.DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class AddBillingCycleDay : Migration
+    public partial class LastUpdatedMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
-                name: "BillingCycleDay",
+                name: "BillingCycleWeek",
                 table: "AspNetUsers",
                 type: "int",
                 nullable: false,
@@ -22,7 +22,7 @@ namespace CRMOzem.DataAccess.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "BillingCycleDay",
+                name: "BillingCycleWeek",
                 table: "AspNetUsers");
         }
     }

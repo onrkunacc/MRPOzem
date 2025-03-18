@@ -243,7 +243,8 @@ namespace CRMOzem.Web.Controllers
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
                     Title = user.Title,
-                    CardNumber = user.CardNumber
+                    CardNumber = user.CardNumber,
+                    BillingCycleWeek = user.BillingCycleWeek
                 };
 
                 return View(model);
@@ -281,6 +282,7 @@ namespace CRMOzem.Web.Controllers
                 user.PhoneNumber = model.PhoneNumber;
                 user.Title = model.Title;
                 user.CardNumber = model.CardNumber;
+                user.BillingCycleWeek = model.BillingCycleWeek;
 
                 var result = await _userManager.UpdateAsync(user);
                 if (result.Succeeded)
@@ -303,6 +305,8 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
         }
+
+    
 
     }
 }

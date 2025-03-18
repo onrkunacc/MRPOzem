@@ -263,5 +263,83 @@ namespace CRMOzem.Business.Services
             return expenses;
         }
 
+
+
+
+        public async Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return new List<BillingCycleReportViewModel>();
+
+            var currentDate = DateTime.UtcNow;
+            var billingCycleReports = new List<BillingCycleReportViewModel>();
+
+            // 🔹 Kullanıcının kesim tarihine göre başlangıç ve bitiş tarihini al
+            var (startDate, endDate) = GetBillingCyclePeriod(currentDate, user.BillingCycleWeek);
+
+            // 🔹 Tüm masraf detaylarını çekiyoruz
+            var selectedExpenses = await _context.ExpenseDetails
+                .Include(e => e.Report)
+                .Where(e => e.Report.UserId == userId && e.Date >= startDate && e.Date <= endDate)
+                .OrderBy(e => e.Date)
+                .ToListAsync();
+
+            if (selectedExpenses.Any())
+            {
+                billingCycleReports.Add(new BillingCycleReportViewModel
+                {
+                    Year = startDate.Year,
+                    Month = startDate.Month,
+                    MonthName = new DateTime(startDate.Year, startDate.Month, 1).ToString("MMMM"),
+                    TotalAmount = selectedExpenses.Sum(e => e.Amount),
+                    ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
+                    {
+                        Id = d.Id,
+                        ReportId = d.ReportId,
+                        Category = d.Category,
+                        Description = d.Description,
+                        Amount = d.Amount,
+                        Date = d.Date,
+                        PaymentMethod = d.PaymentMethod
+                    }).ToList()
+                });
+            }
+
+            return billingCycleReports;
+        }
+
+
+        private static (DateTime StartDate, DateTime EndDate) GetBillingCyclePeriod(DateTime currentDate, int billingCycleWeek)
+        {
+            int currentYear = currentDate.Year;
+            int currentMonth = currentDate.Month;
+
+            // 🔹 Haftalık hesaplamaya göre başlangıç ve bitiş tarihleri
+            int startDay = (billingCycleWeek - 1) * 7 + 1; // Örn: 2. Hafta -> 8. gün
+            int endDay = billingCycleWeek * 7; // Örn: 2. Hafta -> 14. gün
+
+            // 🔹 Eğer ayın sonuna denk geliyorsa, son günü kullan
+            int daysInMonth = DateTime.DaysInMonth(currentYear, currentMonth);
+            if (startDay > daysInMonth) startDay = daysInMonth;
+            if (endDay > daysInMonth) endDay = daysInMonth;
+
+            // 🔹 Eğer tarih, kesim haftasından önceyse, bir önceki aya git
+            if (currentDate.Day < endDay)
+            {
+                currentMonth -= 1;
+                if (currentMonth == 0)
+                {
+                    currentMonth = 12;
+                    currentYear -= 1;
+                }
+            }
+
+            // 🔹 Başlangıç ve bitiş tarihlerini hesapla
+            DateTime startDate = new DateTime(currentYear, currentMonth, startDay);
+            DateTime endDate = new DateTime(currentYear, currentMonth, endDay);
+
+            return (startDate, endDate);
+        }
+
     }
 }

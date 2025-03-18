@@ -22,5 +22,9 @@ namespace CRMOzem.Core.ViewModels
 
         public string? Title { get; set; }  // Unvan opsiyonel
         public string? CardNumber { get; set; }
+
+        [Required(ErrorMessage = "Kesim haftası seçmek zorunludur.")]
+        [Range(1, 4, ErrorMessage = "Kesim haftası 1 ile 4 arasında olmalıdır.")]
+        public int BillingCycleWeek { get; set; }
     }
 }

@@ -1,0 +1,37 @@
+﻿@model List<CRMOzem.Core.ViewModels.BillingCycleReportViewModel>
+
+@{
+    ViewData["Title"] = "Ekstre Raporlarım";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="text-center font-bold text-2xl mb-4">@DateTime.Now.Year EKSTRE RAPORLARI</h2>
+    <hr />
+
+    <div class="row">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var report in Model.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month))
+            {
+                <div class="col-md-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body text-center">
+                            <h3 class="font-weight-bold">@report.MonthName @report.Year</h3>
+                            <p class="text-muted">Toplam Tutar:</p>
+                            <p class="font-weight-bold text-success">@report.TotalAmount.ToString("C")</p>
+                            <a href="@Url.Action("Details", "BillingCycleReport", new { year = report.Year, month = report.Month })"
+                               class="btn btn-outline-primary btn-sm">
+                                📑 Detaylı Tablo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-center text-muted">Henüz ekstre raporu bulunmamaktadır.</p>
+        }
+    </div>
+</div>

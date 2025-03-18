@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRMOzem.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250317120358_AddBillingCycleDay")]
-    partial class AddBillingCycleDay
+    [Migration("20250318110928_LastUpdatedMigration")]
+    partial class LastUpdatedMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,7 +33,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("BillingCycleDay")
+                    b.Property<int>("BillingCycleWeek")
                         .HasColumnType("int");
 
                     b.Property<string>("CardNumber")
