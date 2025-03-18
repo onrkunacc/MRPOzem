@@ -271,75 +271,89 @@ namespace CRMOzem.Business.Services
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return new List<BillingCycleReportViewModel>();
 
-            var currentDate = DateTime.UtcNow;
-            var billingCycleReports = new List<BillingCycleReportViewModel>();
+            var (startDate, endDate) = await GetBillingCyclePeriodAsync(userId, user.BillingCycleWeek);
 
-            // 🔹 Kullanıcının kesim tarihine göre başlangıç ve bitiş tarihini al
-            var (startDate, endDate) = GetBillingCyclePeriod(currentDate, user.BillingCycleWeek);
+            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue)
+            {
+                Console.WriteLine("🚨 Kullanıcının geçerli bir ekstre dönemi yok!");
+                return new List<BillingCycleReportViewModel>();
+            }
 
-            // 🔹 Tüm masraf detaylarını çekiyoruz
+            // 🔹 Belirlenen tarih aralığında harcamaları getiriyoruz
             var selectedExpenses = await _context.ExpenseDetails
                 .Include(e => e.Report)
                 .Where(e => e.Report.UserId == userId && e.Date >= startDate && e.Date <= endDate)
                 .OrderBy(e => e.Date)
                 .ToListAsync();
 
-            if (selectedExpenses.Any())
+            if (!selectedExpenses.Any())
             {
-                billingCycleReports.Add(new BillingCycleReportViewModel
-                {
-                    Year = startDate.Year,
-                    Month = startDate.Month,
-                    MonthName = new DateTime(startDate.Year, startDate.Month, 1).ToString("MMMM"),
-                    TotalAmount = selectedExpenses.Sum(e => e.Amount),
-                    ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
-                    {
-                        Id = d.Id,
-                        ReportId = d.ReportId,
-                        Category = d.Category,
-                        Description = d.Description,
-                        Amount = d.Amount,
-                        Date = d.Date,
-                        PaymentMethod = d.PaymentMethod
-                    }).ToList()
-                });
+                Console.WriteLine("🚨 Bu dönem için harcama bulunamadı!");
+                return new List<BillingCycleReportViewModel>();
             }
 
-            return billingCycleReports;
+            var report = new BillingCycleReportViewModel
+            {
+                Year = endDate.Year,
+                Month = endDate.Month,
+                MonthName = new DateTime(endDate.Year, endDate.Month, 1).ToString("MMMM"),
+                TotalAmount = selectedExpenses.Sum(e => e.Amount),
+                ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
+                {
+                    Id = d.Id,
+                    ReportId = d.ReportId,
+                    Category = d.Category,
+                    Description = d.Description,
+                    Amount = d.Amount,
+                    Date = d.Date,
+                    PaymentMethod = d.PaymentMethod
+                }).ToList()
+            };
+
+            return new List<BillingCycleReportViewModel> { report };
         }
 
 
-        private static (DateTime StartDate, DateTime EndDate) GetBillingCyclePeriod(DateTime currentDate, int billingCycleWeek)
+
+        private async Task<(DateTime StartDate, DateTime EndDate)> GetBillingCyclePeriodAsync(string userId, int billingCycleWeek)
         {
-            int currentYear = currentDate.Year;
-            int currentMonth = currentDate.Month;
+            // Kullanıcının tüm harcamalarını getir
+            var userExpenses = await _context.ExpenseDetails
+                .Where(e => e.Report.UserId == userId)
+                .Select(e => e.Date)
+                .OrderBy(e => e)
+                .ToListAsync();
 
-            // 🔹 Haftalık hesaplamaya göre başlangıç ve bitiş tarihleri
-            int startDay = (billingCycleWeek - 1) * 7 + 1; // Örn: 2. Hafta -> 8. gün
-            int endDay = billingCycleWeek * 7; // Örn: 2. Hafta -> 14. gün
-
-            // 🔹 Eğer ayın sonuna denk geliyorsa, son günü kullan
-            int daysInMonth = DateTime.DaysInMonth(currentYear, currentMonth);
-            if (startDay > daysInMonth) startDay = daysInMonth;
-            if (endDay > daysInMonth) endDay = daysInMonth;
-
-            // 🔹 Eğer tarih, kesim haftasından önceyse, bir önceki aya git
-            if (currentDate.Day < endDay)
+            if (!userExpenses.Any())
             {
-                currentMonth -= 1;
-                if (currentMonth == 0)
-                {
-                    currentMonth = 12;
-                    currentYear -= 1;
-                }
+                return (DateTime.MinValue, DateTime.MinValue); // Kullanıcının hiç harcaması yoksa boş dön
             }
 
-            // 🔹 Başlangıç ve bitiş tarihlerini hesapla
-            DateTime startDate = new DateTime(currentYear, currentMonth, startDay);
-            DateTime endDate = new DateTime(currentYear, currentMonth, endDay);
+            DateTime latestExpenseDate = userExpenses.Max(); // En son harcama yapılan tarih
+
+            int startDay = (billingCycleWeek - 1) * 7 + 1; // Seçilen haftaya göre başlangıç günü
+            int endDay = billingCycleWeek * 7; // Seçilen haftaya göre bitiş günü
+
+            // 🔹 Hesap kesim periyodu önceki aya göre belirleniyor
+            int previousMonth = latestExpenseDate.Month - 1;
+            int previousYear = latestExpenseDate.Year;
+
+            if (previousMonth == 0) // Ocak için bir önceki ay Aralık
+            {
+                previousMonth = 12;
+                previousYear--;
+            }
+
+            int daysInPreviousMonth = DateTime.DaysInMonth(previousYear, previousMonth);
+            startDay = Math.Min(startDay, daysInPreviousMonth); // Gün sayısını kontrol et
+            endDay = Math.Min(endDay, daysInPreviousMonth);
+
+            DateTime startDate = new DateTime(previousYear, previousMonth, startDay);
+            DateTime endDate = new DateTime(latestExpenseDate.Year, latestExpenseDate.Month, endDay);
 
             return (startDate, endDate);
         }
+
 
     }
 }

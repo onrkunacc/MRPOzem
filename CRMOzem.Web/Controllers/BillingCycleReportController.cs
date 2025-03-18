@@ -21,6 +21,12 @@ namespace CRMOzem.Web.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             var reports = await _expenseService.GetUserBillingCycleReportsAsync(user.Id);
+
+            if (!reports.Any())
+            {
+                Console.WriteLine("🚨 Hiç ekstre raporu bulunamadı!");
+            }
+
             return View(reports);
         }
         public async Task<IActionResult> Details(int year, int month)
