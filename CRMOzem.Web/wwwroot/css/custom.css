@@ -1,0 +1,31 @@
+﻿/* Kullanıcı Adı Hover Efekti */
+.user-dropdown {
+    padding: 10px 12px;
+    border-radius: 5px;
+    transition: all 0.2s ease-in-out;
+    margin-top: 2px; 
+}
+
+    .user-dropdown:hover {
+        border: 1px solid #007bff;
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+/* Dropdown Menüsünün Konumunu Sabitle */
+.custom-dropdown {
+    position: absolute !important;
+    right: 0;
+    top: calc(100% + 5px); /* Menü daha aşağı açılsın */
+    z-index: 1050;
+    min-width: 150px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-logo {
+    max-width: 120px; /* Küçülmüş hali */
+    transition: all 0.3s ease-in-out;
+}
+
+.sidebar-left.collapsed .sidebar-logo {
+    max-width: 60px; /* Sidebar küçüldüğünde logoyu küçült */
+}

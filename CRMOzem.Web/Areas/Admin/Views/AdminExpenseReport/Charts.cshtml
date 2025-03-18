@@ -1,0 +1,73 @@
+﻿@model CRMOzem.Core.ViewModels.AdminExpenseReportViewModel
+@{
+    ViewData["Title"] = "Masraf Grafiği";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="text-center text-primary font-weight-bold">Masraf Raporları Grafiği</h2>
+    <hr />
+
+    <!-- Kullanıcı Seçme -->
+    <form method="get" class="mb-4">
+        <div class="row">
+            <div class="col-md-6">
+                <label for="userId">Kullanıcı Seç:</label>
+                <select id="userId" name="userId" class="form-control">
+                    <option value="">Tüm Kullanıcılar</option>
+                    @foreach (var user in Model.Users)
+                    {
+                        <option value="@user.Value" selected="@(user.Value == Model.SelectedUserId ? "selected" : null)">
+                            @user.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary mt-4">Filtrele</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Masraf Grafiği -->
+    <canvas id="expenseChart" height="100"></canvas>
+
+    <hr />
+    <div class="text-center">
+        <a href="@Url.Action("Index", "AdminExpenseReport")" class="btn btn-secondary">
+            <i class="fa fa-arrow-left"></i> Geri Dön
+        </a>
+    </div>
+</div>
+
+<!-- Chart.js Kütüphanesi -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var ctx = document.getElementById('expenseChart').getContext('2d');
+
+        var chartData = {
+            labels: @Html.Raw(Json.Serialize(Model.MonthlyExpenses.Select(m => m.MonthName))),
+            datasets: [{
+                label: 'Aylık Masraf (₺)',
+                data: @Html.Raw(Json.Serialize(Model.MonthlyExpenses.Select(m => m.TotalAmount))),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2
+            }]
+        };
+
+        var expenseChart = new Chart(ctx, {
+            type: 'bar', // Çubuk Grafik
+            data: chartData,
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>

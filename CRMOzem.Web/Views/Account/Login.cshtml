@@ -1,0 +1,110 @@
+﻿@model CRMOzem.Core.ViewModels.LoginViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Giriş Yap";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Özem CRM Giriş">
+    <meta name="author" content="Özem CRM">
+    <title>Giriş Yap - Özem MRP</title>
+
+    <!-- Template CSS -->
+    <link rel="stylesheet" href="~/tinydash-master/light/css/app-light.css">
+    <link rel="shortcut icon" href="~/favicon/ozemLogo.ico" />
+    <style>
+        .form-container {
+            max-width: 800px; /* 📌 Daha geniş yapı */
+            padding: 40px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-control-lg {
+            font-size: 1rem;
+            padding: 12px;
+        }
+
+        .alert-danger ul {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body class="light">
+    <div class="wrapper vh-100 d-flex align-items-center justify-content-center">
+        <div class="form-container">
+            <div class="text-center mb-3">
+                <a class="navbar-brand">
+                    <img src="~/tinydash-master/light/assets/images/logo.jpeg" width="160" alt="Özem Logo" />
+                </a>
+                <h2 class="h5 mt-2 font-weight-bold text-primary">Giriş Yap</h2>
+            </div>
+            @if (TempData["Message"] != null)
+            {
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle"></i> @TempData["Message"]
+                </div>
+            }
+            <!-- 📌 Türkçe Hata Mesajları -->
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger text-left">
+                    <ul>
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <form asp-action="Login" asp-controller="Account" method="post">
+                <div class="row">
+                    <!-- Sol Taraf -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="UserName">Kullanıcı Adı</label>
+                            <input asp-for="UserName" class="form-control form-control-lg" placeholder="Kullanıcı adı" required>
+                            <span asp-validation-for="UserName" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Taraf -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Password">Şifre</label>
+                            <input asp-for="Password" type="password" class="form-control form-control-lg" placeholder="Şifre" required>
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Giriş Yap</button>
+
+                <div class="text-center mt-3">
+                    <a asp-action="Register" asp-controller="Account" class="text-primary">Kayıt Ol</a>
+                </div>
+                <div class="text-center mt-3">
+                    <a asp-action="ForgotPassword" class="text-primary">Şifremi Unuttum</a>
+                </div>
+
+                <p class="mt-4 text-muted text-center">&copy; 2025 - Özem MRP</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="~/tinydash-master/light/js/jquery.min.js"></script>
+    <script src="~/tinydash-master/light/js/bootstrap.min.js"></script>
+
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+    }
+</body>
+</html>

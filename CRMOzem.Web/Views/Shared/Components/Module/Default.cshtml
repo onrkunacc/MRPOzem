@@ -1,0 +1,101 @@
+﻿@model List<string>
+
+<div class="row align-items-center">
+    @if (Model.Contains("Finans"))
+    {
+        <div class="col-6 text-center">
+            <a href="/Finance" class="squircle bg-success justify-content-center">
+                <i class="fe fe-dollar-sign fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Finans</p>
+        </div>
+    }
+    @if (Model.Contains("İnsan Kaynakları"))
+    {
+        <div class="col-6 text-center">
+            <a href="/HR" class="squircle bg-primary justify-content-center">
+                <i class="fe fe-users fe-32 align-self-center text-white"></i>
+            </a>
+            <p>İnsan Kaynakları</p>
+        </div>
+    }
+    @if (Model.Contains("İhale"))
+    {
+        <div class="col-6 text-center">
+            <a href="/Tenders" class="squircle bg-warning justify-content-center">
+                <i class="fe fe-file-text fe-32 align-self-center text-white"></i>
+            </a>
+            <p>İhale Birimi</p>
+        </div>
+    }
+    @if (Model.Contains("Yönetici"))
+    {
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                <i class="fe fe-list fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Masraf Raporları</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" asp-area="Admin" asp-controller="AdminUser" asp-action="Index">
+                <i class="fe fe-user fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Kullanıcı Yönetim</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" href="#">
+                <i class="fe fe-file fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Raporlar</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-book fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Evrak Takip</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" asp-area="Ihale" asp-controller="BidDocument" asp-action="Index">
+                <i class="fe fe-folder fe-32 align-self-center text-white"></i>
+            </a>
+            <p>İhale Takip</p>
+        </div>
+       
+    }
+    @if (Model.Contains("Muhasebe"))
+    {
+        <div class="col-6 text-center">
+            <a href="/Accounting" class="squircle bg-info justify-content-center">
+                <i class="fe fe-dollar-sign fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Muhasebe</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-info justify-content-center" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                <i class="fe fe-list fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Masraf Raporları</p>
+        </div>
+        <div class="col-6 text-center">
+            <a class="squircle bg-dark justify-content-center" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-book fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Evrak Takip</p>
+        </div>
+    }
+    @if (Model.Contains("Kullanıcı"))
+    {
+        <div class="col-6 text-center">
+            <a href="/ExpenseReport/AddExpense" class="squircle bg-primary justify-content-center">
+                <i class="fe fe-file-plus fe-32 align-self-center text-white"></i>
+            </a>
+            <p>Masraf Raporu</p>
+        </div>
+        <div class="col-6 text-center">
+            <a href="/ExpenseReport/AddExpense" class="squircle bg-primary justify-content-center">
+                <i class="fe fe-calendar fe-32 align-self-center text-white"></i>
+            </a>
+            <p>İzin İşlemleri</p>
+        </div>
+    }
+</div>

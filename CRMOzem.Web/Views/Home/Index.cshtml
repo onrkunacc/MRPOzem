@@ -1,0 +1,118 @@
+﻿@{
+    ViewData["Title"] = "Ana Sayfa";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Sol Tarafta Hoş Geldin ve Açıklamalar -->
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <h2 class="text-primary fw-bold">Hoş Geldiniz,</h2>
+                    <p class="text-muted">
+                        Özem MRP'ye hoş geldiniz. Buradan masraf raporlarınızı yönetebilir, izin taleplerinizi kontrol edebilir ve şirket duyurularını takip edebilirsiniz.
+                    </p>
+                    <hr />
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-body text-center">
+                                    <i class="fa fa-file-invoice-dollar fa-2x text-success mb-2"></i>
+                                    <h5 class="fw-bold">Bu Ayki Masraf Raporu</h5>
+                                    <p class="text-muted"><span id="totalExpense">@ViewBag.TotalExpense ₺</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-body text-center">
+                                    <i class="fa fa-calendar-check fa-2x text-warning mb-2"></i>
+                                    <h5 class="fw-bold">Kalan Yıllık İzin</h5>
+                                    <p class="text-muted"><span id="remainingLeave">0 Gün</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="installPwaBtn" class="btn btn-outline-dark mt-4">
+                        <i class="fe fe-download"></i> Masaüstüne Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ Tarafta Hızlı Linkler ve Duyurular -->
+        <div class="col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-header text-white">
+                    <h5 class="mb-0">Hızlı Erişim</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" asp-area="" asp-controller="ExpenseReport" asp-action="Index">
+                                <i class="fa fa-receipt text-success"></i> Masraf Raporlarım
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" href="#">
+                                <i class="fa fa-calendar-day text-primary"></i> İzin Taleplerim
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" href="#">
+                                <i class="fa fa-bullhorn text-warning"></i> Şirket Duyuruları
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" asp-area="" asp-controller="Account" asp-action="Profile">
+                                <i class="fa fa-user-edit text-danger"></i> Profilimi Düzenle
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // PWA Yükleme Butonu
+    let deferredPrompt;
+    const installBtn = document.getElementById("installPwaBtn");
+    installBtn.style.display = "none";
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        installBtn.style.display = "block";
+    });
+
+    installBtn.addEventListener("click", () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === "accepted") {
+                    console.log("PWA başarıyla eklendi!");
+                } else {
+                    console.log("PWA ekleme iptal edildi.");
+                }
+                deferredPrompt = null;
+            });
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+         fetch('/Home/GetTotalExpense')
+             .then(response => response.json())
+             .then(data => {
+                 document.getElementById('totalExpense').innerText = `₺${data.totalAmount.toFixed(2)}`;
+             })
+             .catch(error => console.error('Masraf yüklenirken hata oluştu:', error));
+     });
+
+    document.getElementById('remainingLeave').innerText = '... Gün';  // Örnektir, API'den çekilebilir.
+</script>

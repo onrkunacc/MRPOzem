@@ -1,0 +1,85 @@
+﻿@model List<ApplicationUser>
+@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Kullanıcı Yönetimi</h3>
+        </div>
+
+        <div class="card-body">
+            <a href="@Url.Action("Create", "AdminUser")" class="btn btn-success mb-3">
+                <i class="fas fa-user-plus"></i> Yeni Kullanıcı Ekle
+            </a>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle text-center">
+                    <thead class="bg-secondary text-white">
+                        <tr>
+                            <th>Ad Soyad</th>
+                            <th>Unvan</th>
+                            <th>Email</th>
+                            <th>Telefon</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@user.FullName</td>
+                                <td>@user.Title</td>
+                                <td>@user.Email</td>
+                                <td>@user.PhoneNumber</td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-3">
+                                        <a href="@Url.Action("Edit", "AdminUser", new { id = user.Id })" class="btn btn-warning btn-sm px-3">
+                                            <i class="fas fa-edit"></i> Düzenle
+                                        </a>
+                                        &nbsp;&nbsp;
+                                        <a href="@Url.Action("AssignRole", "AdminRole", new { userId = user.Id })" class="btn btn-secondary btn-sm px-3">
+                                            <i class="fas fa-user-tag"></i> Rol Ata
+                                        </a>
+                                        &nbsp;&nbsp;
+                                        <button type="button" class="btn btn-danger btn-sm px-3" onclick="deleteUser('@user.Id')">
+                                            <i class="fas fa-trash"></i> Sil
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function deleteUser(userId) {
+        if (!confirm("Bu kullanıcıyı silmek istediğinizden emin misiniz?")) {
+            return;
+        }
+
+        fetch(`/Admin/AdminUser/Delete/${userId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Silme işlemi başarısız oldu: " + data.message);
+            }
+        })
+        .catch(error => console.error("Silme hatası:", error));
+    }
+</script>

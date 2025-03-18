@@ -1,0 +1,82 @@
+﻿@{
+    ViewData["Title"] = "Yönetim Paneli";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <h2 class="text-primary fw-bold">Hoş Geldiniz,</h2>
+                    <hr />
+                    <p class="text-muted">
+                        Özem CRM Yönetim Paneline hoş geldiniz. Buradan kullanıcı yönetimi, izin talepleri, raporlar ve diğer işlemleri kolayca gerçekleştirebilirsiniz.
+                    </p>
+                    <hr />
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light shadow-sm">
+                                <div class="card-body text-center">
+                                    <i class="fa fa-users fa-2x text-primary mb-2"></i>
+                                    <h5 class="fw-bold">Toplam Kullanıcı</h5>
+                                    <p class="text-muted">@ViewBag.AktifKullaniciSayisi Aktif Kullanıcı</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light shadow-sm">
+                                <div class="card-body text-center">
+                                    <i class="fa fa-envelope-open-text fa-2x text-warning mb-2"></i>
+                                    <h5 class="fw-bold">Bekleyen İzin Talepleri</h5>
+                                    <p class="text-muted">5 Bekleyen Talep</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light shadow-sm">
+                                <div class="card-body text-center">
+                                    <i class="fa fa-chart-bar fa-2x text-success mb-2"></i>
+                                    <h5 class="fw-bold">Aylık Masraf Raporu</h5>
+                                    <p class="text-muted">₺@ViewBag.ToplamAylikMasraf.ToString("N2")</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-header text-white">
+                    <h5 class="mb-0">Hızlı Erişim</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" asp-area="Admin" asp-controller="AdminUser" asp-action="Index">
+                                <i class="fa fa-user-cog text-primary"></i>&nbsp;Kullanıcı Yönetimi
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index" class="text-decoration-none">
+                                <i class="fa fa-file-invoice text-success"></i>&nbsp;Masraf Raporları
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="#" class="text-decoration-none">
+                                <i class="fa fa-calendar-check text-warning"></i>&nbsp;İzin Talepleri
+                            </a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="#" class="text-decoration-none">
+                                <i class="fa fa-cogs text-danger"></i>&nbsp;Sistem Ayarları
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

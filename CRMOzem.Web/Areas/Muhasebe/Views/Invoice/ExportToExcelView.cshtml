@@ -1,0 +1,74 @@
+﻿@{
+    ViewData["Title"] = "Excel Raporu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="text-primary">📊 Excel Raporu Oluştur</h2>
+
+@if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+{
+    <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+}
+
+<div class="alert alert-info">
+    📌 <strong>En az bir kriter girmeniz yeterlidir.</strong> Eğer hiçbir şey seçmezseniz, tüm verileri içeren rapor oluşturulacaktır.
+</div>
+
+<form method="post" asp-action="ExportToExcel">
+    <div class="row">
+        <div class="col-md-4">
+            <label>Cari Grubu</label>
+            <select name="cariGrupId" class="form-control">
+                <option value="">Cari Grubu Seç (Opsiyonel)</option>
+                @if (ViewBag.CariGruplari != null)
+                {
+                    @foreach (var grup in ViewBag.CariGruplari)
+                    {
+                        <option value="@grup.Id">@grup.GrupAdi</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label>İl</label>
+            <input type="text" name="il" class="form-control" placeholder="İl Girin (Opsiyonel)" />
+        </div>
+
+        <div class="col-md-4">
+            <label>İhale No</label>
+            <input type="text" name="ihaleNo" class="form-control" placeholder="İhale No Girin (Opsiyonel)" />
+        </div>
+
+        <div class="col-md-4">
+            <label>Dönem</label>
+            <input type="number" name="donem" class="form-control" placeholder="Yıl Girin (Opsiyonel)" />
+        </div>
+
+      
+        <div class="col-md-4">
+            <label>Başlangıç Ayı</label>
+            <select name="baslangicAy" class="form-control">
+                <option value="">Başlangıç Ayı Seçiniz</option> 
+                @for (int i = 1; i <= 12; i++)
+                {
+                    <option value="@i">@((new string[] { "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" })[i - 1])</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label>Bitiş Ayı</label>
+            <select name="bitisAy" class="form-control">
+                <option value="">Bitiş Ayı Seçiniz</option> 
+                @for (int i = 1; i <= 12; i++)
+                {
+                    <option value="@i">@((new string[] { "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" })[i - 1])</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">📥 Excel İndir</button>
+    <button type="submit" formaction="@Url.Action("ExportToPdf", "Invoice")" class="btn btn-danger mt-3">📄 PDF İndir</button>
+</form>

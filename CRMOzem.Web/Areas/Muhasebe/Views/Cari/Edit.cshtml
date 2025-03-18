@@ -1,0 +1,76 @@
+﻿@model CRMOzem.Core.ViewModels.CariEditViewModel
+@{
+    ViewData["Title"] = "Cari Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">@Model.Unvan İsimli Cari Düzenle</h3>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Cari Kodu</label>
+                            <input asp-for="CariKodu" class="form-control" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Unvan</label>
+                            <input asp-for="Unvan" class="form-control" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tevkifat</label>
+                            <select asp-for="Tevkifat" class="form-control">
+                                <option value="true">Evet</option>
+                                <option value="false">Hayır</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Cari Grubu:</label>
+                            <div class="border rounded p-3 bg-light dark-mode-bg">
+                                @foreach (var grup in Model.CariGruplari)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio"
+                                               id="CariGrubu_@grup.Value"
+                                               name="CariGrubuId"
+                                               value="@grup.Value"
+                                        @(Model.CariGrubuId == int.Parse(grup.Value) ? "checked" : "") />
+                                        <label class="form-check-label fw-bold" for="CariGrubu_@grup.Value">
+                                            @grup.Text
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">İl</label>
+                            <input asp-for="Il" class="form-control" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">İlçe</label>
+                            <input asp-for="Ilce" class="form-control" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-success px-4"> <i class="fas fa-save"></i> Güncelle</button>
+                    <a asp-area="Muhasebe" asp-controller="Cari" asp-action="Index" class="btn btn-outline-secondary px-4"><i class="fe fe-x-circle"></i>İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

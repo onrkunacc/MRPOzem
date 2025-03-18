@@ -1,0 +1,27 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+
+<ul class="navbar-nav ml-auto">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var user = await UserManager.GetUserAsync(User);
+        <li class="nav-item dropdown mt-2">
+            <a class="nav-link dropdown-toggle user-dropdown" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                @user.FullName
+            </a>
+            <div class="dropdown-menu dropdown-menu-right custom-dropdown" aria-labelledby="userDropdown">
+                <a class="dropdown-item" asp-area="" asp-controller="Account" asp-action="Profile">Profilim</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" asp-area="" asp-controller="Account" asp-action="Logout">Çıkış Yap</a>
+            </div>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link btn btn-outline-primary" asp-area="" asp-controller="Account" asp-action="Login">Giriş Yap</a>
+        </li>
+    }
+</ul>

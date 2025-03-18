@@ -1,0 +1,102 @@
+﻿@model CRMOzem.Core.ViewModels.AdminExpenseReportViewModel
+@{
+    ViewData["Title"] = "Masraf Raporları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="text-center font-bold text-2xl mb-4">Masraf Raporları</h2>
+    <hr />
+
+    <!-- Kullanıcı Seçme DropDown -->
+    <form method="get" class="mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label for="userId" class="font-weight-bold">Kullanıcı Seç:</label>
+                <select id="userId" name="userId" class="form-control" onchange="this.form.submit()">
+                    <option value="">Tüm Kullanıcılar</option>
+                    @foreach (var user in Model.Users)
+                    {
+                        <option value="@user.Value" selected="@(user.Value == Context.Request.Query["userId"])">@user.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <!-- Aylık ve Yıllık Toplamlar -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h4>
+                @DateTime.Now.ToString("MMMM") Ayı Toplam:
+                <span class="text-primary font-weight-bold">
+                    @Model.Reports.Where(r => r.MonthYear.Month == DateTime.Now.Month).Sum(r => r.TotalAmount).ToString("C")
+                </span>
+            </h4>
+        </div>
+        <div class="col-md-6">
+            <h4>Yıllık Toplam: <span class="text-danger font-weight-bold">@Model.Reports.Where(r => r.MonthYear.Year == DateTime.Now.Year).Sum(r => r.TotalAmount).ToString("C")</span></h4>
+        </div>
+    </div>
+
+    @{
+        var sortColumn = Context.Request.Query["sortColumn"];
+        var sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc";
+    }
+
+    <table class="table table-bordered table-hover">
+        <thead class="bg-dark text-white">
+            <tr>
+                <th scope="col">
+                    <a href="@Url.Action("Index", new { userId = Context.Request.Query["userId"], sortColumn = "MonthYear", sortDirection })" class="text-white">
+                        Tarih
+                        @if (sortColumn == "MonthYear")
+                        {
+                            <i class="fa @(sortDirection == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                        }
+                    </a>
+                </th>
+                <th scope="col">Kullanıcı</th>
+                <th scope="col">
+                    <a href="@Url.Action("Index", new { userId = Context.Request.Query["userId"], sortColumn = "TotalAmount", sortDirection })" class="text-white">
+                        Toplam Tutar (₺)
+                        @if (sortColumn == "TotalAmount")
+                        {
+                            <i class="fa @(sortDirection == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                        }
+                    </a>
+                </th>
+                <th scope="col">Detaylar</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var report in Model.Reports
+            .OrderBy(r => sortColumn == "MonthYear" && sortDirection == "asc" ? r.MonthYear : DateTime.MaxValue)
+            .ThenByDescending(r => sortColumn == "MonthYear" && sortDirection == "desc" ? r.MonthYear : DateTime.MinValue)
+            .ThenBy(r => sortColumn == "TotalAmount" && sortDirection == "asc" ? r.TotalAmount : decimal.MaxValue)
+            .ThenByDescending(r => sortColumn == "TotalAmount" && sortDirection == "desc" ? r.TotalAmount : decimal.MinValue))
+            {
+                <tr>
+                    <td>@report.MonthYear.ToString("MMMM yyyy")</td>
+                    <td>@report.UserName</td>
+                    <td class="text-success font-weight-bold">@report.TotalAmount.ToString("C")</td>
+                    <td>
+                        <a href="@Url.Action("Details", "AdminExpenseReport", new { id = report.Id })" class="btn btn-info btn-sm">
+                            <i class="fa fa-eye"></i> Detayları Gör
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+
+
+    <!-- Grafik Butonu -->
+    <div class="text-center mt-4">
+        <a href="@Url.Action("Charts", "AdminExpenseReport")" class="btn btn-primary btn-lg">
+            <i class="fe fe-chart"></i> Grafik Görüntüle
+        </a>
+    </div>
+</div>
+

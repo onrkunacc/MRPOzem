@@ -1,0 +1,151 @@
+﻿@model IEnumerable<CRMOzem.Core.Models.Invoices>
+@{
+    ViewData["Title"] = "Fatura Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <!-- 📌 Başlık -->
+        <div class="card-header bg-gradient-dark text-white text-center">
+            <h3 class="mb-0">Fatura Listesi</h3>
+        </div>
+
+        <div class="card-body">
+            <!-- 📌 Filtreleme Seçeneği -->
+            <div class="d-flex justify-content-between mb-3">
+                <form asp-action="Index" method="get" class="d-flex">
+                    <input type="text" name="search" class="form-control me-2" placeholder="Cari Adı / Ay / Tutar Ara..."
+                           value="@ViewBag.SearchTerm">
+                    &nbsp;&nbsp;
+                    <button type="submit" class="btn btn-primary">Ara</button>
+                </form>
+
+                <form asp-action="Index" method="get" class="d-flex">
+                    <label for="yearFilter" class="form-label fw-bold mt-2 me-2">Dönem:</label>
+                    <select id="yearFilter" name="year" class="form-select" onchange="this.form.submit()">
+                        <option value="">Tümü</option>
+
+                        @foreach (var year in new List<int> { 2024, 2025 })
+                        {
+                            <option value="@year" selected="@(ViewBag.SelectedYear == year ? "selected" : null)">
+                                @year
+                            </option>
+                        }
+                    </select>
+                </form>
+            </div>
+            @if (ViewBag.TotalPages > 1)
+            {
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            <li class="page-item @(ViewBag.CurrentPage == i ? "active" : "")">
+                                <a class="page-link" href="?page=@i&search=@ViewBag.SearchTerm&year=@ViewBag.SelectedYear">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+
+            <!-- 📌 Fatura Tablosu -->
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle text-center">
+                    <thead class="bg-secondary text-white">
+                        <tr>
+                            <th scope="col">Cari Unvanı</th>
+                            <th scope="col">Dönem</th>
+                            <th scope="col">Ay</th>
+                            <th scope="col">Tutar</th>
+                            <th scope="col">Ekler</th>
+                            <th scope="col">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invoice in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@invoice.Cari.Unvan</td>
+                                <td>@invoice.Donemi</td>
+                                <td>@DateHelper.GetMonthName(invoice.Ay)</td>
+                                <td>
+                                    <span class="badge @(invoice.Tutar > 0 ? "bg-success" : "bg-warning text-dark") p-2 fs-6">
+                                        @(invoice.Tutar > 0 ? invoice.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR")) + " ₺" : "Henüz girilmemiş")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(invoice.Ekler))
+                                    {
+                                        <button class="btn btn-outline-info btn-sm" onclick="showEklerModal('@invoice.Ekler')">
+                                            <i class="fe fe-file-text"></i> Görüntüle
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Ek bulunmuyor</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-3">
+                                        <button type="button" class="btn btn-danger btn-sm px-3" onclick="deleteInvoice(@invoice.Id)">
+                                            <i class="fe fe-trash"></i> Sil
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 📌 Ekler Modal -->
+<div class="modal fade" id="eklerModal" tabindex="-1" aria-labelledby="eklerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eklerModalLabel">Ek Detayları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="eklerModalContent">
+                <!-- Dinamik olarak eklenecek -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 📌 JavaScript -->
+<script>
+    function deleteInvoice(invoiceId) {
+        if (!confirm("Bu faturayı silmek istediğinizden emin misiniz?")) {
+            return;
+        }
+
+        fetch(`/Muhasebe/Invoice/Delete/${invoiceId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Silme işlemi başarısız oldu: " + data.message);
+            }
+        })
+        .catch(error => console.error("Silme hatası:", error));
+    }
+
+    function showEklerModal(eklerContent) {
+        document.getElementById("eklerModalContent").innerHTML = eklerContent;
+        var modal = new bootstrap.Modal(document.getElementById('eklerModal'));
+        modal.show();
+    }
+</script>

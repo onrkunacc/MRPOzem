@@ -1,0 +1,114 @@
+﻿@model IEnumerable<CRMOzem.Core.Models.Cariler>
+@{
+    ViewData["Title"] = "Cari Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Cari Listesi</h3>
+        </div>
+
+        <div class="card-body">
+            <!-- 📌 Filtreleme Formu -->
+            <form asp-action="Index" method="get" class="mb-3 d-flex justify-content-between">
+                <input type="text" name="search" class="form-control me-2" placeholder="Cari Adı, Grup veya İl ara..."
+                       value="@ViewBag.SearchTerm" />
+                &nbsp;&nbsp;
+                <button type="submit" class="btn btn-primary">Ara</button>
+            </form>
+
+            <!-- 📌 Cari Listesi Tablosu -->
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle text-center">
+                    <thead class="bg-secondary text-white">
+                        <tr>
+                            <th>Cari Kodu</th>
+                            <th>Unvan</th>
+                            <th>Teklif No</th>
+                            <th>İhale No</th>
+                            <th>Cari Grubu</th>
+                            <th>Tevkifat</th>
+                            <th>İl</th>
+                            <th>İlçe</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cari in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@cari.CariKodu</td>
+                                <td>@cari.Unvan</td>
+                                <td>@cari.TeklifNo</td>
+                                <td>@cari.IhaleNo</td>
+                                <td>@cari.CariGrubu.GrupAdi</td>
+                                <td>
+                                    <span class="badge @(cari.Tevkifat ? "bg-success" : "bg-danger") p-3 fs-9">
+                                        @(cari.Tevkifat ? "Evet" : "Hayır")
+                                    </span>
+                                </td>
+                                <td>@cari.Il</td>
+                                <td>@cari.Ilce</td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-3">
+                                        <a class="btn btn-info btn-sm px-3" href="/Muhasebe/Cari/Details/@cari.Id">
+                                            <i class="fe fe-eye"></i> Detaylar
+                                        </a>
+                                        &nbsp;
+                                        <a class="btn btn-success btn-sm px-3" href="/Muhasebe/Cari/Edit/@cari.Id">
+                                            <i class="fe fe-edit"></i> Düzenle
+                                        </a>
+                                        &nbsp;
+                                        <button type="button" class="btn btn-danger btn-sm px-3" onclick="deleteCari(@cari.Id)">
+                                            <i class="fe fe-trash"></i> Sil
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 📌 Sayfalama Butonları -->
+            <nav>
+                <ul class="pagination justify-content-center mt-4">
+                    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { page = i, search = ViewBag.SearchTerm })">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+     function deleteCari(cariId) {
+        if (!confirm("Bu cariyi silmek istediğinizden emin misiniz?")) {
+            return;
+        }
+
+        fetch(`/Muhasebe/Cari/Delete/${cariId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Silme işlemi başarısız oldu: " + data.message);
+            }
+        })
+        .catch(error => console.error("Silme hatası:", error));
+    }
+</script>

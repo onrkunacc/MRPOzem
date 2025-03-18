@@ -1,0 +1,50 @@
+﻿@model List<CRMOzem.Core.ViewModels.ExpenseReportViewModel>
+
+@{
+    ViewData["Title"] = "Masraf Rapoları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="text-center font-bold text-2xl mb-4">@DateTime.Now.Year MASRAF RAPORLARI LİSTESİ</h2>
+    <hr />
+
+    <div class="flex justify-between items-center mb-4">
+        <h4 class="font-semibold text-lg">
+            Toplam Tutar: <span class="text-2xl font-bold text-red-500">
+                @(Model?.Sum(r => r.TotalAmount).ToString("C") ?? "0,00 TL") 
+            </span>
+        </h4>
+    </div>
+
+    <!-- Grid düzenini düzelttik -->
+    <div class="row">
+        @if (Model != null && Model.Any()) 
+        {
+            @foreach (var report in Model.OrderBy(r => r.MonthYear.Month))
+            {
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body text-center">
+                            <h3 class="font-weight-bold">@report.MonthYear.ToString("MMMM")</h3>
+                            <p class="text-muted">Toplam Tutar:</p>
+                            <p class="font-weight-bold text-success">@report.TotalAmount.ToString("C")</p>
+                            <a href="@Url.Action("Details", "ExpenseReport", new { id = report.Id })"
+                               class="btn btn-outline-primary btn-sm">Detaylı Tablo</a>
+                            <br />
+                            <hr />
+                            <a href="@Url.Action("PrintReport", "ExpenseReport", new { reportId = report.Id })"
+                               class="btn btn-outline-success btn-sm" target="_blank">
+                                <i class="fe fe-print"></i> Yazdır / PDF Görüntüle
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-center text-muted">Henüz masraf raporu bulunmamaktadır.</p>
+        }
+    </div>
+</div>

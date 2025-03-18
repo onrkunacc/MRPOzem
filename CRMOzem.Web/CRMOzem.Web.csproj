@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-CRMOzem.Web-65df537f-550b-46df-86fa-c9da1160e552</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="wwwroot\tinydash-master\light-rtl\**" />
+    <Content Remove="wwwroot\tinydash-master\light-rtl\**" />
+    <EmbeddedResource Remove="wwwroot\tinydash-master\light-rtl\**" />
+    <None Remove="wwwroot\tinydash-master\light-rtl\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\tinydash-master\dark\.DS_Store" />
+    <None Include="wwwroot\tinydash-master\light\.DS_Store" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="iTextSharp" Version="5.5.13.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CRMOzem.Business\CRMOzem.Business.csproj" />
+    <ProjectReference Include="..\CRMOzem.Core\CRMOzem.Core.csproj" />
+    <ProjectReference Include="..\CRMOzem.DataAccess\CRMOzem.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Areas\Finans\Controllers\" />
+    <Folder Include="Areas\Finans\Views\" />
+    <Folder Include="Areas\InsanKaynaklari\Controllers\" />
+    <Folder Include="Areas\InsanKaynaklari\Views\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Areas\Evrak\Views\_ViewImports.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

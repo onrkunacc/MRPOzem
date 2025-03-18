@@ -1,0 +1,148 @@
+﻿@model dynamic
+
+@{
+	var cari = Model.Cari;
+	var faturalar = Model.Faturalar as List<FaturaViewModel>;
+	int currentYear = Model.CurrentYear;
+	var availableYears = Model.AvailableYears as List<int>;
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+	<h2 class="text-primary">Cari Detayları</h2>
+	<hr />
+
+
+	<div class="card shadow-sm mb-4">
+		<div class="card-body">
+			<div class="row">
+				<div class="col-md-8">
+					<h5 class="text-dark font-weight-bold">Temel Bilgiler</h5>
+					<p><strong>Cari Kodu:</strong> @cari.CariKodu</p>
+					<p><strong>Unvan:</strong> <span class="text-uppercase text-primary">@cari.Unvan</span></p>
+					<p><strong>Cari Grubu:</strong> @cari.CariGrubu?.GrupAdi</p>
+				</div>
+				<div class="col-md-4 text-right">
+					<label for="yearFilter" class="form-label font-weight-bold">📅 Dönem Seç:</label>
+					<select id="yearFilter" class="form-control" onchange="filterByYear(this.value)">
+						@foreach (var year in availableYears)
+						{
+							<option value="@year" selected="@(year == currentYear ? "selected" : null)">@year</option>
+						}
+					</select>
+					<div class="text-center mt-4">
+						<a href="~/Invoice/Cari/Index" class="btn btn-secondary px-4">⬅️ Geri Dön</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="mb-3 d-flex align-items-center">
+		@if (!string.IsNullOrEmpty(cari.OdemeYazisiLinki))
+		{
+			<a href="@cari.OdemeYazisiLinki" class="btn btn-primary me-2" target="_blank">
+				<i class="fe fe-text"></i> Ödeme Yazısını Görüntüle
+			</a>
+		}
+		&nbsp;&nbsp;
+		<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#odemeYazisiModal">
+			<i class="fe fe-pencil"></i> Ödeme Yazısı Ekle / Güncelle
+		</button>
+	</div>
+
+	<div class="modal fade" id="odemeYazisiModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Ödeme Yazısı Linki Güncelle</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<label for="odemeYazisiLinki" class="form-label">Link</label>
+					<input type="url" id="odemeYazisiLinki" class="form-control" value="@cari.OdemeYazisiLinki" placeholder="https://..." />
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+					<button type="button" class="btn btn-primary" onclick="saveOdemeYazisi(@cari.Id)">Kaydet</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 📌 Fatura Bilgileri Tablosu -->
+	<h5 class="font-weight-bold text-dark">Fatura Bilgileri (Dönem: @currentYear)</h5>
+
+	@if (faturalar != null && faturalar.Count > 0)
+	{
+		<table class="table table-hover shadow-sm">
+			<thead class="thead-light">
+				<tr>
+					<th>📅 Ay</th>
+					<th>💰 Fatura Tutarı</th>
+					<th class="text-center">🔧 İşlemler</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var fatura in faturalar)
+				{
+					<tr>
+						<td class="align-middle">@fatura.AyAdi</td>
+						<td class="align-middle @(fatura.Tutar > 0 ? "text-success font-weight-bold" : "text-muted")">
+							@(fatura.Tutar?.ToString("C") ?? "Henüz girilmemiş")
+						</td>
+						<td class="align-middle text-center">
+							@if (fatura.FaturaVarMi)
+							{
+								<a href="@Url.Action("EditInvoice", "Invoice", new { area = "Muhasebe", cariId = fatura.CariId, month = fatura.AyIndex, year = currentYear })"
+								   class="btn btn-primary btn-sm px-3">✏️ Düzenle</a>
+							}
+							else
+							{
+								<a href="@Url.Action("AddInvoice", "Invoice", new { area = "Muhasebe", cariId = cari.Id, ay = fatura.AyIndex, donem = currentYear })"
+								   class="btn btn-success btn-sm px-3">➕ Ekle</a>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+	else
+	{
+		<div class="alert alert-danger text-center">❌ Fatura bilgisi bulunamadı.</div>
+	}
+	@if (Model.ToplamFaturaTutari > 0)
+	{
+		<div class="alert alert-info text-center mt-4">
+			<h5 class="fw-bold">📊 Toplam Fatura Tutarı: <span class="text-success">@Model.ToplamFaturaTutari.ToString("C")</span></h5>
+		</div>
+	}
+
+	<div class="text-center mt-4">
+		<a href="~/Invoice/Cari/Index" class="btn btn-secondary px-4">⬅️ Geri Dön</a>
+	</div>
+</div>
+
+<script>
+	function filterByYear(year) {
+		window.location.href = `?year=${year}`;
+	}
+	function saveOdemeYazisi(cariId) {
+		var link = document.getElementById("odemeYazisiLinki").value;
+
+		fetch("@Url.Action("UpdateOdemeYazisi", "Cari", new { area = "Muhasebe" })", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({ id: cariId, link: link })
+		})
+		.then(response => {
+			if (response.ok) {
+				location.reload();
+			} else {
+				alert("Ödeme yazısı güncellenirken hata oluştu.");
+			}
+		});
+	}
+</script>

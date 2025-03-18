@@ -1,0 +1,59 @@
+﻿@model CRMOzem.Core.Models.ApplicationUser
+@{
+    ViewData["Title"] = "Kullanıcı Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Kullanıcı Düzenle</h3>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id">
+
+                <div class="row">
+                    <!-- Sol Sütun -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Ad Soyad</label>
+                            <input asp-for="FullName" class="form-control" required>
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input asp-for="Email" class="form-control" type="email" required>
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Unvan</label>
+                            <input asp-for="Title" class="form-control" type="text" required>
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Sütun -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Telefon</label>
+                            <input asp-for="PhoneNumber" class="form-control">
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Butonlar -->
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="fas fa-edit"></i> Güncelle
+                    </button>
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary px-4">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

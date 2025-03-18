@@ -1,0 +1,50 @@
+﻿@model List<ApplicationUser>
+
+@{
+    ViewData["Title"] = "Onay Bekleyen Kullanıcılar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Onay Bekleyen Kullanıcılar</h3>
+        </div>
+
+        <div class="card-body">
+            <table class="table table-bordered align-middle text-center">
+                <thead class="bg-secondary text-white">
+                    <tr>
+                        <th>Ad Soyad</th>
+                        <th>Email</th>
+                        <th>Unvan</th>
+                        <th>Telefon</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>@user.Title</td>
+                            <td>@user.PhoneNumber</td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-3">
+                                    <a href="@Url.Action("ApproveUser", "AdminUser", new { id = user.Id })" class="btn btn-success btn-sm px-3">
+                                        <i class="fas fa-check"></i> Onayla
+                                    </a>
+                                    &nbsp;&nbsp;&nbsp;
+                                    <a href="@Url.Action("RejectUser", "AdminUser", new { id = user.Id })" class="btn btn-danger btn-sm px-3">
+                                        <i class="fas fa-times"></i> Reddet
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,29 @@
+﻿@{
+    ViewData["Title"] = "Yeni Rol Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Yeni Rol Ekle</h3>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Rol Adı</label>
+                    <input type="text" name="roleName" class="form-control" required placeholder="Örn: Yönetici, Muhasebe, Finans">
+                </div>
+
+                <!-- Butonlar -->
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-plus"></i> Rol Ekle
+                    </button>
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary px-4">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

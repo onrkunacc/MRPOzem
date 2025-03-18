@@ -1,0 +1,89 @@
+﻿@model CRMOzem.Core.Models.FollowDocument
+@{
+    ViewData["Title"] = "Evrak Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title fw-semibold mb-4">Yeni Evrak Girişi</h1>
+            <form asp-action="AddDocument" method="post">
+                <div class="mb-3">
+                    <label for="CategoryId">Kategori</label>
+                    <select id="CategoryDropdown" name="CategoryId" class="form-control">
+                        <option value="">Seçiniz</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Subject" class="form-label">Konu :</label>
+                    <input asp-for="Subject" type="text" class="form-control" required />
+                    <span asp-validation-for="Subject" class="text-danger"></span>
+                </div>
+
+                <!-- 📌 Gönderim Biçimi -->
+                <div class="mb-3">
+                    <label>Gönderim Biçimi</label>
+                    <select id="DeliveryMethod" name="DeliveryMethod" class="form-control">
+                        <option value="Elden">Elden</option>
+                        <option value="Kargo">Kargo</option>
+                    </select>
+                </div>
+
+                <!-- 📦 Eğer Kargo Seçilirse Kargo Firması Gözüksün -->
+                <div class="mb-3" id="CargoCompanyDiv" style="display: none;">
+                    <label>Kargo Şirketi</label>
+                    <select name="CargoCompany" class="form-control">
+                        <option value="Yurtiçi">Yurtiçi</option>
+                        <option value="MNG">MNG</option>
+                        <option value="Aras">Aras</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const dropdown = document.getElementById('CategoryDropdown');
+        fetch('/Evrak/Document/GetCategories')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id; 
+                    option.textContent = category.description; 
+                    dropdown.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Kategori yüklenirken hata oluştu:', error));
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const deliveryMethod = document.getElementById("DeliveryMethod");
+        const cargoCompanyDiv = document.getElementById("CargoCompanyDiv");
+        const cargoCompanySelect = document.querySelector("select[name='CargoCompany']");
+
+        deliveryMethod.addEventListener("change", function () {
+            if (this.value === "Kargo") {
+                cargoCompanyDiv.style.display = "block";
+            } else {
+                cargoCompanyDiv.style.display = "none";
+                cargoCompanySelect.value = ""; // 🚀 "Elden" seçildiğinde CargoCompany sıfırlanıyor
+            }
+        });
+
+        // 📌 Form gönderilmeden önce CargoCompany'nin gereksiz gönderilmesini engelle
+        document.querySelector("form").addEventListener("submit", function () {
+            if (deliveryMethod.value === "Elden") {
+                cargoCompanySelect.value = "";
+            }
+        });
+    });
+</script>

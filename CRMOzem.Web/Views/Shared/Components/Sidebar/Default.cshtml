@@ -1,0 +1,255 @@
+﻿@model IList<string>
+
+<ul class="navbar-nav flex-fill w-100 mb-2">
+    @if (Model.Contains("Kullanıcı"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">Ana Sayfa</span>
+            </a>
+        </li>
+        <!-- Masraf Raporları Menüsü -->
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#masraf-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Masraf Raporu</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="masraf-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="" asp-controller="ExpenseReport" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Rapor Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="" asp-controller="ExpenseReport" asp-action="AddExpense">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Rapor Ekle</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+    }
+    
+
+    @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Admin" asp-controller="Admin" asp-action="Index">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">Ana Sayfa</span>
+            </a>
+        </li>
+        @*<li class="nav-item">
+            <a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                <i class="fe fe-settings fe-16"></i>
+                <span class="ml-3 item-text">Yönetim Paneli</span>
+            </a>
+        </li> *@
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                <i class="fe fe-filter fe-16"></i>
+                <span class="ml-3 item-text">Masraf Raporları Detay</span>
+            </a>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#kullanici-menu">
+                <i class="fe fe-user fe-16"></i>
+                <span class="ml-3 item-text">Kullanıcı Yönetimi</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="kullanici-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminUser" asp-action="Index">
+                        <i class="fe fe-users fe-16"></i>
+                        <span class="ml-3 item-text">Kullanıcılar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminUser" asp-action="PendingApprovals">
+                        <i class="fe fe-user-check fe-16"></i>
+                        <span class="ml-3 item-text">Kullanıcı Onay</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminRole" asp-action="Index">
+                        <i class="fe fe-user-plus fe-16"></i>
+                        <span class="ml-3 item-text">Rol Listesi</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <!-- Fatura Takip Menüsü -->
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#fatura-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Fatura Takip</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="fatura-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="AddInvoice">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Fatura Ekle</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Fatura Takip Listesi</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+          <!-- Cari İşlemler Menüsü -->
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#cari-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Cari İşlemler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="cari-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Cari Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Cari Ekle</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-book fe-16"></i>
+                <span class="ml-3 item-text">Evrak Listesi</span>
+            </a>
+        </li>
+    }
+
+    @if (Model.Contains("Muhasebe"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Muhasebe" asp-controller="Cari" asp-action="Index">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">Ana Sayfa</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                <i class="fe fe-filter fe-16"></i>
+                <span class="ml-3 item-text">Masraf Raporları Detay</span>
+            </a>
+        </li>
+        <!-- Fatura Takip Menüsü -->
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#muhasebe-fatura-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Fatura Takip</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="muhasebe-fatura-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="AddInvoice">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Fatura Ekle</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Fatura Takip Listesi</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- Cari İşlemler Menüsü -->
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#muhasebe-cari-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Cari İşlemler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="muhasebe-cari-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Cari Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Cari Ekle</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="ExportToExcelView">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Raporlama</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-book fe-16"></i>
+                <span class="ml-3 item-text">Evrak Listesi</span>
+            </a>
+        </li>
+    }
+    @if (Model.Contains("Evrak"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">Ana Sayfa</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                <i class="fe fe-book fe-16"></i>
+                <span class="ml-3 item-text">Evrak Listesi</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="AddDocument">
+                <i class="fe fe-plus fe-16"></i>
+                <span class="ml-3 item-text">Evrak Ekle</span>
+            </a>
+        </li>
+
+    }
+    @if (Model.Contains("Finans"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Finans" asp-controller="Raporlar" asp-action="Index">
+                <i class="fe fe-pie-chart fe-16"></i>
+                <span class="ml-3 item-text">Finans Raporları</span>
+            </a>
+        </li>
+    }
+
+    @if (Model.Contains("İnsan Kaynakları"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Personel" asp-action="Index">
+                <i class="fe fe-user-check fe-16"></i>
+                <span class="ml-3 item-text">Personel Yönetimi</span>
+            </a>
+        </li>
+    }
+
+    @if (Model.Contains("İhale"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Ihale" asp-controller="BidDocument" asp-action="Index">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İhale Dosyaları</span>
+            </a>
+        </li>
+    }
+</ul>

@@ -1,0 +1,106 @@
+﻿@model CRMOzem.Core.ViewModels.CariCreateViewModel
+@{
+    ViewData["Title"] = "Yeni Cari Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Yeni Cari Ekle</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div class="row">
+                    <!-- Sol Sütun -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="Cari.CariKodu" class="form-label">Cari Kodu</label>
+                            <input name="Cari.CariKodu" class="form-control" required />
+                            <span asp-validation-for="Cari.CariKodu" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.Unvan" class="form-label">Unvan</label>
+                            <input name="Cari.Unvan" class="form-control" required />
+                            <span asp-validation-for="Cari.Unvan" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.Tevkifat" class="form-label">Tevkifat</label>
+                            <select name="Cari.Tevkifat" class="form-control">
+                                <option value="true">Evet</option>
+                                <option value="false">Hayır</option>
+                            </select>
+                            <span asp-validation-for="Cari.Tevkifat" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.TeklifNo" class="form-label">Teklif No</label>
+                            <input name="Cari.TeklifNo" class="form-control" required />
+                            <span asp-validation-for="Cari.TeklifNo" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.IhaleNo" class="form-label">İhale No</label>
+                            <input name="Cari.IhaleNo" class="form-control" required />
+                            <span asp-validation-for="Cari.IhaleNo" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Sütun -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Cari Grubu:</label>
+                            <div class="border rounded p-3 bg-light dark-mode-bg">
+                                @foreach (var grup in Model.CariGruplari)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio"
+                                               id="CariGrubu_@grup.Value"
+                                               name="Cari.CariGrubuId"
+                                               value="@grup.Value"
+                                        @(Model.Cari.CariGrubuId == int.Parse(grup.Value) ? "checked" : "") />
+                                        <label class="form-check-label fw-bold" for="CariGrubu_@grup.Value">
+                                            @grup.Text
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                            <span asp-validation-for="Cari.CariGrubuId" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.Il" class="form-label">İl</label>
+                            <input name="Cari.Il" class="form-control" required />
+                            <span asp-validation-for="Cari.Il" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label for="Cari.Ilce" class="form-label">İlçe</label>
+                            <input name="Cari.Ilce" class="form-control" required />
+                            <span asp-validation-for="Cari.Ilce" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Butonlar -->
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-success px-4">Kaydet</button>
+                    <a asp-area="" asp-controller="Cari" asp-action="Index" class="btn btn-outline-secondary px-4">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Tema değişikliğine göre arka plan rengi ayarla -->
+<style>
+    .dark-mode-bg {
+        background-color: #2a2a2a !important;
+        color: white !important;
+        border-color: #444 !important;
+    }
+
+    body.dark-mode .card-header {
+        background-color: #444 !important;
+    }
+
+    body.dark-mode .form-check-label {
+        color: white !important;
+    }
+</style>

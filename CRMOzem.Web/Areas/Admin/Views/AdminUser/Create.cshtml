@@ -1,0 +1,55 @@
+﻿@model ApplicationUser
+
+@{
+    ViewData["Title"] = "Yeni Kullanıcı Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header text-white text-center">
+            <h3 class="mb-0">Yeni Kullanıcı Ekle</h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Ad Soyad</label>
+                            <input asp-for="FullName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kullanıcı Adı</label>
+                            <input asp-for="UserName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input asp-for="Email" class="form-control" type="email" required>
+                        </div>                        
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Unvan</label>
+                            <input asp-for="Title" class="form-control" type="text" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Telefon</label>
+                            <input asp-for="PhoneNumber" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Şifre</label>
+                            <input name="password" class="form-control" type="password" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-success px-4">Kaydet</button>
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary px-4">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+

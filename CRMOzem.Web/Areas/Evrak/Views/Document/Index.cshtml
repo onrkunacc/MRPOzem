@@ -1,0 +1,123 @@
+﻿@model IEnumerable<CRMOzem.Core.Models.FollowDocument>
+
+@{
+    ViewData["Title"] = "Evrak Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Evrak Listesi</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Kod</th>
+            <th>Konu</th>
+            <th>Kategori</th>
+            <th>Tarih</th>
+            <th>Gönderim</th>
+            <th>Kargo Şirketi</th>
+            <th>Gitti mi?</th>
+            <th>Not</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var document in Model)
+        {
+            <tr>
+                <td>@document.Code</td>
+                <td>@document.Subject</td>
+                <td>@document.Category?.Description</td>
+                <td>@document.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>@document.DeliveryMethod</td>
+                <td>@(string.IsNullOrWhiteSpace(document.CargoCompany) ? "-" : document.CargoCompany)</td>
+
+                <td>
+                    @if (!document.IsSent)
+                    {
+                        <input type="checkbox" class="sent-checkbox" data-id="@document.Id">
+                    }
+                    else
+                    {
+                        <span class="text-success">@document.SentDate?.ToString("dd.MM.yyyy HH:mm")</span>
+                    }
+                </td>
+
+                <td>
+                    <button class="btn @(string.IsNullOrEmpty(document.Notes) ? "btn-danger" : "btn-success") note-btn"
+                            data-id="@document.Id" data-notes="@document.Notes">
+                        📝 Not Ekle / Görüntüle
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 📌 Modal sadece bir kez tanımlanıyor (Tüm satırlar için aynı modal kullanılıyor) -->
+<div class="modal fade" id="noteModal" tabindex="-1" aria-labelledby="noteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="noteModalLabel">Not Ekle / Görüntüle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="noteContent" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="saveNoteBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+       // 📌 Not Ekle / Görüntüle butonları için event listener
+    document.querySelectorAll(".note-btn").forEach(btn => {
+        btn.addEventListener("click", function () {
+            currentDocumentId = this.dataset.id;
+            let existingNote = this.dataset.notes || "";
+
+            document.getElementById("noteContent").value = existingNote;
+
+            // 📌 Bootstrap modalını aç
+            let noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+            noteModal.show();
+        });
+    });
+
+    // 📌 Not Kaydetme Butonu
+    document.getElementById("saveNoteBtn").addEventListener("click", function () {
+        let newNote = document.getElementById("noteContent").value;
+
+        fetch('/Evrak/Document/AddNote/' + currentDocumentId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note: newNote })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === "Not başarıyla eklendi.") {
+                let btn = document.querySelector(`.note-btn[data-id='${currentDocumentId}']`);
+                btn.classList.remove("btn-danger");
+                btn.classList.add("btn-success");
+                btn.dataset.notes = newNote; 
+            }
+        })
+        .catch(error => console.error('Not eklenirken hata oluştu:', error));
+    });
+
+
+    // ✅ "Gitti mi?" checkbox işlemi
+    document.querySelectorAll(".sent-checkbox").forEach(cb => {
+        cb.addEventListener("change", function () {
+            if (confirm("Evrak gönderildi olarak işaretlensin mi?")) {
+                fetch('/Evrak/Document/MarkAsSent/' + this.dataset.id, { method: 'POST' })
+                    .then(() => location.reload());
+            } else {
+                this.checked = false;
+            }
+        });
+    });
+</script>

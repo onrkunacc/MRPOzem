@@ -1,0 +1,130 @@
+﻿@model CRMOzem.Core.Models.Invoices
+
+@{
+    ViewData["Title"] = "Fatura Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-light text-center">
+            <h3 class="mb-0 fw-bold">Yeni Fatura Ekle</h3>
+        </div>
+
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success text-center">@TempData["SuccessMessage"]</div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger text-center">@TempData["ErrorMessage"]</div>
+            }
+
+            <form asp-action="AddInvoice" method="post">
+                <div class="row g-3">
+                    <!-- Cari Seç -->
+                    <div class="col-md-6">
+                        <label for="CariId" class="form-label fw-bold">Cari Seç:</label>
+                        <select id="CariId" name="CariId" class="form-select">
+                            <option value="">Seçiniz</option>
+
+                            @foreach (var cari in ViewBag.Cariler)
+                            {
+                                <option value="@cari.Id" selected="@(cari.Id == ViewBag.SelectedCariId ? "selected" : null)">
+                                    @cari.Unvan
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Dönem Seç -->
+                    <div class="col-md-6">
+                        <label asp-for="Donemi" class="form-label fw-bold">Dönem (Yıl):</label>
+                        <input name="Donemi" type="number" class="form-control" min="2020" max="2100" placeholder="Yıl giriniz..." />
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                    <!-- Ay Seçimi -->
+                    <div class="col-md-6">
+                        <label asp-for="Ay" class="form-label fw-bold">Ay:</label>
+                        <select name="Ay" class="form-select">
+                            <option value="1">Ocak</option>
+                            <option value="2">Şubat</option>
+                            <option value="3">Mart</option>
+                            <option value="4">Nisan</option>
+                            <option value="5">Mayıs</option>
+                            <option value="6">Haziran</option>
+                            <option value="7">Temmuz</option>
+                            <option value="8">Ağustos</option>
+                            <option value="9">Eylül</option>
+                            <option value="10">Ekim</option>
+                            <option value="11">Kasım</option>
+                            <option value="12">Aralık</option>
+                        </select>
+                    </div>
+
+                    <!-- Tutar -->
+                    <div class="col-md-6">
+                        <label asp-for="Tutar" class="form-label fw-bold">Tutar:</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₺</span>
+                            <input name="Tutar"
+                                   type="text"
+                                   class="form-control"
+                                   oninput="formatCurrency(this)"
+                                   value="@Model.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR"))"
+                                   placeholder="0,00" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ekler -->
+                <div class="row g-3 mt-2">
+                    <div class="col-md-12">
+                        <label asp-for="Ekler" class="form-label fw-bold">Ekler:</label>
+                        <textarea name="Ekler" class="form-control" rows="3" placeholder="Varsa açıklama girin..."></textarea>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button type="submit" class="btn btn-success px-4"><i class="fe fe-save"></i> Kaydet</button>
+                    <a href="~/Invoice/Invoice/Index" class="btn btn-danger px-4"><i class="fe fe-x-circle"></i> İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 📌 Stil Güncellemeleri -->
+<style>
+    .form-select, .form-control {
+        height: 45px;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        font-size: 16px;
+        width: 100%;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 8px 0 0 8px;
+    }
+</style>
+
+<script>
+    function formatCurrency(input) {
+        let value = input.value.replace(/[^0-9,]/g, '');
+        let parts = value.split(',');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        input.value = parts.join(',');
+    }
+</script>

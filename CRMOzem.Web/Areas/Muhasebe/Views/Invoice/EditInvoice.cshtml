@@ -1,0 +1,112 @@
+﻿@model CRMOzem.Core.ViewModels.EditInvoiceViewModel
+
+@{
+    ViewData["Title"] = "Fatura Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-light text-center">
+            <h3 class="mb-0 fw-bold">Fatura Düzenle</h3>
+        </div>
+
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success text-center">@TempData["SuccessMessage"]</div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger text-center">@TempData["ErrorMessage"]</div>
+            }
+
+            <form asp-action="EditInvoice" method="post">
+                @Html.HiddenFor(m => m.FaturaId)
+                @Html.HiddenFor(m => m.CariId)
+                @Html.HiddenFor(m => m.Yil)
+                @Html.HiddenFor(m => m.Ay)
+
+                <div class="row g-3">
+                    <!-- Cari Adı -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Cari Adı:</label>
+                        <input type="text" class="form-control" value="@Model.CariAdi" disabled />
+                    </div>
+
+                    <!-- Dönem -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Dönem:</label>
+                        <input type="text" class="form-control" value="@($"{Model.Ay}/{Model.Yil}")" disabled />
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                    <!-- Tutar -->
+                    <div class="col-md-6">
+                        <label asp-for="Tutar" class="form-label fw-bold">Tutar:</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₺</span>
+                            <input name="Tutar"
+                                   class="form-control"
+                                   type="text"
+                                   oninput="formatCurrency(this)"
+                                   value="@Model.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR"))" />
+                        </div>
+                        <span asp-validation-for="Tutar" class="text-danger"></span>
+                    </div>
+
+                    <!-- Ekler -->
+                    <div class="col-md-6">
+                        <label asp-for="Ekler" class="form-label fw-bold">Ekler:</label>
+                        <textarea name="Ekler" class="form-control" rows="3">@Model.Ekler</textarea>
+                        <span asp-validation-for="Ekler" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success px-4"><i class="fe fe-save"></i> Kaydet</button>
+                    <a href="@Url.Action("Details", "Cari", new { id = Model.CariId, year = Model.Yil })" class="btn btn-danger px-4">
+                        <i class="fe fe-x-circle"></i> İptal
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 📌 Stil Güncellemeleri -->
+<style>
+    .form-select, .form-control {
+        height: 45px;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        font-size: 16px;
+        width: 100%;
+    }
+
+        .form-select:focus, .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+        }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 8px 0 0 8px;
+    }
+</style>
+
+<!-- 📌 Para Formatlama Scripti -->
+<script>
+    function formatCurrency(input) {
+        // Mevcut değeri al ve sadece sayı ile virgül karakterlerini tut
+        let value = input.value.replace(/[^0-9,]/g, '');
+
+        // Nokta ile ayrılmış binlik formatı ekle
+        let parts = value.split(',');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        input.value = parts.join(',');
+    }
+</script>
