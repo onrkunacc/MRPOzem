@@ -9,6 +9,14 @@
     <h2 class="text-center font-bold text-2xl mb-4">@DateTime.Now.Year EKSTRE RAPORLARI</h2>
     <hr />
 
+    <div class="flex justify-between items-center mb-4">
+        <h4 class="font-semibold text-lg">
+            Toplam Tutar: <span class="text-2xl font-bold text-red-500">
+                @(Model?.Sum(r => r.TotalAmount).ToString("C") ?? "0,00 TL")
+            </span>
+        </h4>
+    </div>
+
     <div class="row">
         @if (Model != null && Model.Any())
         {
@@ -25,9 +33,9 @@
                                 📑 Detaylı Tablo
                             </a>
                             <hr />
-                            <a href="@Url.Action("PrintBillingCycleReport", "BillingCycleReport")"
-                               class="btn btn-outline-success btn-sm" target="_blank">
-                                <i class="fe fe-print"></i> Yazdır / PDF Görüntüle
+                            <a href="@Url.Action("PrintBillingCycleReport", "BillingCycleReport", new { year = report.Year, month = report.Month })"
+                               target="_blank" class="btn btn-outline-danger btn-sm">
+                                📄 Yazdır / PDF Görüntüle
                             </a>
                         </div>
                     </div>

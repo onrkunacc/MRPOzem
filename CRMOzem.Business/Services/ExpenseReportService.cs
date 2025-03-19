@@ -264,96 +264,88 @@ namespace CRMOzem.Business.Services
         }
 
 
+        private DateTime GetFirstMondayOfWeek(int year, int month, int weekNumber)
+        {
+            DateTime firstDayOfMonth = new DateTime(year, month, 1);
 
+            // İlk haftanın pazartesini bul
+            DateTime firstMonday = firstDayOfMonth;
+            while (firstMonday.DayOfWeek != DayOfWeek.Monday)
+            {
+                firstMonday = firstMonday.AddDays(1);
+            }
+
+            // Kullanıcının seçtiği haftaya göre pazartesi gününü hesapla
+            int daysToAdd = (weekNumber - 1) * 7; // 1. hafta = 0 gün, 2. hafta = 7 gün, vb.
+            DateTime billingCycleDay = firstMonday.AddDays(daysToAdd);
+
+            return billingCycleDay;
+        }
 
         public async Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return new List<BillingCycleReportViewModel>();
 
-            var (startDate, endDate) = await GetBillingCyclePeriodAsync(userId, user.BillingCycleWeek);
+            var billingCycleReports = new List<BillingCycleReportViewModel>();
 
-            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue)
-            {
-                Console.WriteLine("🚨 Kullanıcının geçerli bir ekstre dönemi yok!");
-                return new List<BillingCycleReportViewModel>();
-            }
-
-            // 🔹 Belirlenen tarih aralığında harcamaları getiriyoruz
-            var selectedExpenses = await _context.ExpenseDetails
-                .Include(e => e.Report)
-                .Where(e => e.Report.UserId == userId && e.Date >= startDate && e.Date <= endDate)
-                .OrderBy(e => e.Date)
-                .ToListAsync();
-
-            if (!selectedExpenses.Any())
-            {
-                Console.WriteLine("🚨 Bu dönem için harcama bulunamadı!");
-                return new List<BillingCycleReportViewModel>();
-            }
-
-            var report = new BillingCycleReportViewModel
-            {
-                Year = endDate.Year,
-                Month = endDate.Month,
-                MonthName = new DateTime(endDate.Year, endDate.Month, 1).ToString("MMMM"),
-                TotalAmount = selectedExpenses.Sum(e => e.Amount),
-                ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
-                {
-                    Id = d.Id,
-                    ReportId = d.ReportId,
-                    Category = d.Category,
-                    Description = d.Description,
-                    Amount = d.Amount,
-                    Date = d.Date,
-                    PaymentMethod = d.PaymentMethod
-                }).ToList()
-            };
-
-            return new List<BillingCycleReportViewModel> { report };
-        }
-
-
-
-        private async Task<(DateTime StartDate, DateTime EndDate)> GetBillingCyclePeriodAsync(string userId, int billingCycleWeek)
-        {
-            // Kullanıcının tüm harcamalarını getir
-            var userExpenses = await _context.ExpenseDetails
+            // Kullanıcının harcama yaptığı tüm yılları ve ayları al
+            var distinctMonths = await _context.ExpenseDetails
                 .Where(e => e.Report.UserId == userId)
-                .Select(e => e.Date)
-                .OrderBy(e => e)
+                .Select(e => new { e.Date.Year, e.Date.Month })
+                .Distinct()
+                .OrderBy(e => e.Year).ThenBy(e => e.Month)
                 .ToListAsync();
 
-            if (!userExpenses.Any())
+            foreach (var monthData in distinctMonths)
             {
-                return (DateTime.MinValue, DateTime.MinValue); // Kullanıcının hiç harcaması yoksa boş dön
+                int year = monthData.Year;
+                int month = monthData.Month;
+
+                // Kullanıcının seçtiği haftanın ilk pazartesi gününü hesapla
+                DateTime currentBillingCycle = GetFirstMondayOfWeek(year, month, user.BillingCycleWeek);
+                DateTime previousBillingCycle;
+
+                // Önceki ayın hesap kesim tarihini bul
+                if (month == 1)
+                {
+                    previousBillingCycle = GetFirstMondayOfWeek(year - 1, 12, user.BillingCycleWeek);
+                }
+                else
+                {
+                    previousBillingCycle = GetFirstMondayOfWeek(year, month - 1, user.BillingCycleWeek);
+                }
+
+                // Harcamaları getir
+                var selectedExpenses = await _context.ExpenseDetails
+                    .Include(e => e.Report)
+                    .Where(e => e.Report.UserId == userId && e.Date >= previousBillingCycle && e.Date < currentBillingCycle)
+                    .OrderBy(e => e.Date)
+                    .ToListAsync();
+
+                if (selectedExpenses.Any())
+                {
+                    billingCycleReports.Add(new BillingCycleReportViewModel
+                    {
+                        Year = currentBillingCycle.Year,
+                        Month = currentBillingCycle.Month,
+                        MonthName = currentBillingCycle.ToString("MMMM"),
+                        TotalAmount = selectedExpenses.Sum(e => e.Amount),
+                        ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
+                        {
+                            Id = d.Id,
+                            ReportId = d.ReportId,
+                            Category = d.Category,
+                            Description = d.Description,
+                            Amount = d.Amount,
+                            Date = d.Date,
+                            PaymentMethod = d.PaymentMethod
+                        }).ToList()
+                    });
+                }
             }
 
-            DateTime latestExpenseDate = userExpenses.Max(); // En son harcama yapılan tarih
-
-            int startDay = (billingCycleWeek - 1) * 7 + 1; // Seçilen haftaya göre başlangıç günü
-            int endDay = billingCycleWeek * 7; // Seçilen haftaya göre bitiş günü
-
-            // 🔹 Hesap kesim periyodu önceki aya göre belirleniyor
-            int previousMonth = latestExpenseDate.Month - 1;
-            int previousYear = latestExpenseDate.Year;
-
-            if (previousMonth == 0) // Ocak için bir önceki ay Aralık
-            {
-                previousMonth = 12;
-                previousYear--;
-            }
-
-            int daysInPreviousMonth = DateTime.DaysInMonth(previousYear, previousMonth);
-            startDay = Math.Min(startDay, daysInPreviousMonth); // Gün sayısını kontrol et
-            endDay = Math.Min(endDay, daysInPreviousMonth);
-
-            DateTime startDate = new DateTime(previousYear, previousMonth, startDay);
-            DateTime endDate = new DateTime(latestExpenseDate.Year, latestExpenseDate.Month, endDay);
-
-            return (startDate, endDate);
+            return billingCycleReports;
         }
-
-
     }
 }

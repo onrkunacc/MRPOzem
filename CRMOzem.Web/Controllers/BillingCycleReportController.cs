@@ -42,19 +42,33 @@ namespace CRMOzem.Web.Controllers
         }
 
         // ✅ Ekstre PDF Raporu Oluşturma
-        public async Task<IActionResult> PrintBillingCycleReport()
+        public async Task<IActionResult> PrintBillingCycleReport(int year, int month)
         {
             var user = await _userManager.GetUserAsync(User);
             var reports = await _expenseService.GetUserBillingCycleReportsAsync(user.Id);
-            decimal totalAmount = reports.Sum(r => r.TotalAmount);
 
+            Console.WriteLine($"🟢 {reports.Count} adet ekstre raporu bulundu.");
+
+            foreach (var r in reports)
+            {
+                Console.WriteLine($"📅 {r.Year}-{r.Month}: {r.TotalAmount} ₺");
+            }
+
+            var selectedReport = reports.FirstOrDefault(r => r.Year == year && r.Month == month);
+            if (selectedReport == null)
+            {
+                Console.WriteLine("🔴 Tam eşleşme bulunamadı, benzerleri kontrol ediliyor...");
+                selectedReport = reports.FirstOrDefault(r => r.Year == year);
+                if (selectedReport != null)
+                    Console.WriteLine($"🟡 Eşleşen yıl bulundu, fakat ay farklı: {selectedReport.Month}");
+            }
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 iTextSharp.text.Document document = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4, 50, 50, 50, 50);
                 PdfWriter writer = PdfWriter.GetInstance(document, memoryStream);
                 document.Open();
 
-                // 📌 Türkçe karakter desteği için Arial font ekleniyor
+                // **Türkçe karakter desteği için Arial font**
                 string fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
                 BaseFont baseFont = BaseFont.CreateFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 iTextSharp.text.Font fontTitle = new iTextSharp.text.Font(baseFont, 18, iTextSharp.text.Font.BOLD);
@@ -62,14 +76,41 @@ namespace CRMOzem.Web.Controllers
                 iTextSharp.text.Font fontRegular = new iTextSharp.text.Font(baseFont, 10);
                 iTextSharp.text.Font fontRedBold = new iTextSharp.text.Font(baseFont, 14, iTextSharp.text.Font.BOLD, BaseColor.RED);
 
-                // 📌 Başlık ekleniyor
-                iTextSharp.text.Paragraph title = new iTextSharp.text.Paragraph($"Ekstre Masraf Raporu: {DateTime.UtcNow:MMMM yyyy}", fontTitle);
+                // **Başlık Tablosu (Logo + Kullanıcı Bilgisi)**
+                PdfPTable headerTable = new PdfPTable(2);
+                headerTable.WidthPercentage = 100;
+                headerTable.SetWidths(new float[] { 50f, 50f });
+
+                // **Şirket Logosu**
+                PdfPCell logoCell = new PdfPCell();
+                string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "tinydash-master", "light", "assets", "images", "logo.jpeg");
+                if (System.IO.File.Exists(logoPath))
+                {
+                    iTextSharp.text.Image logo = iTextSharp.text.Image.GetInstance(logoPath);
+                    logo.ScaleAbsolute(100f, 75f);
+                    logoCell.AddElement(logo);
+                }
+                logoCell.Border = PdfPCell.NO_BORDER;
+
+                // **Kullanıcı Adı ve Tarih**
+                PdfPCell userInfoCell = new PdfPCell(new Phrase($"{user?.FullName ?? "Bilinmeyen Kullanıcı"}\n{selectedReport.MonthName} {selectedReport.Year}",
+                    new iTextSharp.text.Font(baseFont, 12, iTextSharp.text.Font.BOLD)))
+                {
+                    HorizontalAlignment = Element.ALIGN_RIGHT,
+                    Border = PdfPCell.NO_BORDER
+                };
+
+                headerTable.AddCell(logoCell);
+                headerTable.AddCell(userInfoCell);
+                document.Add(headerTable);
+
+                // **Başlık**
+                iTextSharp.text.Paragraph title = new iTextSharp.text.Paragraph($"Ekstre Masraf Raporu: {selectedReport.MonthName} {selectedReport.Year}", fontTitle);
                 title.Alignment = Element.ALIGN_CENTER;
+                title.SpacingAfter = 20;
                 document.Add(title);
 
-                document.Add(new iTextSharp.text.Paragraph($"Toplam: {totalAmount:N2} ₺", fontRedBold));
-
-                // 📌 Tablo başlıkları oluşturuluyor
+                // **Tablo Başlıkları**
                 PdfPTable table = new PdfPTable(5);
                 table.WidthPercentage = 100;
                 table.SetWidths(new float[] { 15f, 20f, 35f, 15f, 15f });
@@ -86,25 +127,46 @@ namespace CRMOzem.Web.Controllers
                     table.AddCell(cell);
                 }
 
-                // 📌 Masraf detayları ekleniyor
-                foreach (var report in reports)
+                // **Tablo İçeriği - Tarih sıralaması**
+                foreach (var expense in selectedReport.ExpenseDetails.OrderBy(e => e.Date))
                 {
-                    foreach (var expense in report.ExpenseDetails)
-                    {
-                        table.AddCell(new Phrase(expense.Date.ToString("dd.MM.yyyy"), fontRegular));
-                        table.AddCell(new Phrase(expense.Category, fontRegular));
-                        table.AddCell(new Phrase(expense.Description, fontRegular));
-                        table.AddCell(new Phrase(expense.PaymentMethod.ToString(), fontRegular));
-                        table.AddCell(new Phrase($"{expense.Amount:N2} ₺", fontRegular));
-                    }
+                    table.AddCell(new Phrase(expense.Date.ToString("dd.MM.yyyy"), fontRegular));
+                    table.AddCell(new Phrase(expense.Category, fontRegular));
+                    table.AddCell(new Phrase(expense.Description, fontRegular));
+                    table.AddCell(new Phrase(expense.PaymentMethod.ToString(), fontRegular));
+                    table.AddCell(new Phrase($"{expense.Amount:N2} ₺", fontRegular));
                 }
 
                 document.Add(table);
+
+                // **Toplam Tutar Sağ Alt Köşe**
+                PdfPTable totalAmountTable = new PdfPTable(1);
+                totalAmountTable.WidthPercentage = 30;
+                totalAmountTable.HorizontalAlignment = Element.ALIGN_RIGHT;
+                PdfPCell totalAmountCell = new PdfPCell(new Phrase($"Toplam Tutar: {selectedReport.TotalAmount:N2} ₺", fontRedBold))
+                {
+                    HorizontalAlignment = Element.ALIGN_RIGHT,
+                    Border = PdfPCell.NO_BORDER,
+                    PaddingTop = 10
+                };
+
+                // **İmza Alanı**
+                iTextSharp.text.Paragraph signature = new iTextSharp.text.Paragraph("\n\nİmza :..................", fontRegular);
+                signature.Alignment = Element.ALIGN_LEFT;
+                signature.SpacingBefore = 30;
+                document.Add(signature);
+
+                totalAmountTable.AddCell(totalAmountCell);
+                document.Add(totalAmountTable);
+
                 document.Close();
 
                 byte[] pdfBytes = memoryStream.ToArray();
-                return File(pdfBytes, "application/pdf", "EkstreMasrafRaporu.pdf");
+
+                // **Yeni sekmede açmak için PDF'yi inline olarak döndür**
+                return File(pdfBytes, "application/pdf");
             }
         }
+
     }
 }
