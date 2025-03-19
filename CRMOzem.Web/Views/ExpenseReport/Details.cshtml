@@ -13,8 +13,6 @@
         <div class="card-body">
             <h5 class="card-title">Toplam Tutar: <strong>@Model.TotalAmount ₺</strong></h5>
 
-         
-
             <table class="table table-bordered table-striped mt-3">
                 <thead class="table-dark">
                     <tr>
@@ -36,10 +34,20 @@
                             <td>@detail.PaymentMethod</td>
                             <td>@detail.Amount.ToString("C2")</td>
                             <td>
+                                <!-- Düzenleme Butonu -->
                                 <a href="@Url.Action("Edit", "ExpenseReport", new { id = detail.Id })"
                                    class="btn btn-sm btn-warning">
                                     <i class="fa fa-edit"></i> Düzenle
                                 </a>
+
+                                <!-- Silme Butonu (Onaylı) -->
+                                <form asp-action="DeleteExpense" asp-controller="ExpenseReport" method="post" class="d-inline"
+                                      onsubmit="return confirm('Bu masrafı silmek istediğinize emin misiniz?');">
+                                    <input type="hidden" name="expenseId" value="@detail.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fa fa-trash"></i> Sil
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     }

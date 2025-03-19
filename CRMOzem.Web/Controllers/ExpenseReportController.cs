@@ -126,6 +126,18 @@ namespace CRMOzem.Web.Controllers
             return RedirectToAction("Details", "ExpenseReport", new { id = expense.ReportId });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> DeleteExpense(int expenseId)
+        {
+            var success = await _expenseService.DeleteExpenseAsync(expenseId);
+            if (!success)
+            {
+                return NotFound("Silinmek istenen masraf bulunamadı.");
+            }
+
+            return RedirectToAction("Details", new { id = expenseId });
+        }
+
         public async Task<IActionResult> PrintReport(int reportId)
         {
             var report = await _expenseService.GetReportByIdAsync(reportId);
@@ -234,6 +246,10 @@ namespace CRMOzem.Web.Controllers
                 byte[] pdfBytes = memoryStream.ToArray();
                 return File(pdfBytes, "application/pdf");
             }
+
+
         }
+
+
     }
 }

@@ -17,10 +17,14 @@ namespace CRMOzem.Business.Interfaces
         Task<ExpenseReportViewModel> GetReportByIdAsync(int reportId);
 
         Task<ExpenseDetail> GetExpenseByIdAsync(int id);
+        //Rapor güncelleme
         Task<bool> UpdateExpenseAsync(ExpenseDetail expense);
         Task<List<MonthlyExpenseSummaryViewModel>> GetMonthlyExpensesAsync(string userId = null);
+        //Home/Index bulunduğumuz ayın toplam raporu
         Task<decimal> GetCurrentMonthExpenseAsync(string userId);
+        //Aylık kesim tarihine göre rapor
         Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId);
+        Task<bool> DeleteExpenseAsync(int expenseId);
 
     }
 }

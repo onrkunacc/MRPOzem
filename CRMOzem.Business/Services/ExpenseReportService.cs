@@ -193,6 +193,24 @@ namespace CRMOzem.Business.Services
                 }).ToList()
             };
         }
+        public async Task<bool> DeleteExpenseAsync(int expenseId)
+        {
+            var expense = await _context.ExpenseDetails.FindAsync(expenseId);
+            if (expense == null) return false;
+
+            _context.ExpenseDetails.Remove(expense);
+
+            // **İlgili raporun toplam tutarını güncelle**
+            var report = await _context.ExpenseReports.FindAsync(expense.ReportId);
+            if (report != null)
+            {
+                report.TotalAmount -= expense.Amount;
+                _context.ExpenseReports.Update(report);
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
         public async Task<ExpenseDetail> GetExpenseByIdAsync(int id)
         {
             return await _context.ExpenseDetails.FindAsync(id);
