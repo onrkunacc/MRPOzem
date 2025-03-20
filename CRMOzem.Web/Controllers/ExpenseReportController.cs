@@ -54,7 +54,10 @@ namespace CRMOzem.Web.Controllers
                 var success = await _expenseService.AddExpenseAsync(model, user.Id);
 
                 if (success)
-                    return RedirectToAction("Index");
+                {
+                    TempData["SuccessMessage"] = "Masraf başarıyla eklendi! ✅"; 
+                    return RedirectToAction("AddExpense", new { reportId = model.ReportId });
+                }
 
                 ModelState.AddModelError("", "Masraf eklenemedi.");
             }
@@ -117,10 +120,17 @@ namespace CRMOzem.Web.Controllers
             }
 
             var expense = await _expenseService.GetExpenseByIdAsync(model.Id);
-            if (expense == null) {
-                return NotFound("Masraf Bulunamadı.");            
+            if (expense == null)
+            {
+                return NotFound("Masraf Bulunamadı.");
             }
+
+           
+            expense.Category = model.Category;
+            expense.Description = model.Description;
+            expense.PaymentMethod = model.PaymentMethod;
             expense.Amount = model.Amount;
+            expense.Date = model.Date;
 
             await _expenseService.UpdateExpenseAsync(expense);
             return RedirectToAction("Details", "ExpenseReport", new { id = expense.ReportId });

@@ -67,7 +67,14 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user != null && !string.IsNullOrEmpty(role))
             {
+                // Kullanıcının mevcut rollerini temizle
+                var existingRoles = await _userManager.GetRolesAsync(user);
+                await _userManager.RemoveFromRolesAsync(user, existingRoles);
+
+                // Yeni rolü ata
                 await _userManager.AddToRoleAsync(user, role);
+
+                TempData["SuccessMessage"] = $"{user.FullName} adlı kullanıcının rolü başarıyla {role} olarak güncellendi! ✅";
             }
             return RedirectToAction("Index", "AdminUser");
         }
