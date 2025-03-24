@@ -1,0 +1,97 @@
+﻿@model CRMOzem.Core.ViewModels.EditDocumentViewModel
+@{
+    ViewData["Title"] = "Evrak Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title fw-semibold mb-4">Evrak Güncelle</h1>
+
+            <form asp-action="EditDocument" method="post">
+                <input type="hidden" asp-for="Id" />
+
+                <!-- Kategori -->
+                <div class="mb-3">
+                    <label for="CategoryId">Kategori</label>
+                    <select id="CategoryDropdown" name="CategoryId" class="form-control">
+                        <option value="">Seçiniz</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+
+                <!-- Konu -->
+                <div class="mb-3">
+                    <label asp-for="Subject" class="form-label">Konu :</label>
+                    <input asp-for="Subject" class="form-control" required />
+                    <span asp-validation-for="Subject" class="text-danger"></span>
+                </div>
+
+                <!-- Gönderim Biçimi -->
+                <div class="mb-3">
+                    <label>Gönderim Biçimi</label>
+                    <select id="DeliveryMethod" asp-for="DeliveryMethod" class="form-control">
+                        <option value="Elden">Elden</option>
+                        <option value="Kargo">Kargo</option>
+                    </select>
+                </div>
+
+                <!-- Kargo Şirketi -->
+                <div class="mb-3" id="CargoCompanyDiv" style="display: none;">
+                    <label>Kargo Şirketi</label>
+                    <select asp-for="CargoCompany" class="form-control">
+                        <option value="">Seçiniz</option>
+                        <option value="Yurtiçi">Yurtiçi</option>
+                        <option value="MNG">MNG</option>
+                        <option value="Aras">Aras</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">İptal</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const dropdown = document.getElementById('CategoryDropdown');
+            const selectedId = "@Model.CategoryId";
+
+            fetch('/Evrak/Document/GetCategories')
+                .then(res => res.json())
+                .then(data => {
+                    data.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.id;
+                        opt.text = cat.description;
+                        if (cat.id == selectedId) opt.selected = true;
+                        dropdown.appendChild(opt);
+                    });
+                });
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const method = document.getElementById("DeliveryMethod");
+            const cargoDiv = document.getElementById("CargoCompanyDiv");
+            const cargoSelect = document.querySelector("select[name='CargoCompany']");
+
+            function toggleCargo() {
+                if (method.value === "Kargo") {
+                    cargoDiv.style.display = "block";
+                } else {
+                    cargoDiv.style.display = "none";
+                    cargoSelect.value = "";
+                }
+            }
+
+            toggleCargo();
+            method.addEventListener("change", toggleCargo);
+        });
+    </script>
+}

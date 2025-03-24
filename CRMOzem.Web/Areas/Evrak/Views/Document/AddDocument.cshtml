@@ -23,7 +23,7 @@
                     <span asp-validation-for="Subject" class="text-danger"></span>
                 </div>
 
-                <!-- 📌 Gönderim Biçimi -->
+               
                 <div class="mb-3">
                     <label>Gönderim Biçimi</label>
                     <select id="DeliveryMethod" name="DeliveryMethod" class="form-control">
@@ -32,7 +32,7 @@
                     </select>
                 </div>
 
-                <!-- 📦 Eğer Kargo Seçilirse Kargo Firması Gözüksün -->
+                <!-- Eğer Kargo Seçilirse Kargo Firması Gözüksün -->
                 <div class="mb-3" id="CargoCompanyDiv" style="display: none;">
                     <label>Kargo Şirketi</label>
                     <select name="CargoCompany" class="form-control">
@@ -75,11 +75,11 @@
                 cargoCompanyDiv.style.display = "block";
             } else {
                 cargoCompanyDiv.style.display = "none";
-                cargoCompanySelect.value = ""; // 🚀 "Elden" seçildiğinde CargoCompany sıfırlanıyor
+                cargoCompanySelect.value = ""; // "Elden" seçildiğinde CargoCompany sıfırlanıyor
             }
         });
 
-        // 📌 Form gönderilmeden önce CargoCompany'nin gereksiz gönderilmesini engelle
+        // Form gönderilmeden önce CargoCompany'nin gereksiz gönderilmesini engelle
         document.querySelector("form").addEventListener("submit", function () {
             if (deliveryMethod.value === "Elden") {
                 cargoCompanySelect.value = "";

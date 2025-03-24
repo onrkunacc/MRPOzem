@@ -1,4 +1,5 @@
 ﻿using CRMOzem.Core.Models;
+using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -89,6 +90,95 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
                 Console.WriteLine($"Hata: {ex.Message}");
                 ModelState.AddModelError("", "Beklenmeyen bir hata oluştu.");
                 return View(document);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditDocument(int id)
+        {
+            var document = await _context.FollowDocuments.FindAsync(id);
+            if (document == null)
+                return NotFound();
+
+            var model = new EditDocumentViewModel
+            {
+                Id = document.Id,
+                CategoryId = document.CategoryId,
+                Subject = document.Subject,
+                DeliveryMethod = document.DeliveryMethod,
+                CargoCompany = document.CargoCompany
+            };
+
+            return View(model);
+        }
+        [HttpPost]
+        public async Task<IActionResult> EditDocument(EditDocumentViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // Hataları logla veya debug et
+                foreach (var key in ModelState.Keys)
+                {
+                    var state = ModelState[key];
+                    foreach (var error in state.Errors)
+                    {
+                        Console.WriteLine($"Validation Hatası [{key}]: {error.ErrorMessage}");
+                    }
+                }
+
+                return View(model);
+            }
+
+            try
+            {
+                var document = await _context.FollowDocuments.FindAsync(model.Id);
+                if (document == null)
+                    return NotFound("Evrak bulunamadı.");
+
+                document.Subject = model.Subject;
+                document.DeliveryMethod = model.DeliveryMethod;
+                document.CargoCompany = model.DeliveryMethod == "Kargo" ? model.CargoCompany : null;
+                document.CategoryId = model.CategoryId;
+
+                _context.FollowDocuments.Update(document);
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = "Evrak başarıyla güncellendi.";
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", "Beklenmeyen bir hata oluştu: " + ex.Message);
+                return View(model);
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            try
+            {
+                var document = await _context.FollowDocuments.FindAsync(id);
+                if (document == null)
+                {
+                    return NotFound(new { success = false, message = "Evrak bulunamadı." });
+                }
+
+                // ❗ Not varsa silme uyarısı (opsiyonel - frontendde de yapılabilir)
+                if (!string.IsNullOrWhiteSpace(document.Notes))
+                {
+                    // İstersen bu kontrolü frontend'e taşıyabiliriz
+                    return BadRequest(new { success = false, message = "Notu bulunan evrak silinemez. Önce notu temizleyin." });
+                }
+
+                _context.FollowDocuments.Remove(document);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Evrak başarıyla silindi." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Sunucu hatası: " + ex.Message });
             }
         }
 
