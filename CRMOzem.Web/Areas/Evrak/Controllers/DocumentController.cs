@@ -19,12 +19,39 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
         }
 
         // Evrak Listesi
-        public async Task<IActionResult> Index()
+        [HttpGet]
+        public async Task<IActionResult> Index(string searchTerm, int page = 1)
         {
-            var documents = await _context.FollowDocuments
-                .Include(d => d.Category) // Kategoriyi de dahil et
+            int pageSize = 10;
+
+            var query = _context.FollowDocuments
+                .Include(d => d.Category)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(d => d.Subject.Contains(searchTerm) ||
+                                         d.Code.Contains(searchTerm));
+            }
+
+            var totalDocs = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalDocs / (double)pageSize);
+
+            var documents = await query
+                .OrderByDescending(d => d.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
-            return View(documents);
+
+            var viewModel = new DocumentListViewModel
+            {
+                Documents = documents,
+                SearchTerm = searchTerm,
+                Page = page,
+                TotalPages = totalPages
+            };
+
+            return View(viewModel);
         }
         [HttpGet]
         public async Task<IActionResult> GetCategories()
