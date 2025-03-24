@@ -103,7 +103,7 @@ app.Use(async (context, next) =>
             context.Response.Redirect("/Admin/Admin/Index");
             return;
         }
-        else if (roles.Contains("Muhasebe") && !path.StartsWith("/muhasebe") && !path.StartsWith("/admin"))
+        else if (roles.Contains("Muhasebe") && !path.StartsWith("/muhasebe") && !path.StartsWith("/admin") && !path.StartsWith("/evrak"))
         {
             context.Response.Redirect("/Muhasebe/Cari/Index");
             return;

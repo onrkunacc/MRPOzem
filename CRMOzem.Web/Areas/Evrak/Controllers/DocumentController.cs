@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRMOzem.Web.Areas.Personel.Controllers
+namespace CRMOzem.Web.Areas.Evrak.Controllers
 {
     [Area("Evrak")]
     [Authorize(Roles ="Yönetici,Evrak,Muhasebe,Finans")]

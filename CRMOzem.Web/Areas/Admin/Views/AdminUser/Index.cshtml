@@ -33,7 +33,7 @@
                                 <td class="fw-bold">@user.FullName</td>
                                 <td>@user.Title</td>
                                 <td>@user.Email</td>
-                                <td>@user.PhoneNumber</td>
+                                <td>@user.PhoneNumber.FormatAsPhone()</td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-3">
                                         <a href="@Url.Action("Edit", "AdminUser", new { id = user.Id })" class="btn btn-warning btn-sm px-3">

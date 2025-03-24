@@ -144,12 +144,6 @@
                 <span class="ml-3 item-text">Ana Sayfa</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
-                <i class="fe fe-filter fe-16"></i>
-                <span class="ml-3 item-text">Masraf Raporları Detay</span>
-            </a>
-        </li>
         <!-- Fatura Takip Menüsü -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#muhasebe-fatura-menu">
@@ -199,11 +193,30 @@
                 </li>
             </ul>
         </li>
-
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#evrak-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Evrak Takibi</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="evrak-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Evrak" asp-controller="Document" asp-action="Index">
+                        <i class="fe fe-book fe-14"></i>
+                        <span class="ml-1 item-text">Evrak Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Evrak" asp-controller="Document" asp-action="AddDocument">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Evrak Ekle</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
         <li class="nav-item">
-            <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
-                <i class="fe fe-book fe-16"></i>
-                <span class="ml-3 item-text">Evrak Listesi</span>
+            <a class="nav-link" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                <i class="fe fe-filter fe-16"></i>
+                <span class="ml-3 item-text">Masraf Raporları Detay</span>
             </a>
         </li>
     }
