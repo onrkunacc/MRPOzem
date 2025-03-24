@@ -40,6 +40,12 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
 
+            if (!user.IsApproved)
+            {
+                ModelState.AddModelError("", "Hesabınız henüz yönetici tarafından onaylanmadı.");
+                return View(model);
+            }
+
             var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
             if (!result.Succeeded)
             {
@@ -47,36 +53,21 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
 
-            // Kullanıcının rollerini al
             var roles = await _userManager.GetRolesAsync(user);
 
-           
             if (roles.Contains("Yönetici"))
-            {
                 return RedirectToAction("Index", "Admin", new { area = "Admin" });
-            }
             else if (roles.Contains("Muhasebe"))
-            {
                 return RedirectToAction("Index", "Cari", new { area = "Muhasebe" });
-            }
             else if (roles.Contains("Finans"))
-            {
                 return RedirectToAction("Index", "Dashboard", new { area = "Finans" });
-            }
             else if (roles.Contains("İnsan Kaynakları"))
-            {
                 return RedirectToAction("Index", "Dashboard", new { area = "InsanKaynaklari" });
-            }
             else if (roles.Contains("İhale"))
-            {
                 return RedirectToAction("Index", "BidDocument", new { area = "Ihale" });
-            }
             else if (roles.Contains("Evrak"))
-            {
                 return RedirectToAction("Index", "Document", new { area = "Evrak" });
-            }
 
-            // Eğer yalnızca Kullanıcı rolü varsa Home/Index'e yönlendir
             return RedirectToAction("Index", "Home");
         }
 
