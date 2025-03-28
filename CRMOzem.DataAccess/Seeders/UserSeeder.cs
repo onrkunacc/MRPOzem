@@ -25,6 +25,7 @@ namespace CRMOzem.DataAccess.Seeders
                 ("ik", "İnsan Kaynakları", "ik@ozemmedikal.com", "444-444-4444", "İK Uzmanı", "İnsan Kaynakları"),
                 ("ihale", "İhale", "ihale@ozemmedikal.com", "555-555-5555", "İhale Yetkilisi", "İhale"),
                 ("evrak", "Evrak", "info@ozemmedikal.com", "555-555-5555", "Evrak İşlemleri", "Evrak"),
+                ("malikdemir", "Muhammet Malik Demir", "mmdmr@ozemmedikal.com", "666-666-6666", "Mali Müşavir", "MMDMR")
 
             };
 
