@@ -133,10 +133,8 @@ namespace CRMOzem.Web.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            Console.WriteLine("Çıkış yapılıyor");
             await _signInManager.SignOutAsync();  
             HttpContext.Response.Cookies.Delete(".AspNetCore.Identity.Application"); 
-            Console.WriteLine("Çıkış yapıldı");
             return RedirectToAction("Login", "Account");
         }
 
@@ -164,18 +162,44 @@ namespace CRMOzem.Web.Controllers
             if (user == null)
             {
                 TempData["Message"] = "E-posta adresiniz sistemde bulunamadı.";
-                return View();
+                return View(model);
             }
 
-            // ✅ Şifre sıfırlama token oluştur
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            try
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var resetLink = Url.Action("ResetPassword", "Account", new { token, email = user.Email }, Request.Scheme);
 
-            // ✅ Kullanıcıya şifre sıfırlama linki içeren bir e-posta gönder
-            var resetLink = Url.Action("ResetPassword", "Account", new { token, email = user.Email }, Request.Scheme);
-            await _emailSender.SendEmailAsync(user.Email, "Şifre Sıfırlama", $"Şifrenizi sıfırlamak için <a href='{resetLink}'>buraya tıklayın</a>.");
+                string emailBody = $@"
+                <div style='font-family:Arial, sans-serif; padding:20px; background-color:#f4f4f4;'>
+                    <div style='max-width:600px; margin:auto; background-color:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);'>
+                        <h2 style='color:#2c3e50;'>🔐 Şifre Sıfırlama İsteği</h2>
+                        <p>Merhaba <strong>{user.FullName}</strong>,</p>
+                        <p>Şifrenizi sıfırlamak için aşağıdaki butona tıklayabilirsiniz:</p>
+                        <div style='text-align:center; margin:40px 0;'>
+                            <a href='{resetLink}'
+                               style='display:inline-block; background-color:#28a745; color:white; padding:15px 30px;
+                                      font-size:16px; font-weight:bold; text-decoration:none; border-radius:8px;
+                                      box-shadow:0 2px 6px rgba(0,0,0,0.2); transition:all 0.3s ease;'>
+                                Şifremi Sıfırla
+                            </a>
+                        </div>
+                        <p>Bu isteği siz yapmadıysanız, bu e-postayı görmezden gelebilirsiniz.</p>
+                        <p style='color:#888;'>İyi günler dileriz, <br/><strong>ÖZEM</strong></p>
+                    </div>
+                </div>";
 
-            TempData["Message"] = "Şifre sıfırlama bağlantınız e-posta adresinize gönderildi.";
-            return RedirectToAction("ForgotPassword");
+                await _emailSender.SendEmailAsync(user.Email, "Şifre Sıfırlama Bağlantınız", emailBody);
+
+                TempData["Message"] = "Şifre sıfırlama bağlantınız e-posta adresinize gönderildi.";
+                return RedirectToAction("Login", "Account");
+            }
+            catch (Exception ex)
+            {
+                // loglama mekanizmanız varsa burada loglayabilirsiniz
+                TempData["Error"] = "İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.";
+                return View(model);
+            }
         }
         [HttpGet]
         [AllowAnonymous]

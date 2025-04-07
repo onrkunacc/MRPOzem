@@ -13,7 +13,7 @@ namespace CRMOzem.DataAccess.Seeders
         public static async Task SeedRoleAsync(IServiceProvider serviceProvider)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            string[] roleNames = { "İnsan Kaynakları", "Finans", "İhale", "Yönetici", "Kullanıcı" ,"Muhasebe","Evrak","MMDMR"};
+            string[] roleNames = { "İnsan Kaynakları", "Finans", "İhale", "Yönetici", "Kullanıcı" ,"Muhasebe","Evrak"};
 
             foreach (var role in roleNames) 
             {

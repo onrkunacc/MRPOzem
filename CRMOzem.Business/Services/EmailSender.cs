@@ -38,7 +38,7 @@ namespace CRMOzem.Business.Services
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(_configuration["EmailSettings:FromEmail"], "Özem CRM"),
+                From = new MailAddress(_configuration["EmailSettings:FromEmail"], "Özem MRP"),
                 Subject = subject,
                 Body = message,
                 IsBodyHtml = true
