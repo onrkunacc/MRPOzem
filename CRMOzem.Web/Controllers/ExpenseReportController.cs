@@ -1,4 +1,5 @@
 ﻿using CRMOzem.Business.Interfaces;
+using CRMOzem.Core.Enums;
 using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using iTextSharp.text;
@@ -40,7 +41,8 @@ namespace CRMOzem.Web.Controllers
             var model = new ExpenseDetailViewModel
             {
                 ReportId = reportId, // Kullanıcının mevcut raporuna eklenecek
-                Date = DateTime.Now // Varsayılan olarak bugünü ayarla
+                Date = DateTime.Now, // Varsayılan olarak bugünü ayarla
+                PaymentMethod = (PaymentMethod)3 // ← 3 numaralı ödeme yöntemi varsayılan olarak seçilir
             };
             return View(model);
         }

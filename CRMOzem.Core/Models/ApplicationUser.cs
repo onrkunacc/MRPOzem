@@ -21,6 +21,6 @@ namespace CRMOzem.Core.Models
         public bool IsApproved { get; set; }
         [EnumDataType(typeof(PaymentMethod))]
         public PaymentMethod DefaultPaymentMethod { get; set; }
-        public int BillingCycleWeek { get; set; } = 2;
+        public int BillingCycleWeek { get; set; } = 1;
     }
 }
