@@ -2,79 +2,100 @@
 @{
     ViewData["Title"] = "Masraf Raporları";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var currentMonth = DateTime.Now.Month;
+    var selectedYear = Model.SelectedYear ?? DateTime.Now.Year;
+
+    var selectedMonthTotal = Model.Reports
+        .Where(r => r.MonthYear.Month == currentMonth && r.MonthYear.Year == selectedYear)
+        .Sum(r => r.TotalAmount);
+
+    var selectedYearTotal = Model.Reports
+        .Where(r => r.MonthYear.Year == selectedYear)
+        .Sum(r => r.TotalAmount);
 }
 
 <div class="container py-4">
     <h2 class="text-center font-bold text-2xl mb-4">Masraf Raporları</h2>
     <hr />
 
-    <!-- Kullanıcı Seçme DropDown -->
     <form method="get" class="mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
                 <label for="userId" class="font-weight-bold">Kullanıcı Seç:</label>
-                <select id="userId" name="userId" class="form-control" onchange="this.form.submit()">
-                    <option value="">Tüm Kullanıcılar</option>
-                    @foreach (var user in Model.Users)
+                @Html.DropDownList("userId", Model.Users, "Tüm Kullanıcılar", new
                     {
-                        <option value="@user.Value" selected="@(user.Value == Context.Request.Query["userId"])">@user.Text</option>
-                    }
-                </select>
+                        @class = "form-control",
+                        onchange = "this.form.submit()"
+                    })
+            </div>
+            <div class="col-md-3">
+                <label for="year" class="font-weight-bold">Yıl Seç:</label>
+                @Html.DropDownList("year", Model.YearSelectList, "Tüm Yıllar", new
+                    {
+                        @class = "form-control",
+                        onchange = "this.form.submit()"
+                    })
             </div>
         </div>
     </form>
 
-    <!-- Aylık ve Yıllık Toplamlar -->
     <div class="row mb-3">
         <div class="col-md-6">
             <h4>
                 @DateTime.Now.ToString("MMMM") Ayı Toplam:
                 <span class="text-primary font-weight-bold">
-                    @Model.Reports.Where(r => r.MonthYear.Month == DateTime.Now.Month).Sum(r => r.TotalAmount).ToString("C")
+                    @selectedMonthTotal.ToString("C")
                 </span>
             </h4>
         </div>
         <div class="col-md-6">
-            <h4>Yıllık Toplam: <span class="text-danger font-weight-bold">@Model.Reports.Where(r => r.MonthYear.Year == DateTime.Now.Year).Sum(r => r.TotalAmount).ToString("C")</span></h4>
+            <h4>
+                Yıllık Toplam:
+                <span class="text-danger font-weight-bold">
+                    @selectedYearTotal.ToString("C")
+                </span>
+            </h4>
         </div>
     </div>
-
-    @{
-        var sortColumn = Context.Request.Query["sortColumn"];
-        var sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc";
-    }
 
     <table class="table table-bordered table-hover">
         <thead class="bg-dark text-white">
             <tr>
-                <th scope="col">
-                    <a href="@Url.Action("Index", new { userId = Context.Request.Query["userId"], sortColumn = "MonthYear", sortDirection })" class="text-white">
+                <th>
+                    <a href="@Url.Action("Index", new {
+                        userId = Context.Request.Query["userId"],
+                        year = Context.Request.Query["year"],
+                        sortColumn = "MonthYear",
+                        sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc"
+                    })" class="text-white">
                         Tarih
-                        @if (sortColumn == "MonthYear")
+                        @if (Context.Request.Query["sortColumn"] == "MonthYear")
                         {
-                            <i class="fa @(sortDirection == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                            <i class="fa @(Context.Request.Query["sortDirection"] == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
                         }
                     </a>
                 </th>
-                <th scope="col">Kullanıcı</th>
-                <th scope="col">
-                    <a href="@Url.Action("Index", new { userId = Context.Request.Query["userId"], sortColumn = "TotalAmount", sortDirection })" class="text-white">
+                <th>Kullanıcı</th>
+                <th>
+                    <a href="@Url.Action("Index", new {
+                        userId = Context.Request.Query["userId"],
+                        year = Context.Request.Query["year"],
+                        sortColumn = "TotalAmount",
+                        sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc"
+                    })" class="text-white">
                         Toplam Tutar (₺)
-                        @if (sortColumn == "TotalAmount")
+                        @if (Context.Request.Query["sortColumn"] == "TotalAmount")
                         {
-                            <i class="fa @(sortDirection == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                            <i class="fa @(Context.Request.Query["sortDirection"] == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
                         }
                     </a>
                 </th>
-                <th scope="col">Detaylar</th>
+                <th>Detaylar</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var report in Model.Reports
-            .OrderBy(r => sortColumn == "MonthYear" && sortDirection == "asc" ? r.MonthYear : DateTime.MaxValue)
-            .ThenByDescending(r => sortColumn == "MonthYear" && sortDirection == "desc" ? r.MonthYear : DateTime.MinValue)
-            .ThenBy(r => sortColumn == "TotalAmount" && sortDirection == "asc" ? r.TotalAmount : decimal.MaxValue)
-            .ThenByDescending(r => sortColumn == "TotalAmount" && sortDirection == "desc" ? r.TotalAmount : decimal.MinValue))
+            @foreach (var report in Model.PagedReports)
             {
                 <tr>
                     <td>@report.MonthYear.ToString("MMMM yyyy")</td>
@@ -90,13 +111,25 @@
         </tbody>
     </table>
 
+    <div class="d-flex justify-content-center">
+        @Html.PagedListPager(Model.PagedReports, page => Url.Action("Index", new
+            {
+                userId = Context.Request.Query["userId"],
+                year = Context.Request.Query["year"],
+                sortColumn = Context.Request.Query["sortColumn"],
+                sortDirection = Context.Request.Query["sortDirection"],
+                page
+            }), new PagedListRenderOptions
+   {
+       Display = PagedListDisplayMode.IfNeeded,
+       MaximumPageNumbersToDisplay = 5,
+       DisplayEllipsesWhenNotShowingAllPageNumbers = true
+   })
+    </div>
 
-
-    <!-- Grafik Butonu -->
     <div class="text-center mt-4">
         <a href="@Url.Action("Charts", "AdminExpenseReport")" class="btn btn-primary btn-lg">
             <i class="fe fe-chart"></i> Grafik Görüntüle
         </a>
     </div>
 </div>
-

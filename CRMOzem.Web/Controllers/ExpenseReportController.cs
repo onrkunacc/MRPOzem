@@ -42,7 +42,7 @@ namespace CRMOzem.Web.Controllers
             {
                 ReportId = reportId, // Kullanıcının mevcut raporuna eklenecek
                 Date = DateTime.Now, // Varsayılan olarak bugünü ayarla
-                PaymentMethod = (PaymentMethod)3 // ← 3 numaralı ödeme yöntemi varsayılan olarak seçilir
+                PaymentMethod = (PaymentMethod)3 
             };
             return View(model);
         }

@@ -3,6 +3,7 @@ using CRMOzem.Core.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using X.PagedList.Extensions;
 
 namespace CRMOzem.Web.Areas.Admin.Controllers
 {
@@ -21,17 +22,37 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
             _expenseReportService = expenseReportService;
         }
 
-        public async Task<IActionResult> Index(string userId)
+        public async Task<IActionResult> Index(string userId, int? year, string sortColumn = "MonthYear", string sortDirection = "desc", int page = 1)
         {
             var reports = string.IsNullOrEmpty(userId)
                 ? await _reportService.GetAllReportsAsync()
                 : await _reportService.GetReportsByUserIdAsync(userId);
 
+            if (year.HasValue)
+                reports = reports.Where(r => r.MonthYear.Year == year.Value).ToList();
+
+            reports = sortColumn switch
+            {
+                "TotalAmount" => (sortDirection == "asc"
+                    ? reports.OrderBy(r => r.TotalAmount)
+                    : reports.OrderByDescending(r => r.TotalAmount)).ToList(),
+
+                _ => (sortDirection == "asc"
+                    ? reports.OrderBy(r => r.MonthYear)
+                    : reports.OrderByDescending(r => r.MonthYear)).ToList(),
+            };
+
+            var availableYears = reports.Select(r => r.MonthYear.Year).Distinct().OrderByDescending(y => y).ToList();
+            var pagedReports = reports.ToPagedList(page, 10);
+
             var users = await _userService.GetUsersByRoleAsync("Kullanıcı");
 
             var model = new AdminExpenseReportViewModel
             {
+                PagedReports = pagedReports,
                 Reports = reports,
+                AvailableYears = availableYears,
+                SelectedYear = year,
                 Users = users.Select(u => new SelectListItem
                 {
                     Value = u.Id,
@@ -42,7 +63,8 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
             return View(model);
         }
 
-        
+
+
         public async Task<IActionResult> Details(int id)
         {
             var report = await _expenseReportService.GetReportByIdAsync(id);
