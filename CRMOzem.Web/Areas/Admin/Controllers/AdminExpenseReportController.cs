@@ -43,7 +43,7 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
             };
 
             var availableYears = reports.Select(r => r.MonthYear.Year).Distinct().OrderByDescending(y => y).ToList();
-            var pagedReports = reports.ToPagedList(page, 10);
+            var pagedReports = reports.ToPagedList(page, 20);
 
             var users = await _userService.GetUsersByRoleAsync("Kullanıcı");
 
