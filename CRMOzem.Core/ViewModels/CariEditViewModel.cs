@@ -26,6 +26,9 @@ namespace CRMOzem.Core.ViewModels
         [Required(ErrorMessage = "İlçe zorunludur.")]
         public string Ilce { get; set; }
 
+        public string? TeklifNo { get; set; }     
+        public string? IhaleNo { get; set; }      
+
         [Required(ErrorMessage = "Cari Grubu seçmelisiniz.")]
         public int CariGrubuId { get; set; }
 

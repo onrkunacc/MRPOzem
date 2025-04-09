@@ -142,6 +142,10 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                     Il = cari.Il,
                     Ilce = cari.Ilce,
                     CariGrubuId = cari.CariGrubuId,
+
+                    TeklifNo = cari.TeklifNo,    
+                    IhaleNo = cari.IhaleNo,      
+
                     CariGruplari = cariGruplari
                 };
 
@@ -194,6 +198,8 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                 existingCari.CariGrubuId = viewModel.CariGrubuId;
                 existingCari.Il = viewModel.Il;
                 existingCari.Ilce = viewModel.Ilce;
+                existingCari.TeklifNo = viewModel.TeklifNo; 
+                existingCari.IhaleNo = viewModel.IhaleNo;
 
                 _context.Carilers.Update(existingCari);  
                 int affectedRows = await _context.SaveChangesAsync();

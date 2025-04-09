@@ -22,7 +22,7 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string search, int page = 1, int pageSize = 50, int year = 0)
+        public async Task<IActionResult> Index(string search, int page = 1, int pageSize = 25, int year = 0)
         {
             var invoicesQuery = _context.Invoices
                 .Include(i => i.Cari)
@@ -138,15 +138,24 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
         {
-            var invoice = await _context.Invoices.FindAsync(id);
-            if (invoice == null)
+            try
             {
-                return NotFound();
-            }
+                var invoice = await _context.Invoices.FindAsync(id);
+                if (invoice == null)
+                {
+                    return Json(new { success = false, message = "Fatura bulunamadı." });
+                }
 
-            _context.Invoices.Remove(invoice);
-            await _context.SaveChangesAsync();
-            return RedirectToAction("Index");
+                _context.Invoices.Remove(invoice);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Fatura başarıyla silindi." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Fatura silme hatası: {ex.Message}");
+                return Json(new { success = false, message = "Fatura silinirken hata oluştu." });
+            }
         }
 
 

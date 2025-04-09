@@ -22,7 +22,7 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string searchTerm, int page = 1)
         {
-            int pageSize = 10;
+            int pageSize = 20;
 
             var query = _context.FollowDocuments
                 .Include(d => d.Category)
