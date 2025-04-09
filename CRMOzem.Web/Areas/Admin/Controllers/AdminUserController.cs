@@ -20,7 +20,10 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var users = _userManager.Users.ToList();
+            var users = await _userManager.Users
+                .OrderBy(u => u.FullName)  
+                .ToListAsync();
+
             return View(users);
         }
 
