@@ -6,17 +6,16 @@
 
 <div class="container mt-4">
     <div class="card shadow-lg">
-        <!-- 📌 Başlık -->
         <div class="card-header bg-gradient-dark text-white text-center">
             <h3 class="mb-0">Fatura Listesi</h3>
         </div>
 
         <div class="card-body">
-            <!-- 📌 Filtreleme Seçeneği -->
+            <!-- Filtreleme -->
             <div class="d-flex justify-content-between mb-3">
                 <form asp-action="Index" method="get" class="d-flex">
                     <input type="text" name="search" class="form-control me-2" placeholder="Cari Adı / Ay / Tutar Ara..."
-                           value="@ViewBag.SearchTerm">
+                           value="@ViewBag.SearchTerm" />
                     &nbsp;&nbsp;
                     <button type="submit" class="btn btn-primary">Ara</button>
                 </form>
@@ -35,6 +34,8 @@
                     </select>
                 </form>
             </div>
+
+            <!-- Sayfalama -->
             @if (ViewBag.TotalPages > 1)
             {
                 <nav>
@@ -49,12 +50,20 @@
                 </nav>
             }
 
-            <!-- 📌 Fatura Tablosu -->
+            <!-- Tablo -->
             <div class="table-responsive">
                 <table class="table table-bordered align-middle text-center">
                     <thead class="bg-secondary text-white">
                         <tr>
-                            <th scope="col">Cari Unvanı</th>
+                            <th scope="col">
+                                <a href="@Url.Action("Index", new { sortColumn = "Cari", sortDirection = ViewBag.SortDirection == "asc" ? "desc" : "asc", search = ViewBag.SearchTerm, year = ViewBag.SelectedYear })" class="text-white">
+                                    Cari Unvanı
+                                    @if (ViewBag.SortColumn == "Cari")
+                                    {
+                                        <i class="fa @(ViewBag.SortDirection == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                                    }
+                                </a>
+                            </th>
                             <th scope="col">Dönem</th>
                             <th scope="col">Ay</th>
                             <th scope="col">Tutar</th>
@@ -70,7 +79,7 @@
                                 <td>@invoice.Donemi</td>
                                 <td>@DateHelper.GetMonthName(invoice.Ay)</td>
                                 <td>
-                                    <span class="badge @(invoice.Tutar > 0 ? "bg-success" : "bg-warning text-dark") p-2 fs-6">
+                                    <span class="badge @(invoice.Tutar > 0 ? "bg-success" : "bg-warning text-dark") p-2 px-3 fs-2 fw-bold">
                                         @(invoice.Tutar > 0 ? invoice.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR")) + " ₺" : "Henüz girilmemiş")
                                     </span>
                                 </td>
@@ -117,21 +126,22 @@
     </div>
 </div>
 
-<!-- 📌 JavaScript -->
+<!-- JavaScript -->
 <script>
     function deleteInvoice(invoiceId) {
-        if (!confirm("Bu faturayı silmek istediğinizden emin misiniz?")) {
-            return;
-        }
+        if (!confirm("Bu faturayı silmek istediğinizden emin misiniz?")) return;
 
         fetch(`/Muhasebe/Invoice/Delete/${invoiceId}`, {
-            method: "DELETE",
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest"
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 alert(data.message);

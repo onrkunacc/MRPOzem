@@ -1,0 +1,128 @@
+﻿@model List<CariAylikAnalizViewModel>
+@{
+    ViewData["Title"] = "Analiz Paneli";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="text-center">Fatura Analiz Paneli</h2>
+
+<form method="get" class="row mb-4 g-2">
+    <div class="col-md-4">
+        <label>Seçilen Cari</label>
+        @Html.DropDownList("selectedCariId", (SelectList)ViewBag.Cariler, "Cari Seçiniz", new { @class = "form-control" })
+    </div>
+
+    <div class="col-md-2">
+        <label>Yıl</label>
+        <select name="year" class="form-control">
+            @for (int y = DateTime.Now.Year - 5; y <= DateTime.Now.Year; y++)
+            {
+                if (ViewBag.SelectedYear == y)
+                {
+                    <option value="@y" selected>@y</option>
+                }
+                else
+                {
+                    <option value="@y">@y</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label>Grafik Türü</label>
+        <select name="chartType" class="form-control">
+            @foreach (var type in new[] { "bar", "line", "pie", "doughnut" })
+            {
+                if (ViewBag.ChartType == type)
+                {
+                    <option value="@type" selected>@type.ToUpper()</option>
+                }
+                else
+                {
+                    <option value="@type">@type.ToUpper()</option>
+                }
+            }
+
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label>Tek Ay</label>
+        <select name="month" class="form-control">
+            <option value="">Tümü</option>
+            @for (int i = 1; i <= 12; i++)
+            {
+                var ay = System.Globalization.CultureInfo.GetCultureInfo("tr-TR").DateTimeFormat.GetMonthName(i);
+
+                if (ViewBag.SelectedMonth == i)
+                {
+                    <option value="@i" selected>@ay</option>
+                }
+                else
+                {
+                    <option value="@i">@ay</option>
+                }
+            }
+
+        </select>
+    </div>
+
+    <div class="col-md-2 mt-4">
+        <button class="btn btn-primary w-100">Filtrele</button>
+    </div>
+</form>
+
+@if (Model != null && Model.Any())
+{
+    <canvas id="grafik" height="75"></canvas>
+
+    @section Scripts {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+        <script>
+            const labels = @Html.Raw(JsonConvert.SerializeObject(
+              Enumerable.Range(1, 12).Select(i =>
+                  new System.Globalization.CultureInfo("tr-TR").DateTimeFormat.GetMonthName(i)
+              )
+            ));
+
+            const datasets = @Html.Raw(JsonConvert.SerializeObject(
+            Model.Select(c => new
+            {
+                label = c.CariAdi,
+                data = c.AylikTutarlar,
+                fill = false
+            })
+            ));
+
+            new Chart(document.getElementById('grafik'), {
+                type: '@ViewBag.ChartType',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Aylık Fatura Karşılaştırma"
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            color: '#000',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: (value) => value > 0 ? value.toLocaleString('tr-TR') + ' ₺' : ''
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        </script>
+    }
+}

@@ -1,9 +1,11 @@
-﻿using CRMOzem.Business.Interfaces;
+﻿using System.Globalization;
+using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRMOzem.Web.Areas.Muhasebe.Controllers
@@ -22,43 +24,45 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string search, int page = 1, int pageSize = 25, int year = 0)
+        [HttpGet]
+        public async Task<IActionResult> Index(string search, int page = 1, int pageSize = 25, int year = 0, string sortColumn = "Id", string sortDirection = "desc")
         {
             var invoicesQuery = _context.Invoices
                 .Include(i => i.Cari)
                 .OrderByDescending(i => i.Id)
                 .AsQueryable();
 
-            // Yıla göre filtreleme
             if (year > 0)
-            {
                 invoicesQuery = invoicesQuery.Where(i => i.Donemi == year);
-            }
 
-            // Faturaları önce bir listeye çekelim
             var invoicesList = await invoicesQuery.ToListAsync();
 
-            // Ay isimlerini dönüştürelim
             var invoicesWithMonthNames = invoicesList
                 .Select(i => new
                 {
                     Invoice = i,
-                    MonthName = CRMOzem.Business.Extensions.DateHelper.GetMonthName(i.Ay) // Ay ismini al
-                })
-                .ToList();
+                    MonthName = CRMOzem.Business.Extensions.DateHelper.GetMonthName(i.Ay)
+                }).ToList();
 
-            // Arama (Cari Adı, Ay Adı, Tutar)
             if (!string.IsNullOrEmpty(search))
             {
+                string normalizedSearch = search.ToLower(new System.Globalization.CultureInfo("tr-TR"));
+
                 invoicesWithMonthNames = invoicesWithMonthNames
                     .Where(i =>
-                        i.Invoice.Cari.Unvan.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                        i.MonthName.Contains(search, StringComparison.OrdinalIgnoreCase) || // Ay adına göre filtreleme
-                        i.Invoice.Tutar.ToString().Contains(search))
-                    .ToList();
+                        i.Invoice.Cari.Unvan.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains(normalizedSearch) ||
+                        i.MonthName.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains(normalizedSearch) ||
+                        i.Invoice.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR")).Contains(normalizedSearch)
+                    ).ToList();
             }
 
-            // Sayfalama işlemi
+            invoicesWithMonthNames = (sortColumn, sortDirection.ToLower()) switch
+            {
+                ("Cari", "asc") => invoicesWithMonthNames.OrderBy(i => i.Invoice.Cari.Unvan).ToList(),
+                ("Cari", "desc") => invoicesWithMonthNames.OrderByDescending(i => i.Invoice.Cari.Unvan).ToList(),
+                _ => invoicesWithMonthNames.OrderByDescending(i => i.Invoice.Id).ToList()
+            };
+
             var totalRecords = invoicesWithMonthNames.Count();
             var paginatedInvoices = invoicesWithMonthNames
                 .Skip((page - 1) * pageSize)
@@ -70,9 +74,12 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
             ViewBag.TotalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
             ViewBag.SearchTerm = search;
             ViewBag.SelectedYear = year;
+            ViewBag.SortColumn = sortColumn;
+            ViewBag.SortDirection = sortDirection;
 
             return View(paginatedInvoices);
         }
+
         public async Task<IActionResult> AddInvoice(int? cariId)
         {
             ViewBag.Cariler = await _context.Carilers
@@ -135,7 +142,7 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
         }
 
         // Fatura Silme
-        [HttpDelete]
+        [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -317,6 +324,46 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                 return RedirectToAction("ExportToExcelView");
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> AnalizPaneli(int? selectedCariId, int? year, string chartType = "bar", int? month = null)
+        {
+            int selectedYear = year ?? DateTime.Now.Year;
+
+            var allCariler = await _context.Carilers.ToListAsync();
+
+            ViewBag.Cariler = new SelectList(allCariler, "Id", "Unvan", selectedCariId);
+
+            ViewBag.ChartType = chartType;
+            ViewBag.SelectedYear = selectedYear;
+            ViewBag.SelectedMonth = month;
+
+            if (!selectedCariId.HasValue)
+                return View(new List<CariAylikAnalizViewModel>()); 
+
+            var faturaQuery = _context.Invoices
+                .Include(i => i.Cari)
+                .Where(i => i.Donemi == selectedYear && i.CariId == selectedCariId.Value);
+
+            if (month.HasValue)
+                faturaQuery = faturaQuery.Where(i => i.Ay == month.Value);
+
+            var faturaList = await faturaQuery.ToListAsync();
+
+            var grouped = faturaList
+                .GroupBy(i => i.Cari.Unvan)
+                .Select(g => new CariAylikAnalizViewModel
+                {
+                    CariAdi = g.Key,
+                    AylikTutarlar = Enumerable.Range(1, 12)
+                        .Select(ay => g.Where(f => f.Ay == ay).Sum(f => f.Tutar))
+                        .ToList()
+                }).ToList();
+
+            return View(grouped);
+        }
+
+
 
     }
 }
