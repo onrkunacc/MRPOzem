@@ -1,0 +1,81 @@
+﻿@model List<CRMOzem.Core.ViewModels.BillingCycleReportViewModel>
+
+@{
+    ViewData["Title"] = "Kullanıcı Ekstre Raporları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="text-center text-primary mb-4">📊 Kullanıcı Ekstre Raporları</h2>
+    <hr />
+
+    
+    <form method="get" asp-action="Index" class="row mb-4 g-3 align-items-center">
+        <div class="col-md-4">
+            <label>Kullanıcı Seç</label>
+            <select name="userId" class="form-control">
+                <option value="">Kullanıcı Seçiniz</option>
+                @foreach (var user in ViewBag.Users as List<SelectListItem>)
+                {
+                    <option value="@user.Value" selected="@(user.Value == ViewBag.SelectedUserId ? "selected" : null)">
+                        @user.Text
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Yıl</label>
+            <input type="number" name="year" class="form-control" value="@ViewBag.SelectedYear" placeholder="Örn: 2025" />
+        </div>
+        <div class="col-md-2">
+            <label>Ay</label>
+            <input type="number" name="month" class="form-control" value="@ViewBag.SelectedMonth" placeholder="1 - 12" />
+        </div>
+        <div class="col-md-2 align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+        </div>
+        <div class="col-md-2 align-self-end">
+            <a href="@Url.Action("Index", "AdminBillingCycle", new { area = "Admin" })" class="btn btn-secondary w-100">Temizle</a>
+        </div>
+    </form>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger text-center">@TempData["Error"]</div>
+    }
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="alert alert-info fw-bold text-center">
+            Toplam Tutar: <span class="text-success">@(((decimal)ViewBag.TotalAmount).ToString("C"))</span>
+        </div>
+
+        <div class="row">
+            @foreach (var report in Model.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month))
+            {
+                <div class="col-md-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body text-center">
+                            <h5 class="fw-bold">@report.MonthName @report.Year</h5>
+                            <p class="text-muted">Toplam Tutar:</p>
+                            <p class="fw-bold text-success">@report.TotalAmount.ToString("C")</p>
+                            <a href="@Url.Action("Details", "BillingCycleReport", new { year = report.Year, month = report.Month })"
+                               class="btn btn-outline-primary btn-sm" target="_blank">
+                                📄 Detaylı Tablo
+                            </a>
+                            <hr />
+                            <a href="@Url.Action("PrintBillingCycleReport", "BillingCycleReport", new { year = report.Year, month = report.Month })"
+                               class="btn btn-outline-danger btn-sm" target="_blank">
+                                🖨️ Yazdır / PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning text-center">Henüz filtreye uygun bir ekstre raporu bulunamadı.</div>
+    }
+</div>
