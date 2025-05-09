@@ -16,5 +16,7 @@ namespace CRMOzem.Business.Interfaces
         Task<IdentityResult> RegisterUserAsync(RegisterViewModel model);
         Task LogoutUserAsync();
         Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName);
+        Task<ApplicationUser> GetUserByIdAsync(string userId);
+
     }
 }

@@ -59,15 +59,11 @@
                             <h5 class="fw-bold">@report.MonthName @report.Year</h5>
                             <p class="text-muted">Toplam Tutar:</p>
                             <p class="fw-bold text-success">@report.TotalAmount.ToString("C")</p>
-                            <a href="@Url.Action("Details", "BillingCycleReport", new { year = report.Year, month = report.Month })"
-                               class="btn btn-outline-primary btn-sm" target="_blank">
+                            <a class="btn btn-outline-primary btn-sm" target="_blank"
+                               href="@Url.Action("Details", "AdminBillingCycle", new { area = "Admin", userId = ViewBag.SelectedUserId, year = report.Year, month = report.Month })">
                                 📄 Detaylı Tablo
                             </a>
                             <hr />
-                            <a href="@Url.Action("PrintBillingCycleReport", "BillingCycleReport", new { year = report.Year, month = report.Month })"
-                               class="btn btn-outline-danger btn-sm" target="_blank">
-                                🖨️ Yazdır / PDF
-                            </a>
                         </div>
                     </div>
                 </div>

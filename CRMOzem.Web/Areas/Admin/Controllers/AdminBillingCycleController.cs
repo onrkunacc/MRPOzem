@@ -56,5 +56,28 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
                 return View(new List<BillingCycleReportViewModel>());
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Details(string userId,int year,int month)
+        {
+            try
+            {
+                var reports = await _expenseReportService.GetUserBillingCycleReportsAsync(userId);
+                var selectedReport = reports.FirstOrDefault(r => r.Year == year && r.Month == month);
+
+                if (selectedReport == null)
+                    return NotFound("Seçilen döneme ait rapor bulunamadı.");
+
+                ViewBag.UserName = (await _userService.GetUserByIdAsync(userId))?.FullName ?? "Bilinmeyen Kullanıcı";
+
+                return View(selectedReport);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AdminBillingCycleController - Details] HATA: {ex.Message}");
+                TempData["Error"] = "Detaylar yüklenirken hata oluştu.";
+                return RedirectToAction("Index");
+            }
+        }
     }
 }

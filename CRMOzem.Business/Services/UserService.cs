@@ -57,5 +57,9 @@ namespace CRMOzem.Business.Services
         {
             return await _userManager.GetUsersInRoleAsync(roleName) as List<ApplicationUser>;
         }
+        public async Task<ApplicationUser> GetUserByIdAsync(string userId)
+        {
+            return await _userManager.FindByIdAsync(userId);
+        }
     }
 }
