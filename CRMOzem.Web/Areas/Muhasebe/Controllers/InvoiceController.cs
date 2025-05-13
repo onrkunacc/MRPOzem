@@ -79,23 +79,22 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
 
             return View(paginatedInvoices);
         }
-
+        [HttpGet]
         public async Task<IActionResult> AddInvoice(int? cariId)
         {
             ViewBag.Cariler = await _context.Carilers
                 .Select(c => new { c.Id, c.Unvan })
                 .ToListAsync();
 
+            
             ViewBag.SelectedCariId = cariId;
             return View(new Invoices { CariId = cariId ?? 0 });
         }
-
         [HttpPost]
         public async Task<IActionResult> AddInvoice(Invoices invoice)
         {
             try
             {
-                // Tutarı tr-TR formatına göre parse et
                 var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
                 invoice.Tutar = decimal.Parse(invoice.Tutar.ToString(cultureInfo), cultureInfo);
                 ModelState.Remove(nameof(invoice.Cari));
@@ -108,7 +107,6 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                     TempData["ErrorMessage"] = $"Seçilen ayda ({invoice.Ay}/{invoice.Donemi}) bu cariye ait zaten bir fatura var. " +
                                                 $"Fatura No: {existingInvoice.Id}, Tutar: {existingInvoice.Tutar.ToString("N2", cultureInfo)}.";
 
-                    // Cariler tekrar yüklenir
                     ViewBag.Cariler = await _context.Carilers
                         .Select(c => new { c.Id, c.Unvan })
                         .ToListAsync();
@@ -116,7 +114,6 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                     return View(invoice);
                 }
 
-                // Validasyon kontrolü
                 if (ModelState.IsValid)
                 {
                     invoice.Ekler = string.IsNullOrWhiteSpace(invoice.Ekler) ? null : invoice.Ekler;
@@ -124,8 +121,15 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                     _context.Invoices.Add(invoice);
                     await _context.SaveChangesAsync();
 
+                    var cari = await _context.Carilers.FirstOrDefaultAsync(c => c.Id == invoice.CariId);
+
                     TempData["SuccessMessage"] = "Fatura başarıyla eklendi.";
-                    return RedirectToAction("Index");
+                    TempData["TriggerEvrakModal"] = "true";
+                    TempData["CariUnvan"] = cari?.Unvan ?? "";
+                    TempData["EvrakKod"] = $"MHSB.{DateTime.Now.Year}.{invoice.Id}";
+                    TempData["OdemeYazisiLinki"] = !string.IsNullOrWhiteSpace(cari?.OdemeYazisiLinki) ? cari.OdemeYazisiLinki : null;
+
+                    return RedirectToAction("AddInvoice", new { cariId = invoice.CariId });
                 }
             }
             catch (Exception ex)
@@ -133,13 +137,13 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
                 TempData["ErrorMessage"] = $"Bir hata oluştu: {ex.Message}";
             }
 
-            // Hata durumunda cariler tekrar yüklenir
             ViewBag.Cariler = await _context.Carilers
                 .Select(c => new { c.Id, c.Unvan })
                 .ToListAsync();
 
             return View(invoice);
         }
+
 
         // Fatura Silme
         [HttpPost]
@@ -363,6 +367,16 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
             return View(grouped);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetOdemeYazisiLinki (int id)
+        {
+            var cari = await _context.Carilers.FindAsync(id);
+
+            if (cari == null || string.IsNullOrWhiteSpace(cari.OdemeYazisiLinki))
+                return Content(""); // boş döner, alert gösterilir
+
+            return Content(cari.OdemeYazisiLinki);
+        }
 
 
     }

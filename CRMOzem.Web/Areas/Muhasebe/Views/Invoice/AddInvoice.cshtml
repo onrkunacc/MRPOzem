@@ -1,8 +1,13 @@
 ﻿@model CRMOzem.Core.Models.Invoices
+@using System.Text.Encodings.Web
 
 @{
     ViewData["Title"] = "Fatura Ekle";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var triggerModal = TempData["TriggerEvrakModal"]?.ToString() == "true";
+    var cariUnvan = TempData["CariUnvan"]?.ToString() ?? "";
+    var evrakKod = TempData["EvrakKod"]?.ToString() ?? "";
+    var odemeYazisiLinki = TempData["OdemeYazisiLinki"]?.ToString();
 }
 
 <div class="container mt-4">
@@ -10,7 +15,6 @@
         <div class="card-header bg-light text-center">
             <h3 class="mb-0 fw-bold">Yeni Fatura Ekle</h3>
         </div>
-
         <div class="card-body">
             @if (TempData["SuccessMessage"] != null)
             {
@@ -23,12 +27,10 @@
 
             <form asp-action="AddInvoice" method="post">
                 <div class="row g-3">
-                    <!-- Cari Seç -->
                     <div class="col-md-6">
                         <label for="CariId" class="form-label fw-bold">Cari Seç:</label>
                         <select id="CariId" name="CariId" class="form-select">
                             <option value="">Seçiniz</option>
-
                             @foreach (var cari in ViewBag.Cariler)
                             {
                                 <option value="@cari.Id" selected="@(cari.Id == ViewBag.SelectedCariId ? "selected" : null)">
@@ -37,8 +39,6 @@
                             }
                         </select>
                     </div>
-
-                    <!-- Dönem Seç -->
                     <div class="col-md-6">
                         <label asp-for="Donemi" class="form-label fw-bold">Dönem (Yıl):</label>
                         <input name="Donemi" type="number" class="form-control" min="2020" max="2100" placeholder="Yıl giriniz..." />
@@ -46,7 +46,6 @@
                 </div>
 
                 <div class="row g-3 mt-2">
-                    <!-- Ay Seçimi -->
                     <div class="col-md-6">
                         <label asp-for="Ay" class="form-label fw-bold">Ay:</label>
                         <select name="Ay" class="form-select">
@@ -64,15 +63,11 @@
                             <option value="12">Aralık</option>
                         </select>
                     </div>
-
-                    <!-- Tutar -->
                     <div class="col-md-6">
                         <label asp-for="Tutar" class="form-label fw-bold">Tutar:</label>
                         <div class="input-group">
                             <span class="input-group-text">₺</span>
-                            <input name="Tutar"
-                                   type="text"
-                                   class="form-control"
+                            <input name="Tutar" type="text" class="form-control"
                                    oninput="formatCurrency(this)"
                                    value="@Model.Tutar.ToString("N2", new System.Globalization.CultureInfo("tr-TR"))"
                                    placeholder="0,00" />
@@ -80,7 +75,6 @@
                     </div>
                 </div>
 
-                <!-- Ekler -->
                 <div class="row g-3 mt-2">
                     <div class="col-md-12">
                         <label asp-for="Ekler" class="form-label fw-bold">Ekler:</label>
@@ -97,34 +91,120 @@
     </div>
 </div>
 
-<!-- 📌 Stil Güncellemeleri -->
+<!-- 📦 Evrak Modal -->
+<div class="modal fade" id="evrakModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Evrak Oluştur</h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="evrakForm">
+                    <input type="hidden" name="CategoryId" value="4" />
+                    <div class="mb-3">
+                        <label class="form-label">Evrak Kodu</label>
+                        <input type="text" id="evrakKod" name="Code" class="form-control" readonly />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama (Unvan)</label>
+                        <input type="text" id="evrakSubject" name="Subject" class="form-control" readonly />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teslimat Şekli</label>
+                        <select name="DeliveryMethod" id="deliveryMethod" class="form-select">
+                            <option value="Elden">Elden</option>
+                            <option value="Kargo">Kargo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="cargoField" style="display:none">
+                        <label class="form-label">Kargo Firması</label>
+                        <select name="CargoCompany" class="form-select">
+                            <option value="">Seçiniz</option>
+                            <option value="Yurtiçi">Yurtiçi</option>
+                            <option value="MNG">MNG</option>
+                            <option value="Aras">Aras</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="saveEvrak">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🎨 Stil -->
 <style>
     .form-select, .form-control {
         height: 45px;
         border-radius: 8px;
         border: 1px solid #ced4da;
         font-size: 16px;
-        width: 100%;
     }
 
-    .form-select:focus, .form-control:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-    }
+        .form-select:focus, .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+        }
 
     .input-group-text {
         background-color: #f8f9fa;
         border: 1px solid #ced4da;
         border-radius: 8px 0 0 8px;
     }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
 </style>
 
-<script>
-    function formatCurrency(input) {
-        let value = input.value.replace(/[^0-9,]/g, '');
-        let parts = value.split(',');
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+@section Scripts {
+    <script>
+        function formatCurrency(input) {
+            let value = input.value.replace(/[^0-9,]/g, '');
+            let parts = value.split(',');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            input.value = parts.join(',');
+        }
 
-        input.value = parts.join(',');
-    }
-</script>
+        $(function () {
+            $('#deliveryMethod').on('change', function () {
+                $('#cargoField').toggle(this.value === 'Kargo');
+            });
+
+            @if (triggerModal)
+            {
+                <text>
+                     $('#evrakKod').val('@Html.Raw(JavaScriptEncoder.Default.Encode(evrakKod))');
+                     $('#evrakSubject').val('@Html.Raw(JavaScriptEncoder.Default.Encode(cariUnvan))');
+                     new bootstrap.Modal(document.getElementById('evrakModal')).show();
+                </text>
+            }
+
+            $('#saveEvrak').on('click', function () {
+                $.post('/Evrak/Document/AddDocument', $('#evrakForm').serialize())
+                    .done(() => {
+                        alert('Evrak başarıyla kaydedildi.');
+
+                        const odemeLink = '@TempData["OdemeYazisiLinki"]';
+
+                        if (odemeLink && odemeLink !== '') {
+                            if (confirm("Ödeme yazısını görüntülemek ister misiniz?")) {
+                                window.open(odemeLink, '_blank'); 
+                            }
+                        } else {
+                            alert("Bu cariye ait ödeme yazısı bağlantısı bulunmamaktadır.");
+                        }
+
+                        window.location.href = '/Muhasebe/Invoice/Index'; 
+                    })
+                    .fail(() => {
+                        alert('Evrak kaydedilirken hata oluştu.');
+                    });
+            });
+        });
+    </script>
+}
