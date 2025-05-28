@@ -8,12 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ Veritabanı Bağlantıları
+//  Veritabanı Bağlantıları
 var connectionString = builder.Configuration.GetConnectionString("MainDb");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// ✅ Identity Ayarları
+//  Identity Ayarları
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -22,22 +22,21 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// ✅ Servisleri Ekliyoruz
+//  Servisleri Ekliyoruz
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IExpenseReportService, ExpenseReportService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
-builder.Services.AddScoped<IAwsS3FileService, AwsS3FileService>();
 builder.Services.AddScoped<IAuditReportService, AuditReportService>();
 
-// ✅ Kimlik doğrulama ayarları
+// Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login"; 
     options.AccessDeniedPath = "/Account/AccessDenied"; 
 });
 
-// ✅ Şifre Gereksinimlerini Düzenliyoruz
+// Şifre Gereksinimlerini Düzenliyoruz
 builder.Services.Configure<IdentityOptions>(options =>
 {
     options.Password.RequireDigit = false;
@@ -47,13 +46,13 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireLowercase = false;
 });
 
-// ✅ MVC ve Razor Pages
+//  MVC ve Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// ✅ ROLLERİN OLUŞTURULMASI (SEED)
+//  ROLLERİN OLUŞTURULMASI (SEED)
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -61,7 +60,7 @@ using (var scope = app.Services.CreateScope())
     await UserSeeder.SeedUsersAsync(services);
 }
 
-// ✅ Hata Yönetimi
+//  Hata Yönetimi
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();

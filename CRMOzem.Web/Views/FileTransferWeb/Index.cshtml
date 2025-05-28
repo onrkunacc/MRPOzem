@@ -1,0 +1,60 @@
+﻿@model CRMOzem.Core.ViewModels.FileTransferPageViewModel
+
+@{
+    ViewBag.Title = "Dosya Transferi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+
+    <h2 class="text-primary mb-3">📤 Dosya Yükle</h2>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <form asp-action="Upload" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label asp-for="UploadModel.File" class="form-label">Dosya Seç</label>
+            <input asp-for="UploadModel.File" class="form-control" type="file" />
+            <span asp-validation-for="UploadModel.File" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="UploadModel.TargetPath" class="form-label">Hedef Klasör</label>
+            <input asp-for="UploadModel.TargetPath" class="form-control" />
+            <span asp-validation-for="UploadModel.TargetPath" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Yükle</button>
+    </form>
+
+    <hr />
+
+    <h4 class="text-secondary">🗂️ Yüklenen Son Dosyalar</h4>
+    <table class="table table-striped mt-2">
+        <thead>
+            <tr>
+                <th>Dosya Adı</th>
+                <th>Hedef Klasör</th>
+                <th>Yüklenme Tarihi</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var file in Model.UploadedFiles)
+            {
+                <tr>
+                    <td>@file.FileName</td>
+                    <td>@file.TargetPath</td>
+                    <td>@file.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

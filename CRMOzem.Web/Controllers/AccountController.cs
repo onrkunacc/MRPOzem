@@ -14,7 +14,11 @@ namespace CRMOzem.Web.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly Business.Interfaces.IEmailSender _emailSender;
-        public AccountController(IUserService userService, SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, Business.Interfaces.IEmailSender emailSender)
+        public AccountController(
+            IUserService userService,
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            Business.Interfaces.IEmailSender emailSender)
         {
             _userService = userService;
             _signInManager = signInManager;
@@ -64,11 +68,12 @@ namespace CRMOzem.Web.Controllers
             else if (roles.Contains("İnsan Kaynakları"))
                 return RedirectToAction("Index", "Dashboard", new { area = "InsanKaynaklari" });
             else if (roles.Contains("İhale"))
-                return RedirectToAction("Index", "BidDocument", new { area = "Ihale" });
+                return RedirectToAction("Index", "FileTransferWeb", new { area = "" });
             else if (roles.Contains("Evrak"))
                 return RedirectToAction("Index", "Document", new { area = "Evrak" });
 
             return RedirectToAction("Index", "Home");
+            
         }
 
         public IActionResult Register()

@@ -170,7 +170,7 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
                 _context.FollowDocuments.Update(document);
                 await _context.SaveChangesAsync();
 
-                TempData["Message"] = "Evrak başarıyla güncellendi.";
+                TempData["DocumentMessage"] = "Evrak başarıyla güncellendi.";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)

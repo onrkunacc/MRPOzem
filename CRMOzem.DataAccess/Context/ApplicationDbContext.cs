@@ -13,6 +13,7 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<Invoices> Invoices { get; set; }
         public DbSet<DocumentCategory> DocumentCategories { get; set; }
         public DbSet<FollowDocument> FollowDocuments { get; set; }
+        public DbSet<FileTransferQueue> FileTransferQueues { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         
