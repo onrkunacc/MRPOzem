@@ -216,6 +216,12 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("OverrideCycleMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OverrideCycleYear")
+                        .HasColumnType("int");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
 

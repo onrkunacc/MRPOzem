@@ -1,4 +1,5 @@
-﻿using CRMOzem.Business.Interfaces;
+﻿using System.Globalization;
+using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Enums;
 using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
@@ -149,6 +150,32 @@ namespace CRMOzem.Web.Controllers
 
             return RedirectToAction("Details", new { id = expenseId });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateCycleInline(int id, int? overrideMonth, int? overrideYear)
+        {
+            var expense = await _expenseService.GetExpenseByIdAsync(id);
+            if (expense == null) return NotFound();
+
+            expense.OverrideCycleMonth = overrideMonth;
+            expense.OverrideCycleYear = overrideYear;
+
+            await _expenseService.UpdateExpenseAsync(expense);
+
+            var monthName = overrideMonth.HasValue
+                ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(overrideMonth.Value)
+                : "Otomatik";
+
+            return Ok(new
+            {
+                success = true,
+                month = overrideMonth,
+                year = overrideYear,
+                monthName = monthName
+            });
+        }
+
+
 
         public async Task<IActionResult> PrintReport(int reportId)
         {

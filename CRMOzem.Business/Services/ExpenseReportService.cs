@@ -189,7 +189,9 @@ namespace CRMOzem.Business.Services
                     Description = d.Description,
                     Amount = d.Amount,
                     Date = d.Date,
-                    PaymentMethod = d.PaymentMethod
+                    PaymentMethod = d.PaymentMethod,
+                    OverrideCycleMonth = d.OverrideCycleMonth,
+                    OverrideCycleYear = d.OverrideCycleYear
                 }).ToList()
             };
         }
@@ -307,7 +309,6 @@ namespace CRMOzem.Business.Services
 
             var billingCycleReports = new List<BillingCycleReportViewModel>();
 
-            // Kullanıcının harcama yaptığı tüm yılları ve ayları al
             var distinctMonths = await _context.ExpenseDetails
                 .Where(e => e.Report.UserId == userId)
                 .Select(e => new { e.Date.Year, e.Date.Month })
@@ -320,24 +321,19 @@ namespace CRMOzem.Business.Services
                 int year = monthData.Year;
                 int month = monthData.Month;
 
-                // Kullanıcının seçtiği haftanın ilk pazartesi gününü hesapla
                 DateTime currentBillingCycle = GetFirstMondayOfWeek(year, month, user.BillingCycleWeek);
-                DateTime previousBillingCycle;
+                DateTime previousBillingCycle = (month == 1)
+                    ? GetFirstMondayOfWeek(year - 1, 12, user.BillingCycleWeek)
+                    : GetFirstMondayOfWeek(year, month - 1, user.BillingCycleWeek);
 
-                // Önceki ayın hesap kesim tarihini bul
-                if (month == 1)
-                {
-                    previousBillingCycle = GetFirstMondayOfWeek(year - 1, 12, user.BillingCycleWeek);
-                }
-                else
-                {
-                    previousBillingCycle = GetFirstMondayOfWeek(year, month - 1, user.BillingCycleWeek);
-                }
-
-                // Harcamaları getir
                 var selectedExpenses = await _context.ExpenseDetails
                     .Include(e => e.Report)
-                    .Where(e => e.Report.UserId == userId && e.Date >= previousBillingCycle && e.Date < currentBillingCycle)
+                    .Where(e =>
+                        e.Report.UserId == userId &&
+                        (
+                            (e.OverrideCycleMonth == null && e.Date >= previousBillingCycle && e.Date < currentBillingCycle) ||
+                            (e.OverrideCycleMonth == month && e.OverrideCycleYear == year)
+                        ))
                     .OrderBy(e => e.Date)
                     .ToListAsync();
 
@@ -345,9 +341,9 @@ namespace CRMOzem.Business.Services
                 {
                     billingCycleReports.Add(new BillingCycleReportViewModel
                     {
-                        Year = currentBillingCycle.Year,
-                        Month = currentBillingCycle.Month,
-                        MonthName = currentBillingCycle.ToString("MMMM"),
+                        Year = year,
+                        Month = month,
+                        MonthName = new DateTime(year, month, 1).ToString("MMMM"),
                         TotalAmount = selectedExpenses.Sum(e => e.Amount),
                         ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
                         {
@@ -365,5 +361,6 @@ namespace CRMOzem.Business.Services
 
             return billingCycleReports;
         }
+
     }
 }

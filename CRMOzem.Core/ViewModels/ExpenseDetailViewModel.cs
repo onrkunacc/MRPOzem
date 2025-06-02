@@ -25,5 +25,7 @@ namespace CRMOzem.Core.ViewModels
         [DataType(DataType.Date)]
         public DateTime Date { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
+        public int? OverrideCycleMonth { get; set; }
+        public int? OverrideCycleYear { get; set; }
     }
 }

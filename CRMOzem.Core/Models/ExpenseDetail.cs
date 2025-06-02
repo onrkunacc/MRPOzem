@@ -18,8 +18,9 @@ namespace CRMOzem.Core.Models
         [Precision(18, 2)]
         public decimal Amount {  get; set; }
         public PaymentMethod PaymentMethod { get; set; }
-
         public virtual ExpenseReport Report {  get; set; }
+        public int? OverrideCycleMonth { get; set; }  
+        public int? OverrideCycleYear { get; set; }   
 
-    } 
+    }
 }

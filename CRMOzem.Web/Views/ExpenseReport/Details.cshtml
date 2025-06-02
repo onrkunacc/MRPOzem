@@ -1,4 +1,5 @@
 ﻿@model CRMOzem.Core.ViewModels.ExpenseReportViewModel
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Masraf Raporu Detayları";
@@ -11,17 +12,18 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title">Toplam Tutar: <strong>@Model.TotalAmount ₺</strong></h5>
+            <h5 class="card-title">Toplam Tutar: <strong>@Model.TotalAmount.ToString("C2")</strong></h5>
 
             <table class="table table-bordered table-striped mt-3">
                 <thead class="table-dark">
                     <tr>
-                        <th scope="col">Tarih</th>
-                        <th scope="col">Kategori</th>
-                        <th scope="col">Açıklama</th>
-                        <th scope="col">Ödeme Yöntemi</th>
-                        <th scope="col">Tutar (₺)</th>
-                        <th scope="col">İşlemler</th>
+                        <th>Tarih</th>
+                        <th>Kategori</th>
+                        <th>Açıklama</th>
+                        <th>Ödeme Yöntemi</th>
+                        <th>Tutar (₺)</th>
+                        <th>Ekstre Dönemi</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -33,14 +35,49 @@
                             <td>@detail.Description</td>
                             <td>@detail.PaymentMethod</td>
                             <td>@detail.Amount.ToString("C2")</td>
+                            <td class="d-flex flex-wrap align-items-center gap-2">
+                                @if (detail.OverrideCycleMonth.HasValue && detail.OverrideCycleYear.HasValue)
+                                {
+                                    <span class="me-3">
+                                        @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(detail.OverrideCycleMonth.Value)
+                                        @detail.OverrideCycleYear
+                                    </span>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary edit-cycle-btn"
+                                            data-id="@detail.Id"
+                                            data-month="@detail.OverrideCycleMonth"
+                                            data-year="@detail.OverrideCycleYear"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editCycleModal"
+                                            title="Düzenle">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <form class="cycle-form d-flex flex-wrap align-items-center gap-2" data-id="@detail.Id">
+                                        <select name="overrideMonth" class="form-select form-select-sm me-2">
+                                            <option value="">Otomatik</option>
+                                            @for (int i = 1; i <= 12; i++)
+                                            {
+                                                <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                            }
+                                        </select>
+
+                                        <input name="overrideYear" type="number" min="2020" max="2100"
+                                               class="form-control form-control-sm me-2"
+                                               placeholder="Yıl" style="width: 90px;" />
+
+                                        <button type="submit" class="btn btn-sm btn-success">✔</button>
+                                    </form>
+                                }
+                            </td>
+
+
                             <td>
-                                <!-- Düzenleme Butonu -->
-                                <a href="@Url.Action("Edit", "ExpenseReport", new { id = detail.Id })"
-                                   class="btn btn-sm btn-warning">
+                                <a href="@Url.Action("Edit", "ExpenseReport", new { id = detail.Id })" class="btn btn-sm btn-warning">
                                     <i class="fa fa-edit"></i> Düzenle
                                 </a>
-
-                                <!-- Silme Butonu (Onaylı) -->
                                 <form asp-action="DeleteExpense" asp-controller="ExpenseReport" method="post" class="d-inline"
                                       onsubmit="return confirm('Bu masrafı silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="expenseId" value="@detail.Id" />
@@ -66,3 +103,75 @@
         </div>
     </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="editCycleModal" tabindex="-1" aria-labelledby="editCycleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="modalCycleForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCycleModalLabel">Ekstre Dönemini Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body d-flex gap-2">
+                    <input type="hidden" name="id" id="modal-expense-id" />
+                    <select name="overrideMonth" id="modal-override-month" class="form-select">
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                        }
+                    </select>
+                    <input type="number" name="overrideYear" id="modal-override-year" class="form-control"
+                           placeholder="Yıl" style="width:100px;" min="2020" max="2100" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll(".cycle-form").forEach(form => {
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const id = form.getAttribute("data-id");
+                const formData = new FormData(form);
+
+                fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
+                    method: "POST",
+                    body: formData
+                })
+                    .then(res => res.ok ? location.reload() : alert("⚠️ Hata oluştu."));
+            });
+        });
+
+        document.querySelectorAll(".edit-cycle-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.getElementById("modal-expense-id").value = btn.dataset.id;
+                document.getElementById("modal-override-month").value = btn.dataset.month;
+                document.getElementById("modal-override-year").value = btn.dataset.year;
+            });
+        });
+
+        document.getElementById("modalCycleForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const id = document.getElementById("modal-expense-id").value;
+            const formData = new FormData(this);
+
+            fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
+                method: "POST",
+                body: formData
+            }).then(res => {
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert("⚠️ Güncelleme başarısız!");
+                }
+            });
+        });
+    </script>
+}
