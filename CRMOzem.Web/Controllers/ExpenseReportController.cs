@@ -83,8 +83,11 @@ namespace CRMOzem.Web.Controllers
             {
                 return NotFound("Masraf raporu bulunamadı.");
             }
+
+            report.ExpenseDetails = report.ExpenseDetails.OrderBy(e => e.Date).ToList();
             return View(report);
         }
+
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {

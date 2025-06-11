@@ -38,41 +38,44 @@
                             <td class="d-flex flex-wrap align-items-center gap-2">
                                 @if (detail.OverrideCycleMonth.HasValue && detail.OverrideCycleYear.HasValue)
                                 {
-                                    <span class="me-2">
-                                        <strong>
-                                            @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(detail.OverrideCycleMonth.Value)
-                                            @detail.OverrideCycleYear
-                                        </strong>
-                                    </span>
-                                    <button type="button"
-                                            class="btn btn-sm btn-light border edit-cycle-btn"
-                                            data-id="@detail.Id"
-                                            data-month="@detail.OverrideCycleMonth"
-                                            data-year="@detail.OverrideCycleYear"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editCycleModal"
-                                            title="Ekstre dönemini düzenle">
-                                        <i class="fa fa-pen"></i>
-                                    </button>
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <span class="fw-semibold">
+                                            <strong>@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(detail.OverrideCycleMonth.Value) @detail.OverrideCycleYear</strong>
+                                        </span>
+                                        <button type="button"
+                                                class="btn btn-outline-secondary btn-sm px-2 py-1 edit-cycle-btn"
+                                                data-id="@detail.Id"
+                                                data-month="@detail.OverrideCycleMonth"
+                                                data-year="@detail.OverrideCycleYear"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editCycleModal"
+                                                title="Ekstre dönemini düzenle">
+                                            <i class="fa fa-pen"></i>
+                                        </button>
+                                    </div>
                                 }
                                 else
                                 {
-                                    <form class="cycle-form d-flex flex-wrap align-items-center gap-2 mb-1" data-id="@detail.Id">
-                                        <select name="overrideMonth" class="form-select form-select-sm" style="min-width: 130px;">
-                                            <option value="">Otomatik</option>
-                                            @for (int i = 1; i <= 12; i++)
-                                            {
-                                                <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                                            }
-                                        </select>
-
-                                        <input name="overrideYear" type="number" min="2020" max="2100"
-                                               class="form-control form-control-sm"
-                                               placeholder="Yıl" style="width: 90px;" />
-
-                                        <button type="submit" class="btn btn-sm btn-success">
-                                            <i class="fa fa-check"></i>
-                                        </button>
+                                    <form class="cycle-form row gx-2 gy-1 align-items-center" data-id="@detail.Id">
+                                        <div class="col-12 col-sm-auto">
+                                            <select name="overrideMonth" class="form-select form-select-sm">
+                                                <option value="">Otomatik</option>
+                                                @for (int i = 1; i <= 12; i++)
+                                                {
+                                                    <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-sm-auto">
+                                            <input name="overrideYear" type="number" min="2020" max="2100"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="Yıl" />
+                                        </div>
+                                        <div class="col-12 col-sm-auto">
+                                            <button type="submit" class="btn btn-success btn-sm px-3">
+                                                <i class="fa fa-check"></i>
+                                            </button>
+                                        </div>
                                     </form>
                                 }
                             </td>

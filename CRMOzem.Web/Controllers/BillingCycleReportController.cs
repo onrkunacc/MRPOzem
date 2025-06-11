@@ -41,7 +41,7 @@ namespace CRMOzem.Web.Controllers
             return View(selectedReport);
         }
 
-        // ✅ Ekstre PDF Raporu Oluşturma
+        // Ekstre PDF Raporu Oluşturma
         public async Task<IActionResult> PrintBillingCycleReport(int year, int month)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -128,7 +128,9 @@ namespace CRMOzem.Web.Controllers
                 }
 
                 // **Tablo İçeriği - Tarih sıralaması**
-                foreach (var expense in selectedReport.ExpenseDetails.OrderBy(e => e.Date))
+                foreach (var expense in selectedReport.ExpenseDetails
+                            .Where(e => e.Date != null)
+                            .OrderBy(e => e.Date))
                 {
                     table.AddCell(new Phrase(expense.Date.ToString("dd.MM.yyyy"), fontRegular));
                     table.AddCell(new Phrase(expense.Category, fontRegular));
