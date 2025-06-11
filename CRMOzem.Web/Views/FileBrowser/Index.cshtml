@@ -56,10 +56,21 @@
                                    class="btn btn-sm btn-outline-primary me-2">
                                     İndir
                                 </a>
-                                <a asp-action="Preview" asp-route-path="@item.RelativePath"
-                                   target="_blank" class="btn btn-sm btn-outline-success">
-                                    Önizle
-                                </a>
+
+                                @if (item.CanPreview)
+                                {
+                                    <a asp-action="Preview" asp-route-path="@item.RelativePath"
+                                       target="_blank" class="btn btn-sm btn-outline-success">
+                                        Önizle
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled
+                                            title="Bu dosya türü önizlenemez">
+                                        🚫 Önizlenemez
+                                    </button>
+                                }
                             }
                             else
                             {

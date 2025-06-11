@@ -11,5 +11,10 @@ namespace CRMOzem.Core.ViewModels
         public string Name { get; set; }
         public bool IsDirectory { get; set; }
         public string RelativePath { get; set; }
+
+        public string Extension => Path.GetExtension(Name).ToLowerInvariant();
+
+        public bool CanPreview => new[] { ".pdf", ".jpg", ".jpeg", ".png", ".txt" }.Contains(Extension);
     }
+
 }

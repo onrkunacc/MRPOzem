@@ -1,11 +1,12 @@
 ﻿using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CRMOzem.Web.Controllers
 {
-
+    [Authorize(Roles = "Yönetici,İhale")]
     public class FileTransferWebController : Controller
     {
         private readonly IWebHostEnvironment _env;

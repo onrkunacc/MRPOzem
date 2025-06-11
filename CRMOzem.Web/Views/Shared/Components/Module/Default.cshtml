@@ -7,7 +7,7 @@
             <a href="/Finance" class="squircle bg-success justify-content-center">
                 <i class="fe fe-dollar-sign fe-32 align-self-center text-white"></i>
             </a>
-            <p>Finans</p>
+            <p>Finans Birimi</p>
         </div>
     }
     @if (Model.Contains("İnsan Kaynakları"))
@@ -22,7 +22,7 @@
     @if (Model.Contains("İhale"))
     {
         <div class="col-6 text-center">
-            <a href="/Tenders" class="squircle bg-warning justify-content-center">
+            <a asp-area="" asp-controller="FileBrowser" asp-action="Index" class="squircle bg-warning justify-content-center">
                 <i class="fe fe-file-text fe-32 align-self-center text-white"></i>
             </a>
             <p>İhale Birimi</p>
@@ -55,10 +55,10 @@
             <p>Evrak Takip</p>
         </div>
         <div class="col-6 text-center">
-            <a class="squircle bg-dark justify-content-center" asp-area="Ihale" asp-controller="BidDocument" asp-action="Index">
+            <a class="squircle bg-dark justify-content-center" asp-area="" asp-controller="FileBrowser" asp-action="Index">
                 <i class="fe fe-folder fe-32 align-self-center text-white"></i>
             </a>
-            <p>İhale Takip</p>
+            <p>İhale Birimi</p>
         </div>
        
     }

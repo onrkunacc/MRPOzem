@@ -155,13 +155,21 @@
                 </li>
             </ul>
         </li>
-
+        <!--İhale Dosyaları-->
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="FileBrowser" asp-action="Index">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İhale Dosyaları</span>
+            </a>
+        </li>
+        <!--Evrak Listesi-->
         <li class="nav-item">
             <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
                 <i class="fe fe-book fe-16"></i>
                 <span class="ml-3 item-text">Evrak Listesi</span>
             </a>
         </li>
+       
     }
 
     @if (Model.Contains("Muhasebe"))
@@ -299,15 +307,15 @@
     @if (Model.Contains("İhale"))
     {
         <li class="nav-item">
-            <a class="nav-link" asp-area="Ihale" asp-controller="BidDocument" asp-action="Index">
-                <i class="fe fe-clipboard fe-16"></i>
-                <span class="ml-3 item-text">İhale Dosyaları</span>
+            <a class="nav-link" asp-area="" asp-controller="FileTransferWeb" asp-action="Index">
+                <i class="fe fe-file-plus fe-16"></i>
+                <span class="ml-3 item-text">İhale Dosya Yükle</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" asp-area="" asp-controller="FileTransferWeb" asp-action="Index">
+            <a class="nav-link" asp-area="" asp-controller="FileBrowser" asp-action="Index">
                 <i class="fe fe-list fe-16"></i>
-                <span class="ml-3 item-text">İhale Dosyaları</span>
+                <span class="ml-3 item-text">İhale Dosyaları Listele</span>
             </a>
         </li>
     }

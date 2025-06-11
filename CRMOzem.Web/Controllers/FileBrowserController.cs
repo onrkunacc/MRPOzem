@@ -1,8 +1,10 @@
 ﻿using CRMOzem.Core.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CRMOzem.Web.Controllers
 {
+    [Authorize(Roles = "Yönetici,İhale")]
     public class FileBrowserController : Controller
     {
         private readonly string _nasRootPath = @"\\192.168.1.200\IHALE";
@@ -46,7 +48,7 @@ namespace CRMOzem.Web.Controllers
                 if (!System.IO.File.Exists(fullPath))
                     return NotFound("Dosya bulunamadı.");
 
-                var mime = "application/octet-stream"; // MIME tipi dinamikleştirilebilir
+                var mime = "application/octet-stream"; 
                 var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
                 return File(stream, mime, Path.GetFileName(fullPath));
             }
@@ -65,6 +67,11 @@ namespace CRMOzem.Web.Controllers
                     return NotFound("Dosya bulunamadı.");
 
                 var mime = GetMimeType(fullPath);
+
+                // Tarayıcıda desteklenmeyen dosya türleri engellensin
+                if (mime == "application/octet-stream")
+                    return BadRequest("Bu dosya türü tarayıcıda önizlenemez. Lütfen indirerek açın.");
+
                 var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
                 return File(stream, mime);
             }
@@ -73,6 +80,7 @@ namespace CRMOzem.Web.Controllers
                 return BadRequest($"Önizleme hatası: {ex.Message}");
             }
         }
+
 
         private string GetMimeType(string filePath)
         {
@@ -85,8 +93,12 @@ namespace CRMOzem.Web.Controllers
                 ".png" => "image/png",
                 ".txt" => "text/plain",
                 ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".zip" => "application/zip",
                 _ => "application/octet-stream"
             };
         }
+
     }
 }
