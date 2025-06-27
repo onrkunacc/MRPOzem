@@ -18,7 +18,5 @@ namespace CRMOzem.Core.Models
         public virtual ApplicationUser User { get; set; }
         public virtual List<ExpenseDetail> ExpenseDetails { get; set; }
 
-
-
     }
 }

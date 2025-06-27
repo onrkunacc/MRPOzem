@@ -157,25 +157,37 @@ namespace CRMOzem.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateCycleInline(int id, int? overrideMonth, int? overrideYear)
         {
-            var expense = await _expenseService.GetExpenseByIdAsync(id);
-            if (expense == null) return NotFound();
-
-            expense.OverrideCycleMonth = overrideMonth;
-            expense.OverrideCycleYear = overrideYear;
-
-            await _expenseService.UpdateExpenseAsync(expense);
-
-            var monthName = overrideMonth.HasValue
-                ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(overrideMonth.Value)
-                : "Otomatik";
-
-            return Ok(new
+            try
             {
-                success = true,
-                month = overrideMonth,
-                year = overrideYear,
-                monthName = monthName
-            });
+                var expense = await _expenseService.GetExpenseByIdAsync(id);
+                if (expense == null)
+                    return NotFound("Masraf bulunamadı.");
+
+                expense.OverrideCycleMonth = overrideMonth;
+                expense.OverrideCycleYear = overrideYear;
+                await _expenseService.UpdateExpenseAsync(expense);
+
+                var monthName = overrideMonth.HasValue
+                    ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(overrideMonth.Value)
+                    : "Otomatik";
+
+                return Ok(new
+                {
+                    success = true,
+                    month = overrideMonth,
+                    year = overrideYear,
+                    monthName
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Ekstre dönemi güncellenirken hata oluştu.",
+                    error = ex.Message
+                });
+            }
         }
 
 

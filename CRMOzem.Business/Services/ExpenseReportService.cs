@@ -311,9 +311,14 @@ namespace CRMOzem.Business.Services
 
             var distinctMonths = await _context.ExpenseDetails
                 .Where(e => e.Report.UserId == userId)
-                .Select(e => new { e.Date.Year, e.Date.Month })
+                .Select(e => new
+                {
+                    Year = e.OverrideCycleYear ?? e.Date.Year,
+                    Month = e.OverrideCycleMonth ?? e.Date.Month
+                })
                 .Distinct()
-                .OrderBy(e => e.Year).ThenBy(e => e.Month)
+                .OrderBy(e => e.Year)
+                .ThenBy(e => e.Month)
                 .ToListAsync();
 
             foreach (var monthData in distinctMonths)
@@ -331,8 +336,11 @@ namespace CRMOzem.Business.Services
                     .Where(e =>
                         e.Report.UserId == userId &&
                         (
-                            (e.OverrideCycleMonth == null && e.Date >= previousBillingCycle && e.Date < currentBillingCycle) ||
-                            (e.OverrideCycleMonth == month && e.OverrideCycleYear == year)
+                            // override varsa override'a göre,
+                            (e.OverrideCycleMonth == month && e.OverrideCycleYear == year) ||
+                            // yoksa tarih aralığına göre
+                            (e.OverrideCycleMonth == null && e.OverrideCycleYear == null &&
+                             e.Date >= previousBillingCycle && e.Date < currentBillingCycle)
                         ))
                     .OrderBy(e => e.Date)
                     .ToListAsync();
@@ -361,6 +369,7 @@ namespace CRMOzem.Business.Services
 
             return billingCycleReports;
         }
+
 
     }
 }
