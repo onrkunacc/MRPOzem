@@ -142,20 +142,35 @@
 
 @section Scripts {
     <script>
+        // INLINE form submit (ilk görünümdeki alan)
         document.querySelectorAll(".cycle-form").forEach(form => {
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
                 const id = form.getAttribute("data-id");
                 const formData = new FormData(form);
+                const year = form.querySelector('input[name="overrideYear"]').value;
+
+                if (!year) {
+                    alert("⚠️ Lütfen bir yıl giriniz.");
+                    return;
+                }
 
                 fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
                     method: "POST",
                     body: formData
-                })
-                    .then(res => res.ok ? location.reload() : alert("⚠️ Hata oluştu."));
+                }).then(async res => {
+                    if (res.ok) {
+                        alert("✅ Ekstre dönemi başarıyla güncellendi.");
+                        location.reload();
+                    } else {
+                        const error = await res.json();
+                        alert("❌ Hata: " + (error.message || "Güncelleme başarısız."));
+                    }
+                });
             });
         });
 
+        // Modal tetikleme (butona tıklanıldığında değerleri doldurur)
         document.querySelectorAll(".edit-cycle-btn").forEach(btn => {
             btn.addEventListener("click", () => {
                 document.getElementById("modal-expense-id").value = btn.dataset.id;
@@ -164,19 +179,28 @@
             });
         });
 
+        // MODAL form submit
         document.getElementById("modalCycleForm").addEventListener("submit", function (e) {
             e.preventDefault();
             const id = document.getElementById("modal-expense-id").value;
-            const formData = new FormData(this);
+            const year = document.getElementById("modal-override-year").value;
 
+            if (!year) {
+                alert("⚠️ Lütfen yıl alanını doldurunuz.");
+                return;
+            }
+
+            const formData = new FormData(this);
             fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
                 method: "POST",
                 body: formData
-            }).then(res => {
+            }).then(async res => {
                 if (res.ok) {
+                    alert("✅ Ekstre dönemi başarıyla kaydedildi.");
                     location.reload();
                 } else {
-                    alert("⚠️ Güncelleme başarısız!");
+                    const error = await res.json();
+                    alert("❌ Hata: " + (error.message || "Güncelleme başarısız."));
                 }
             });
         });
