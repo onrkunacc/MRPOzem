@@ -1,0 +1,67 @@
+﻿@model List<CRMOzem.Core.Models.LeaveRequest>
+
+@{
+    ViewData["Title"] = "İzin Taleplerim";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-body">
+            <h3 class="fw-bold text-primary mb-3"><i class="fa fa-calendar-alt"></i> İzin Taleplerim</h3>
+
+            <table class="table table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>İzin Türü</th>
+                        <th>Başlangıç</th>
+                        <th>Bitiş</th>
+                        <th>Durum</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.LeaveType?.Name</td>
+                            <td>@item.StartDate.ToShortDateString()</td>
+                            <td>@item.EndDate.ToShortDateString()</td>
+                            <td>
+                                <span class="badge bg-@GetStatusColor(item.Status?.Code)">
+                                    @item.Status?.Name
+                                </span>
+                            </td>
+                            <td>
+                                @if (item.Status?.Code == "Pending")
+                                {
+                                    <form asp-action="Cancel" asp-route-id="@item.Id" method="post" class="d-inline">
+                                        <button class="btn btn-sm btn-outline-danger">İptal Et</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <a class="btn btn-outline-primary mt-3" asp-action="Create">
+                <i class="fa fa-plus"></i> Yeni İzin Talebi
+            </a>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusColor(string statusCode)
+    {
+        return statusCode switch
+        {
+            "Pending" => "warning",
+            "Approved" => "success",
+            "Rejected" => "danger",
+            "Cancelled" => "secondary",
+            _ => "light"
+        };
+    }
+}

@@ -14,6 +14,11 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<DocumentCategory> DocumentCategories { get; set; }
         public DbSet<FollowDocument> FollowDocuments { get; set; }
         public DbSet<FileTransferQueue> FileTransferQueues { get; set; }
+        public DbSet<LeaveType> LeaveTypes { get; set; }
+        public DbSet<LeaveStatus> LeaveStatuses { get; set; }
+        public DbSet<LeaveRequest> LeaveRequests { get; set; }
+        public DbSet<UserLeaveBalance> UserLeaveBalances { get; set; }
+        public DbSet<UserSupervisor> UserSupervisors { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         
@@ -38,6 +43,18 @@ namespace CRMOzem.DataAccess.Context
             builder.Entity<ExpenseDetail>()
                 .Property(e => e.PaymentMethod)
                 .HasConversion<int>();
+            builder.Entity<UserSupervisor>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserSupervisor>()
+                .HasOne(x => x.Supervisor)
+                .WithMany()
+                .HasForeignKey(x => x.SupervisorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
