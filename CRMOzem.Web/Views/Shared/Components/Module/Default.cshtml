@@ -13,10 +13,10 @@
     @if (Model.Contains("İnsan Kaynakları"))
     {
         <div class="col-6 text-center">
-            <a href="/HR" class="squircle bg-primary justify-content-center">
+            <a asp-area="InsanKaynakları" asp-controller="Leave" asp-action="Index" class="squircle bg-primary justify-content-center">
                 <i class="fe fe-users fe-32 align-self-center text-white"></i>
             </a>
-            <p>İnsan Kaynakları</p>
+            <p>İzin Talepleri</p>
         </div>
     }
     @if (Model.Contains("İhale"))

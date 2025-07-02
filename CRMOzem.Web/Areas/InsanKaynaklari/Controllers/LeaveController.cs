@@ -1,4 +1,5 @@
-﻿using CRMOzem.Business.Services;
+﻿using CRMOzem.Business.Interfaces;
+using CRMOzem.Business.Services;
 using CRMOzem.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -7,13 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
 {
     [Area("InsanKaynaklari")]
-    [Authorize(Roles = "InsanKaynaklari,Yonetici")]
+    [Authorize(Roles = "İnsan Kaynakları,Yönetici")]
     public class LeaveController : Controller
     {
-        private readonly LeaveService _leaveService;
+        private readonly ILeaveService _leaveService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public LeaveController(LeaveService leaveService, UserManager<ApplicationUser> userManager)
+        public LeaveController(ILeaveService leaveService, UserManager<ApplicationUser> userManager)
         {
             _leaveService = leaveService;
             _userManager = userManager;

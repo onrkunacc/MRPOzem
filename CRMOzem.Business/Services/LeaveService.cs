@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Models;
 using CRMOzem.DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRMOzem.Business.Services
 {
-    public class LeaveService
+    public class LeaveService : ILeaveService
     {
         private readonly ApplicationDbContext _context;
 
@@ -126,5 +127,11 @@ namespace CRMOzem.Business.Services
                 .FirstOrDefaultAsync(l => l.Id == id);
         }
 
+        public async Task<List<LeaveType>> GetLeaveTypesAsync()
+        {
+            return await _context.LeaveTypes
+                .OrderBy(x => x.Name)
+                .ToListAsync();
+        }
     }
 }

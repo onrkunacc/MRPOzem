@@ -28,6 +28,7 @@ builder.Services.AddScoped<IExpenseReportService, ExpenseReportService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IAuditReportService, AuditReportService>();
+builder.Services.AddScoped<ILeaveService, LeaveService>();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>

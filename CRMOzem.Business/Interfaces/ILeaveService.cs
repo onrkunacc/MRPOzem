@@ -18,6 +18,7 @@ namespace CRMOzem.Business.Interfaces
         Task CancelLeaveAsync(int leaveRequestId, string userId);
         Task<LeaveRequest> GetByIdAsync(int id);
         Task<List<LeaveRequest>> GetAllAsync();
+        Task<List<LeaveType>> GetLeaveTypesAsync();
 
     }
 }

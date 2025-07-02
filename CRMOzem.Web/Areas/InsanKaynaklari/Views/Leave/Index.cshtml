@@ -1,0 +1,85 @@
+﻿@model List<CRMOzem.Core.Models.LeaveRequest>
+
+@{
+    ViewData["Title"] = "İzin Talepleri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-body">
+            <h3 class="fw-bold text-primary mb-4">
+                <i class="fa fa-user-clock"></i> Tüm İzin Talepleri
+            </h3>
+
+            @if (Model.Any())
+            {
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Kullanıcı</th>
+                            <th>İzin Türü</th>
+                            <th>Tarih</th>
+                            <th>Açıklama</th>
+                            <th>Durum</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.User?.FullName</td>
+                                <td>@item.LeaveType?.Name</td>
+                                <td>@item.StartDate.ToShortDateString() - @item.EndDate.ToShortDateString()</td>
+                                <td>@item.Reason</td>
+                                <td>
+                                    <span class="badge bg-@GetStatusColor(item.Status?.Code)">
+                                        @item.Status?.Name
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (item.Status?.Code == "Pending")
+                                    {
+                                        <form asp-action="Approve" asp-route-id="@item.Id" method="post" class="d-inline">
+                                            <button class="btn btn-sm btn-success">
+                                                <i class="fa fa-check"></i> Onayla
+                                            </button>
+                                        </form>
+                                        <form asp-action="Reject" asp-route-id="@item.Id" method="post" class="d-inline ms-1">
+                                            <button class="btn btn-sm btn-danger">
+                                                <i class="fa fa-times"></i> Reddet
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <em class="text-muted">İşlem Yapıldı</em>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">Bekleyen herhangi bir izin talebi bulunmamaktadır.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusColor(string code)
+    {
+        return code switch
+        {
+            "Pending" => "warning",
+            "Approved" => "success",
+            "Rejected" => "danger",
+            "Cancelled" => "secondary",
+            _ => "light"
+        };
+    }
+}

@@ -1,4 +1,5 @@
-﻿using CRMOzem.Business.Services;
+﻿using CRMOzem.Business.Interfaces;
+using CRMOzem.Business.Services;
 using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -11,10 +12,10 @@ namespace CRMOzem.Web.Controllers
     [Authorize]
     public class LeaveRequestController : Controller
     {
-        private readonly LeaveService _leaveService;
+        private readonly ILeaveService _leaveService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public LeaveRequestController(LeaveService leaveService, UserManager<ApplicationUser> userManager)
+        public LeaveRequestController(ILeaveService leaveService, UserManager<ApplicationUser> userManager)
         {
             _leaveService = leaveService;
             _userManager = userManager;
@@ -42,7 +43,7 @@ namespace CRMOzem.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
             try
             {
@@ -50,7 +51,11 @@ namespace CRMOzem.Web.Controllers
 
                 var model = new CreateLeaveRequestViewModel
                 {
-                    LeaveTypes = leaveTypes.Select(x => new SelectListItem { Value = x.Id.ToString(), Text = x.Name })
+                    LeaveTypes = leaveTypes.Select(x => new SelectListItem
+                    {
+                        Value = x.Id.ToString(),
+                        Text = x.Name
+                    }).ToList()
                 };
 
                 return View(model);
@@ -61,6 +66,7 @@ namespace CRMOzem.Web.Controllers
                 return RedirectToAction("MyLeaves");
             }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create(CreateLeaveRequestViewModel model)

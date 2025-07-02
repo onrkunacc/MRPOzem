@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CRMOzem.Core.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CRMOzem.Core.ViewModels
 {
@@ -23,7 +24,7 @@ namespace CRMOzem.Core.ViewModels
 
         public string? Reason { get; set; }
 
-        public List<LeaveType> LeaveTypes { get; set; } // dropdown için
+        public IEnumerable<SelectListItem> LeaveTypes { get; set; } = Enumerable.Empty<SelectListItem>();
     }
 
 }
