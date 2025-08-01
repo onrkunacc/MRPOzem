@@ -19,6 +19,7 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<UserLeaveBalance> UserLeaveBalances { get; set; }
         public DbSet<UserSupervisor> UserSupervisors { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         

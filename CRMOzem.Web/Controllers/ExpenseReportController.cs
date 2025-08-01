@@ -67,6 +67,8 @@ namespace CRMOzem.Web.Controllers
             return View(model);
         }
 
+
+
         public async Task<IActionResult> ExportToExcel(int reportId)
         {
             var file = await _expenseService.ExportToExcelAsync(reportId);

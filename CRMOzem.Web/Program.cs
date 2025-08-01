@@ -1,4 +1,5 @@
-﻿using CRMOzem.Business.Interfaces;
+﻿using CRMOzem.Business.Extensions;
+using CRMOzem.Business.Interfaces;
 using CRMOzem.Business.Services;
 using CRMOzem.Core.Models;
 using CRMOzem.DataAccess.Context;
@@ -29,6 +30,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IAuditReportService, AuditReportService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
+
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>

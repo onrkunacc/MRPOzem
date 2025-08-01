@@ -56,14 +56,9 @@
                     <input asp-for="CardNumber" class="form-control" />
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Ekstre Kesim Haftası</label>
-                    <select asp-for="BillingCycleWeek" class="form-control">
-                        <option value="1">1. Hafta (1-7)</option>
-                        <option value="2">2. Hafta (8-14)</option>
-                        <option value="3">3. Hafta (15-21)</option>
-                        <option value="4">4. Hafta (22-28)</option>
-                    </select>
-                    <span asp-validation-for="BillingCycleWeek" class="text-danger"></span>
+                    <label class="form-label">Ekstre Kesim Günü (1-28)</label>
+                    <input asp-for="BillingCutoffDay" type="number" min="1" max="28" class="form-control" required />
+                    <span asp-validation-for="BillingCutoffDay" class="text-danger"></span>
                 </div>
                 <div class="text-center mt-3">
                     <button type="submit" class="btn btn-success px-4">

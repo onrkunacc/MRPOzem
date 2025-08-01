@@ -305,69 +305,113 @@ namespace CRMOzem.Business.Services
         public async Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null) return new List<BillingCycleReportViewModel>();
+            if (user == null || user.BillingCutoffDay < 1 || user.BillingCutoffDay > 28)
+                return new List<BillingCycleReportViewModel>();
 
-            var billingCycleReports = new List<BillingCycleReportViewModel>();
-
-            var distinctMonths = await _context.ExpenseDetails
+            var expenses = await _context.ExpenseDetails
+                .Include(e => e.Report)
                 .Where(e => e.Report.UserId == userId)
-                .Select(e => new
-                {
-                    Year = e.OverrideCycleYear ?? e.Date.Year,
-                    Month = e.OverrideCycleMonth ?? e.Date.Month
-                })
-                .Distinct()
-                .OrderBy(e => e.Year)
-                .ThenBy(e => e.Month)
                 .ToListAsync();
 
-            foreach (var monthData in distinctMonths)
-            {
-                int year = monthData.Year;
-                int month = monthData.Month;
-
-                DateTime currentBillingCycle = GetFirstMondayOfWeek(year, month, user.BillingCycleWeek);
-                DateTime previousBillingCycle = (month == 1)
-                    ? GetFirstMondayOfWeek(year - 1, 12, user.BillingCycleWeek)
-                    : GetFirstMondayOfWeek(year, month - 1, user.BillingCycleWeek);
-
-                var selectedExpenses = await _context.ExpenseDetails
-                    .Include(e => e.Report)
-                    .Where(e =>
-                        e.Report.UserId == userId &&
-                        (
-                            // override varsa override'a göre,
-                            (e.OverrideCycleMonth == month && e.OverrideCycleYear == year) ||
-                            // yoksa tarih aralığına göre
-                            (e.OverrideCycleMonth == null && e.OverrideCycleYear == null &&
-                             e.Date >= previousBillingCycle && e.Date < currentBillingCycle)
-                        ))
-                    .OrderBy(e => e.Date)
-                    .ToListAsync();
-
-                if (selectedExpenses.Any())
+            var grouped = expenses
+                .GroupBy(e =>
                 {
-                    billingCycleReports.Add(new BillingCycleReportViewModel
+                    // Override varsa öncelikli
+                    int year = e.OverrideCycleYear ?? 0;
+                    int month = e.OverrideCycleMonth ?? 0;
+
+                    if (year > 0 && month > 0)
+                        return new { Year = year, Month = month };
+
+                    var d = e.Date;
+                    int cutoff = user.BillingCutoffDay;
+
+                    if (d.Day <= cutoff)
                     {
-                        Year = year,
-                        Month = month,
-                        MonthName = new DateTime(year, month, 1).ToString("MMMM"),
-                        TotalAmount = selectedExpenses.Sum(e => e.Amount),
-                        ExpenseDetails = selectedExpenses.Select(d => new ExpenseDetailViewModel
-                        {
-                            Id = d.Id,
-                            ReportId = d.ReportId,
-                            Category = d.Category,
-                            Description = d.Description,
-                            Amount = d.Amount,
-                            Date = d.Date,
-                            PaymentMethod = d.PaymentMethod
-                        }).ToList()
-                    });
-                }
+                        return new { Year = d.Year, Month = d.Month };
+                    }
+                    else
+                    {
+                        var shifted = d.AddMonths(1);
+                        return new { Year = shifted.Year, Month = shifted.Month };
+                    }
+                })
+                .Select(g => new BillingCycleReportViewModel
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    MonthName = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(g.Key.Month),
+                    TotalAmount = g.Sum(x => x.Amount),
+                    ExpenseDetails = g.OrderBy(x => x.Date).Select(d => new ExpenseDetailViewModel
+                    {
+                        Id = d.Id,
+                        Category = d.Category,
+                        Description = d.Description,
+                        Amount = d.Amount,
+                        Date = d.Date,
+                        PaymentMethod = d.PaymentMethod,
+                        OverrideCycleMonth = d.OverrideCycleMonth,
+                        OverrideCycleYear = d.OverrideCycleYear
+                    }).ToList()
+                })
+                .OrderByDescending(x => x.Year)
+                .ThenByDescending(x => x.Month)
+                .ToList();
+
+            return grouped;
+        }
+
+        public async Task<List<BillingCycleReportViewModel>> GetUsersBillingCycleReportsAsync(string userId, int cutOffDay)
+        {
+            var expenseDetails = await _context.ExpenseDetails
+                .Include(ed => ed.Report)
+                .Where(ed => ed.Report.UserId == userId)
+                .ToListAsync();
+
+            var grouped = expenseDetails
+                .Select(ed =>
+                {
+                    var date = ed.Date;
+
+                    // Raporun başlangıç tarihi cutOffDay'e göre belirleniyor
+                    DateTime periodStart = date.Day >= cutOffDay
+                        ? new DateTime(date.Year, date.Month, cutOffDay)
+                        : new DateTime(date.Year, date.Month, cutOffDay).AddMonths(-1);
+
+                    return new
+                    {
+                        PeriodStart = periodStart,
+                        Detail = ed
+                    };
+                })
+                .GroupBy(x => new { x.PeriodStart.Year, x.PeriodStart.Month })
+                .OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month)
+                .ToList();
+
+            var result = new List<BillingCycleReportViewModel>();
+
+            foreach (var group in grouped)
+            {
+                var expenseDetailVMs = group.Select(x => new ExpenseDetailViewModel
+                {
+                    Date = x.Detail.Date,
+                    Amount = x.Detail.Amount,
+                    Category = x.Detail.Category,
+                    Description = x.Detail.Description,
+                    PaymentMethod = x.Detail.PaymentMethod
+                }).ToList();
+
+                result.Add(new BillingCycleReportViewModel
+                {
+                    Year = group.Key.Year,
+                    Month = group.Key.Month,
+                    MonthName = new DateTime(group.Key.Year, group.Key.Month, 1).ToString("MMMM", new CultureInfo("tr-TR")),
+                    TotalAmount = expenseDetailVMs.Sum(d => d.Amount),
+                    ExpenseDetails = expenseDetailVMs
+                });
             }
 
-            return billingCycleReports;
+            return result;
         }
 
 

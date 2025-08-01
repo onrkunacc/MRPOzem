@@ -17,18 +17,27 @@ namespace CRMOzem.Web.Controllers
              _expenseService = expenseService;
             _userManager = userManager;
         }
-        public async  Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? cutOffDay)
         {
             var user = await _userManager.GetUserAsync(User);
-            var reports = await _expenseService.GetUserBillingCycleReportsAsync(user.Id);
 
-            if (!reports.Any())
+            int effectiveCutOffDay = user.BillingCutoffDay;
+
+            if (cutOffDay.HasValue && cutOffDay.Value != user.BillingCutoffDay)
             {
-                Console.WriteLine("🚨 Hiç ekstre raporu bulunamadı!");
+                // Güncellenen kesim gününü kullanıcı profiline kaydet
+                user.BillingCutoffDay = cutOffDay.Value;
+                await _userManager.UpdateAsync(user);
+                effectiveCutOffDay = cutOffDay.Value;
             }
+
+            var reports = await _expenseService.GetUsersBillingCycleReportsAsync(user.Id, effectiveCutOffDay);
+
+            ViewBag.CutOffDay = effectiveCutOffDay;
 
             return View(reports);
         }
+
         public async Task<IActionResult> Details(int year, int month)
         {
             var user = await _userManager.GetUserAsync(User);

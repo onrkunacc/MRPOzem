@@ -264,7 +264,7 @@ namespace CRMOzem.Web.Controllers
                     PhoneNumber = user.PhoneNumber,
                     Title = user.Title,
                     CardNumber = user.CardNumber,
-                    BillingCycleWeek = user.BillingCycleWeek
+                    BillingCutoffDay = user.BillingCutoffDay
                 };
 
                 return View(model);
@@ -302,7 +302,8 @@ namespace CRMOzem.Web.Controllers
                 user.PhoneNumber = model.PhoneNumber;
                 user.Title = model.Title;
                 user.CardNumber = model.CardNumber;
-                user.BillingCycleWeek = model.BillingCycleWeek;
+                user.BillingCutoffDay = model.BillingCutoffDay;
+
 
                 var result = await _userManager.UpdateAsync(user);
                 if (result.Succeeded)

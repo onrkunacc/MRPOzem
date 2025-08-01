@@ -12,7 +12,7 @@ namespace CRMOzem.Core.ViewModels
         public int Month { get; set; } // Ekstre Ayı
         public string MonthName { get; set; } // Örn: "Ocak", "Şubat"
         public decimal TotalAmount { get; set; } // Ayın toplam ekstresi
-        public List<ExpenseReportViewModel> ExpenseReports { get; set; } = new(); // Hangi masraf raporlarını içeriyor
-        public List<ExpenseDetailViewModel> ExpenseDetails { get; set; } = new(); // 📌 Eklenen masraf detayları
+        public List<ExpenseReportViewModel> ExpenseReports { get; set; } = new();  
+        public List<ExpenseDetailViewModel> ExpenseDetails { get; set; } = new(); 
     }
 }

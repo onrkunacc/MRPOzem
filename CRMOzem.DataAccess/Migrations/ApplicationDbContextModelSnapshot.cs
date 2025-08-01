@@ -30,7 +30,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("BillingCycleWeek")
+                    b.Property<int>("BillingCutoffDay")
                         .HasColumnType("int");
 
                     b.Property<string>("CardNumber")
@@ -459,7 +459,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsDeductedFromQuata")
+                    b.Property<bool>("IsDeductedFromQuota")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsHourly")

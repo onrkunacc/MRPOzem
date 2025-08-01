@@ -24,6 +24,8 @@ namespace CRMOzem.Business.Interfaces
         Task<decimal> GetCurrentMonthExpenseAsync(string userId);
         //Aylık kesim tarihine göre rapor
         Task<List<BillingCycleReportViewModel>> GetUserBillingCycleReportsAsync(string userId);
+        Task<List<BillingCycleReportViewModel>> GetUsersBillingCycleReportsAsync(string userId, int cutOffDay);
+
         Task<bool> DeleteExpenseAsync(int expenseId);
 
     }

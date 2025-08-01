@@ -27,5 +27,6 @@ namespace CRMOzem.Core.ViewModels
         public PaymentMethod PaymentMethod { get; set; }
         public int? OverrideCycleMonth { get; set; }
         public int? OverrideCycleYear { get; set; }
+
     }
 }

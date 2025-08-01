@@ -13,7 +13,7 @@ namespace CRMOzem.Core.Models
         [Required, MaxLength(100)]
         public string Name { get; set; }
         public string? Description { get; set; }    
-        public bool IsDeductedFromQuota { get; set; } // Yıllık haktan düşer mi ? 
+        public bool IsDeductedFromQuota  { get; set; } // Yıllık haktan düşer mi ? 
         public bool IsHourly {  get; set; } // Saatlik mi ? 
         public bool IsPaid { get; set; } // Ücretli mi ? 
         public ICollection<LeaveRequest> LeaveRequests { get; set; }

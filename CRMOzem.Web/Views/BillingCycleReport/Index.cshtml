@@ -3,11 +3,28 @@
 @{
     ViewData["Title"] = "Ekstre Raporlarım";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    int cutOffDay = ViewBag.CutOffDay ?? 1;
 }
 
 <div class="container py-4">
     <h2 class="text-center font-bold text-2xl mb-4">@DateTime.Now.Year EKSTRE RAPORLARI</h2>
     <hr />
+
+    <!-- Ekstre Kesim Günü Seçimi -->
+    <form method="get" asp-action="Index" class="form-inline mb-4">
+        <label class="mr-2 font-medium">Ekstre Kesim Günü:</label>
+        <select name="cutOffDay" class="form-control mr-2" onchange="this.form.submit()">
+            @for (int day = 1; day <= 28; day++)
+            {
+                <option value="@day" selected="@(cutOffDay == day ? "selected" : null)">@day</option>
+            }
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-primary">Güncelle</button></noscript>
+    </form>
+
+    <p class="text-sm text-gray-600 mb-3">
+        Gösterilen ekstreler, her ayın <strong>@cutOffDay</strong>'unda kesilmektedir.
+    </p>
 
     <div class="flex justify-between items-center mb-4">
         <h4 class="font-semibold text-lg">
@@ -44,7 +61,9 @@
         }
         else
         {
-            <p class="text-center text-muted">Henüz ekstre raporu bulunmamaktadır.</p>
+            <div class="col-12">
+                <p class="text-center text-muted">Henüz ekstre raporu bulunmamaktadır.</p>
+            </div>
         }
     </div>
 </div>
