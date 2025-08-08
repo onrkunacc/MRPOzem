@@ -1,0 +1,35 @@
+﻿@model ExpenseReport
+
+@{
+    ViewData["Title"] = "Masraf Raporu Detayı";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3>@Model.MonthYear.ToString("MMMM yyyy") Rapor Detayı</h3>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Tarih</th>
+            <th>Kategori</th>
+            <th>Açıklama</th>
+            <th>Ödeme</th>
+            <th>Tutar</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.ExpenseDetails.OrderBy(e => e.Date))
+        {
+            <tr>
+                <td>@item.Date.ToString("dd.MM.yyyy")</td>
+                <td>@item.Category</td>
+                <td>@item.Description</td>
+                <td>@item.PaymentMethod</td>
+                <td>@item.Amount.ToString("N2") ₺</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a class="btn btn-sm btn-outline-success" asp-action="AddToReport" asp-route-reportId="@Model.Id">+ Masraf Ekle</a>
+<a class="btn btn-sm btn-outline-primary" asp-action="PrintReport" asp-route-reportId="@Model.Id" target="_blank">📄 PDF Çıktısı</a>

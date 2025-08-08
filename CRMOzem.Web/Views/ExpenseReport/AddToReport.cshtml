@@ -1,0 +1,79 @@
+﻿@model ExpenseDetailViewModel
+@{
+    ViewData["Title"] = "Masraf Ekle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white text-center">
+            <h4 class="mb-0">Masraf Ekle</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="AddToReport" method="post">
+                <input type="hidden" asp-for="ReportId" /> <!-- 📌 Rapor ID'si gönderiliyor -->
+
+                <div class="form-group">
+                    <label for="Category">Kategori</label>
+                    <input type="text" class="form-control" asp-for="Category" placeholder="Örn: Yemek, Ulaşım" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="Description">Açıklama</label>
+                    <textarea class="form-control" asp-for="Description" rows="3" placeholder="Masraf açıklaması girin" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="PaymentMethod">Ödeme Yöntemi</label>
+                    <select class="form-control" asp-for="PaymentMethod" asp-items="Html.GetEnumSelectList<PaymentMethod>()">
+                        <option selected disabled>Seçiniz...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="Amount">Tutar (₺)</label>
+                    <input type="number" step="0.01" class="form-control" asp-for="Amount" placeholder="0,00" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="Date">Tarih</label>
+                    <input type="date" class="form-control" asp-for="Date" required />
+                </div>
+
+                <button type="submit" class="btn btn-outline-success w-100">💾 Masrafı Kaydet</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const amountInput = document.querySelector('input[name="Amount"]');
+
+            if (amountInput) {
+                amountInput.addEventListener('focus', function () {
+                    if (this.value === '0' || this.value === '0.00') {
+                        this.value = '';
+                    } else {
+                        this.select(); // Select all for quick overwrite
+                    }
+                });
+
+                amountInput.addEventListener('blur', function () {
+                    if (this.value.trim() === '') {
+                        this.value = '0';
+                    }
+                });
+            }
+        });
+    </script>
+}

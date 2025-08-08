@@ -1,12 +1,14 @@
-﻿using System.Globalization;
-using CRMOzem.Business.Interfaces;
+﻿using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Enums;
 using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
+using CRMOzem.DataAccess.Context;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace CRMOzem.Web.Controllers
 {
@@ -14,11 +16,13 @@ namespace CRMOzem.Web.Controllers
     {
         private readonly IExpenseReportService _expenseService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _context;
 
-        public ExpenseReportController(IExpenseReportService expenseService, UserManager<ApplicationUser> userManager)
+        public ExpenseReportController(IExpenseReportService expenseService, UserManager<ApplicationUser> userManager, ApplicationDbContext context)
         {
             _expenseService = expenseService;
             _userManager = userManager;
+            _context = context;
         }
 
         public async Task<IActionResult> Index()
@@ -306,6 +310,139 @@ namespace CRMOzem.Web.Controllers
 
         }
 
+        //Aylık deneme raporu 
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View(new CreateReportViewModel());
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> Create(CreateReportViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                var existing = await _context.ExpenseReports
+                    .FirstOrDefaultAsync(r => r.UserId == user.Id && r.MonthYear.Month == model.Month && r.MonthYear.Year == model.Year);
+
+                if (existing != null)
+                {
+                    TempData["Warning"] = "Bu aya ait rapor zaten mevcut.";
+                    return RedirectToAction("InputDetails", new { year = model.Year, month = model.Month }); // ✅ DOĞRU ROUTE
+                }
+
+                var report = new ExpenseReport
+                {
+                    UserId = user.Id,
+                    MonthYear = new DateTime(model.Year, model.Month, 1),
+                    ExpenseDetails = new List<ExpenseDetail>()
+                };
+
+                _context.ExpenseReports.Add(report);
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] = "Rapor başarıyla oluşturuldu.";
+                return RedirectToAction("InputDetails", new { year = model.Year, month = model.Month }); // ✅ DOĞRU ROUTE
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Rapor oluşturulurken bir hata oluştu: {ex.Message}";
+                return View(model);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AddToReport(int reportId)
+        {
+            var report = await _context.ExpenseReports.FindAsync(reportId);
+            if (report == null)
+                return NotFound();
+
+            var model = new ExpenseDetailViewModel
+            {
+                ReportId = report.Id,
+                Date = DateTime.Now,
+                PaymentMethod = PaymentMethod.Kart
+            };
+
+            return View("AddToReport", model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddToReport(ExpenseDetailViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var report = await _context.ExpenseReports
+                .Include(r => r.ExpenseDetails)
+                .FirstOrDefaultAsync(r => r.Id == model.ReportId);
+
+            if (report == null)
+                return NotFound();
+
+            // 🔍 Tarih kontrolü: aynı ay mı?
+            if (model.Date.Month != report.MonthYear.Month || model.Date.Year != report.MonthYear.Year)
+            {
+                TempData["Error"] = $"⚠️ Masraf tarihi ({model.Date:MMMM yyyy}) ile rapor tarihi ({report.MonthYear:MMMM yyyy}) uyuşmuyor.";
+                return View(model); // ya da uyarı view'ı
+            }
+
+            report.ExpenseDetails.Add(new ExpenseDetail
+            {
+                ReportId = model.ReportId,
+                Date = model.Date,
+                Description = model.Description,
+                Category = model.Category,
+                PaymentMethod = model.PaymentMethod,
+                Amount = model.Amount
+            });
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Masraf başarıyla eklendi!";
+            return RedirectToAction("InputDetails", new { year = report.MonthYear.Year, month = report.MonthYear.Month });
+        }
+
+        public async Task<IActionResult> MonthlyReports()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var reports = await _context.ExpenseReports
+                .Include(r => r.ExpenseDetails)
+                .Where(r => r.UserId == user.Id)
+                .OrderByDescending(r => r.MonthYear)
+                .ToListAsync();
+
+            return View("MonthlyReports", reports);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> InputDetails(int year, int month)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                var report = await _context.ExpenseReports
+                    .Include(r => r.ExpenseDetails)
+                    .FirstOrDefaultAsync(r => r.UserId == user.Id && r.MonthYear.Month == month && r.MonthYear.Year == year);
+
+                if (report == null)
+                    return NotFound();
+
+                return View(report);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Detaylar yüklenemedi: {ex.Message}";
+                return RedirectToAction("Index", "Home");
+            }
+        }
     }
 }

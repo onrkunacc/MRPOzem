@@ -1,0 +1,25 @@
+﻿@model AddExpenseInputModel
+@{
+    ViewData["Title"] = "Tarih Uyuşmazlığı";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="alert alert-warning">
+        <strong>@ViewBag.ConfirmMessage</strong>
+    </div>
+
+    <form asp-controller="ExpenseDetail" asp-action="Add" method="post">
+        <input type="hidden" asp-for="ReportId" />
+        <input type="hidden" asp-for="Date" />
+        <input type="hidden" asp-for="Category" />
+        <input type="hidden" asp-for="Description" />
+        <input type="hidden" asp-for="Amount" />
+        <input type="hidden" asp-for="PaymentMethod" />
+        <input type="hidden" name="UserConfirmed" value="true" />
+
+        <button type="submit" class="btn btn-success">Devam Et</button>
+        <a href="@Url.Action("Details", "ExpenseReport", new { year = Model.Date.Year, month = Model.Date.Month })"
+           class="btn btn-secondary ml-2">Vazgeç</a>
+    </form>
+</div>

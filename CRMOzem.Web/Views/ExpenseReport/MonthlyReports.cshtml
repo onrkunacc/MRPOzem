@@ -1,0 +1,85 @@
+﻿@model List<CRMOzem.Core.Models.ExpenseReport>
+@using System.Globalization
+@using CRMOzem.Core.Enums
+@{
+    ViewData["Title"] = "Yeni Aylık Masraf Raporları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>📘 Yeni Aylık Masraf Raporları</h2>
+        <a class="btn btn-primary" asp-action="Create">➕ Yeni Rapor Oluştur</a>
+    </div>
+
+
+    <hr />
+
+    @foreach (var report in Model)
+    {
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h4 class="card-title">@report.MonthYear.ToString("MMMM yyyy", CultureInfo.CurrentCulture)</h4>
+                <p class="card-text">
+                    Toplam Masraf: <strong>@report.TotalAmount.ToString("C")</strong>
+                </p>
+
+                <a asp-action="Details" asp-route-id="@report.Id" class="btn btn-outline-primary btn-sm">Detay</a>
+                <a asp-action="PrintReport" asp-route-reportId="@report.Id" target="_blank" class="btn btn-outline-danger btn-sm">PDF Yazdır</a>
+
+                <hr />
+                <form asp-controller="ExpenseDetail" asp-action="Add" method="post" onsubmit="return validateDate(this, @report.MonthYear.Month, @report.MonthYear.Year);">
+                    <input type="hidden" name="ReportId" value="@report.Id" />
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <input type="date" name="Date" class="form-control" required />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="Category" class="form-control" placeholder="Kategori" required />
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="Description" class="form-control" placeholder="Açıklama" required />
+                        </div>
+                        <div class="col-md-2">
+                            <select name="PaymentMethod" class="form-control">
+                                @foreach (var method in Enum.GetValues(typeof(PaymentMethod)))
+                                {
+                                    <option value="@((int)method)">@method</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="Amount" step="0.01" class="form-control" placeholder="Tutar" required />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm mt-2">Masraf Ekle</button>
+                    <input type="hidden" name="UserConfirmed" value="false" />
+                </form>
+                <a asp-action="AddToReport" asp-route-reportId="@report.Id" class="btn btn-sm btn-outline-success">➕ Masraf Ekle</a>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function validateDate(form, month, year) {
+            const dateInput = new Date(form.Date.value);
+            const formMonth = dateInput.getMonth() + 1;
+            const formYear = dateInput.getFullYear();
+
+            if (formMonth !== month || formYear !== year) {
+                const confirmed = confirm(`${formMonth}.${formYear} tarihli masraf, ${month}.${year} raporuna ekleniyor. Devam edilsin mi?`);
+                if (confirmed) {
+                    form.UserConfirmed.value = "true";
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    </script>
+}

@@ -174,7 +174,7 @@ namespace CRMOzem.Web.Controllers
 
                 byte[] pdfBytes = memoryStream.ToArray();
 
-                // **Yeni sekmede açmak için PDF'yi inline olarak döndür**
+                // **Yeni sekmede açmak için PDF'yi olarak döndür**
                 return File(pdfBytes, "application/pdf");
             }
         }
