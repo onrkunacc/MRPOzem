@@ -25,20 +25,20 @@ namespace CRMOzem.Web.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index()
-        {
+        //public async Task<IActionResult> Index()
+        //{
 
-            var user = await _userManager.GetUserAsync(User);
-            var reports = await _expenseService.GetUserReportsAsync(user.Id);
-            return View(reports);
-        }
+        //    var user = await _userManager.GetUserAsync(User);
+        //    var reports = await _expenseService.GetUserReportsAsync(user.Id);
+        //    return View(reports);
+        //}
 
         [HttpPost]
         public async Task<IActionResult> CreateReport()
         {
             var user = await _userManager.GetUserAsync(User);
             await _expenseService.CreateReportAsync(user.Id, DateTime.Now);
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(MonthlyReports));
         }
         [HttpGet]
         public IActionResult AddExpense(int reportId)
@@ -52,25 +52,60 @@ namespace CRMOzem.Web.Controllers
             return View(model);
         }
 
+        // ================== MASRAF EKLE (MODAL POST) ==================
         [HttpPost]
-        public async Task<IActionResult> AddExpense(ExpenseDetailViewModel model)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddExpense(AddExpenseInputModel model, string submitAction)
         {
-            if (ModelState.IsValid)
+            ModelState.Remove("submitAction");
+            if (!ModelState.IsValid)
             {
-                var user = await _userManager.GetUserAsync(User);
-                var success = await _expenseService.AddExpenseAsync(model, user.Id);
+                TempData["Error"] = "⚠️ Zorunlu alanları doldurun.";
+                TempData["OpenAddModal"] = model.ReportId.ToString();
+                return RedirectToAction(nameof(Details), new { id = model.ReportId });
+            }
 
-                if (success)
+            try
+            {
+                var report = await _context.ExpenseReports
+                                           .Include(r => r.ExpenseDetails)
+                                           .FirstOrDefaultAsync(r => r.Id == model.ReportId);
+
+                if (report == null)
                 {
-                    TempData["SuccessMessage"] = "Masraf başarıyla eklendi! ✅"; 
-                    return RedirectToAction("AddExpense", new { reportId = model.ReportId });
+                    TempData["Error"] = "❌ Rapor bulunamadı.";
+                    return RedirectToAction(nameof(MonthlyReports));
                 }
 
-                ModelState.AddModelError("", "Masraf eklenemedi.");
-            }
-            return View(model);
-        }
+                report.ExpenseDetails.Add(new ExpenseDetail
+                {
+                    ReportId = model.ReportId,
+                    Date = model.Date,
+                    Category = model.Category,
+                    Description = model.Description,
+                    PaymentMethod = model.PaymentMethod,
+                    Amount = model.Amount
+                });
 
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "✅ Masraf eklendi.";
+
+                if (string.Equals(submitAction, "save_and_new", StringComparison.OrdinalIgnoreCase))
+                {
+                    TempData["OpenAddModal"] = report.Id.ToString();
+                    return RedirectToAction(nameof(Details), new { id = report.Id });
+                }
+
+                return RedirectToAction(nameof(Details), new { id = report.Id });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"❌ Masraf eklenemedi: {ex.Message}";
+                TempData["OpenAddModal"] = model.ReportId.ToString();
+                return RedirectToAction(nameof(Details), new { id = model.ReportId });
+            }
+        }
 
 
         public async Task<IActionResult> ExportToExcel(int reportId)
@@ -82,16 +117,24 @@ namespace CRMOzem.Web.Controllers
             return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "MasrafRaporu.xlsx");
         }
 
+        // ================== DETAY ==================
+        [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            var report = await _expenseService.GetReportByIdAsync(id);
+            var user = await _userManager.GetUserAsync(User);
+            var report = await _context.ExpenseReports
+                                       .Include(r => r.ExpenseDetails)
+                                       .FirstOrDefaultAsync(r => r.Id == id && r.UserId == user.Id);
+
             if (report == null)
             {
-                return NotFound("Masraf raporu bulunamadı.");
+                TempData["Error"] = "Masraf raporu bulunamadı.";
+                return RedirectToAction(nameof(MonthlyReports));
             }
 
-            report.ExpenseDetails = report.ExpenseDetails.OrderBy(e => e.Date).ToList();
-            return View(report);
+            ViewBag.CalculatedTotal = report.ExpenseDetails.Sum(e => e.Amount);
+            ViewBag.AddExpenseModel = new AddExpenseInputModel { ReportId = report.Id };
+            return View("Details", report);
         }
 
         [HttpGet]
@@ -151,189 +194,190 @@ namespace CRMOzem.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> DeleteExpense(int expenseId)
         {
+            var exp = await _expenseService.GetExpenseByIdAsync(expenseId);
+            if (exp == null) return NotFound("Silinmek istenen masraf bulunamadı.");
+
+            var reportId = exp.ReportId;
+
             var success = await _expenseService.DeleteExpenseAsync(expenseId);
-            if (!success)
-            {
-                return NotFound("Silinmek istenen masraf bulunamadı.");
-            }
+            if (!success) return NotFound("Silme işlemi başarısız.");
 
-            return RedirectToAction("Details", new { id = expenseId });
+            return RedirectToAction(nameof(Details), new { id = reportId }); // ✅ doğru sayfaya dönüş
         }
 
-        [HttpPost]
-        public async Task<IActionResult> UpdateCycleInline(int id, int? overrideMonth, int? overrideYear)
+        //[HttpPost]
+        //public async Task<IActionResult> UpdateCycleInline(int id, int? overrideMonth, int? overrideYear)
+        //{
+        //    try
+        //    {
+        //        var expense = await _expenseService.GetExpenseByIdAsync(id);
+        //        if (expense == null)
+        //            return NotFound("Masraf bulunamadı.");
+
+        //        expense.OverrideCycleMonth = overrideMonth;
+        //        expense.OverrideCycleYear = overrideYear;
+        //        await _expenseService.UpdateExpenseAsync(expense);
+
+        //        var monthName = overrideMonth.HasValue
+        //            ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(overrideMonth.Value)
+        //            : "Otomatik";
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            month = overrideMonth,
+        //            year = overrideYear,
+        //            monthName
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = "Ekstre dönemi güncellenirken hata oluştu.",
+        //            error = ex.Message
+        //        });
+        //    }
+        //}
+
+        [HttpGet]
+        public async Task<IActionResult> PrintReport(int id)
         {
-            try
+            var user = await _userManager.GetUserAsync(User);
+            var report = await _context.ExpenseReports
+                                       .Include(r => r.ExpenseDetails)
+                                       .FirstOrDefaultAsync(r => r.Id == id && r.UserId == user.Id);
+            if (report == null) return NotFound("Masraf raporu bulunamadı.");
+
+            using var ms = new MemoryStream();
+            var doc = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4, 50, 50, 50, 50);
+            PdfWriter.GetInstance(doc, ms);
+            doc.Open();
+
+            string fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+            BaseFont bf = BaseFont.CreateFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            var fTitle = new iTextSharp.text.Font(bf, 18, iTextSharp.text.Font.BOLD);
+            var fHeader = new iTextSharp.text.Font(bf, 12, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+            var fReg = new iTextSharp.text.Font(bf, 10);
+            var fRed = new iTextSharp.text.Font(bf, 14, iTextSharp.text.Font.BOLD, BaseColor.RED);
+
+            // --- HEADER ---
+            PdfPTable header = new PdfPTable(2) { WidthPercentage = 100 };
+            header.SetWidths(new float[] { 50f, 50f });
+
+            PdfPCell logoCell = new PdfPCell { Border = PdfPCell.NO_BORDER };
+            string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "tinydash-master", "light", "assets", "images", "logo.jpeg");
+            if (System.IO.File.Exists(logoPath))
             {
-                var expense = await _expenseService.GetExpenseByIdAsync(id);
-                if (expense == null)
-                    return NotFound("Masraf bulunamadı.");
-
-                expense.OverrideCycleMonth = overrideMonth;
-                expense.OverrideCycleYear = overrideYear;
-                await _expenseService.UpdateExpenseAsync(expense);
-
-                var monthName = overrideMonth.HasValue
-                    ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(overrideMonth.Value)
-                    : "Otomatik";
-
-                return Ok(new
-                {
-                    success = true,
-                    month = overrideMonth,
-                    year = overrideYear,
-                    monthName
-                });
+                var logo = iTextSharp.text.Image.GetInstance(logoPath);
+                logo.ScaleAbsolute(100f, 75f);
+                logoCell.AddElement(logo);
             }
-            catch (Exception ex)
+
+            PdfPCell userCell = new PdfPCell(new Phrase(
+                $"{user?.FullName ?? "Kullanıcı"}\n{report.MonthYear:MMMM yyyy}",
+                new iTextSharp.text.Font(bf, 12, iTextSharp.text.Font.BOLD)))
             {
-                return BadRequest(new
+                Border = PdfPCell.NO_BORDER,
+                HorizontalAlignment = Element.ALIGN_RIGHT
+            };
+
+            header.AddCell(logoCell);
+            header.AddCell(userCell);
+            doc.Add(header);
+
+            // --- TITLE ---
+            var title = new iTextSharp.text.Paragraph($"{report.MonthYear:MMMM yyyy} Masraf Raporu", fTitle)
+            {
+                Alignment = Element.ALIGN_CENTER,
+                SpacingAfter = 20
+            };
+            doc.Add(title);
+
+            // --- TABLE ---
+            PdfPTable table = new PdfPTable(5) { WidthPercentage = 100 };
+            table.SetWidths(new float[] { 15f, 20f, 35f, 15f, 15f });
+
+            string[] headers = { "Tarih", "Kategori", "Açıklama", "Ödeme Yöntemi", "Tutar (₺)" };
+            foreach (var h in headers)
+            {
+                var c = new PdfPCell(new Phrase(h, fHeader))
                 {
-                    success = false,
-                    message = "Ekstre dönemi güncellenirken hata oluştu.",
-                    error = ex.Message
-                });
+                    BackgroundColor = new BaseColor(0, 102, 204),
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 5
+                };
+                table.AddCell(c);
             }
+
+            foreach (var e in report.ExpenseDetails.OrderBy(x => x.Date))
+            {
+                table.AddCell(new Phrase(e.Date.ToString("dd.MM.yyyy"), fReg));
+                table.AddCell(new Phrase(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(e.Category ?? ""), fReg));
+                table.AddCell(new Phrase(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(e.Description ?? ""), fReg));
+                table.AddCell(new Phrase(e.PaymentMethod.ToString(), fReg));
+                table.AddCell(new Phrase($"{e.Amount:N2} ₺", fReg));
+            }
+            doc.Add(table);
+
+            // --- TOTAL ---
+            decimal total = report.ExpenseDetails.Sum(x => x.Amount);
+            PdfPTable totalT = new PdfPTable(1) { WidthPercentage = 30, HorizontalAlignment = Element.ALIGN_RIGHT };
+            PdfPCell totalC = new PdfPCell(new Phrase($"Toplam Tutar: {total:N2} ₺", fRed))
+            {
+                Border = PdfPCell.NO_BORDER,
+                HorizontalAlignment = Element.ALIGN_RIGHT,
+                PaddingTop = 10
+            };
+            totalT.AddCell(totalC);
+            doc.Add(totalT);
+
+            // --- SIGNATURE ---
+            var sig = new iTextSharp.text.Paragraph("\n\nİmza :..................", fReg) { SpacingBefore = 30 };
+            doc.Add(sig);
+
+            doc.Close();
+            byte[] pdfBytes = ms.ToArray();
+
+            // 📌 Tarayıcıda yeni sekmede açılması için "inline" ayarı
+            Response.Headers.Add("Content-Disposition", $"inline; filename=MasrafRaporu_{report.MonthYear:yyyy_MM}.pdf");
+            return File(pdfBytes, "application/pdf");
         }
 
 
 
-        public async Task<IActionResult> PrintReport(int reportId)
-        {
-            var report = await _expenseService.GetReportByIdAsync(reportId);
-            if (report == null)
-                return NotFound("Masraf raporu bulunamadı.");
 
-            using (MemoryStream memoryStream = new MemoryStream())
-            {
-                iTextSharp.text.Document document = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4, 50, 50, 50, 50);
-                PdfWriter writer = PdfWriter.GetInstance(document, memoryStream);
-                document.Open();
-
-                // **Türkçe Karakter Desteği için Arial Font Kullanımı**
-                string fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
-                BaseFont baseFont = BaseFont.CreateFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-                iTextSharp.text.Font fontTitle = new iTextSharp.text.Font(baseFont, 18, iTextSharp.text.Font.BOLD);
-                iTextSharp.text.Font fontHeader = new iTextSharp.text.Font(baseFont, 12, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
-                iTextSharp.text.Font fontRegular = new iTextSharp.text.Font(baseFont, 10);
-                iTextSharp.text.Font fontRedBold = new iTextSharp.text.Font(baseFont, 14, iTextSharp.text.Font.BOLD, BaseColor.RED);
-
-                // **Başlık Tablosu (Logo + Kullanıcı Bilgisi)**
-                PdfPTable headerTable = new PdfPTable(2);
-                headerTable.WidthPercentage = 100;
-                headerTable.SetWidths(new float[] { 50f, 50f });
-
-                // **Şirket Logosu Sadece Buraya Eklendi**
-                PdfPCell logoCell = new PdfPCell();
-                string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "tinydash-master", "light", "assets", "images", "logo.jpeg");
-                if (System.IO.File.Exists(logoPath))
-                {
-                    iTextSharp.text.Image logo = iTextSharp.text.Image.GetInstance(logoPath);
-                    logo.ScaleAbsolute(100f, 75f);
-                    logoCell.AddElement(logo);
-                }
-                logoCell.Border = PdfPCell.NO_BORDER;
-
-                // **Kullanıcı Adı ve Tarih Sağ Üste**
-                var user = await _userManager.GetUserAsync(User);
-                PdfPCell userInfoCell = new PdfPCell(new Phrase($"{user?.FullName ?? "Bilinmeyen Kullanıcı"}\n{report.MonthYear:MM.yyyy}",
-                    new iTextSharp.text.Font(baseFont, 12, iTextSharp.text.Font.BOLD)))
-                {
-                    HorizontalAlignment = Element.ALIGN_RIGHT,
-                    Border = PdfPCell.NO_BORDER
-                };
-
-                headerTable.AddCell(logoCell);
-                headerTable.AddCell(userInfoCell);
-                document.Add(headerTable); 
-
-                // **Başlık**
-                iTextSharp.text.Paragraph title = new iTextSharp.text.Paragraph($"{report.MonthYear.ToString("MMMM yyyy")} Masraf Raporu", fontTitle);
-                title.Alignment = Element.ALIGN_CENTER;
-                title.SpacingAfter = 20;
-                document.Add(title);
-
-                // **Tablo Başlıkları**
-                PdfPTable table = new PdfPTable(5);
-                table.WidthPercentage = 100;
-                table.SetWidths(new float[] { 15f, 20f, 35f, 15f, 15f });
-
-                string[] headers = { "Tarih", "Kategori", "Açıklama", "Ödeme Yöntemi", "Tutar (₺)" };
-                foreach (var header in headers)
-                {
-                    PdfPCell cell = new PdfPCell(new Phrase(header, fontHeader))
-                    {
-                        BackgroundColor = new BaseColor(0, 102, 204),
-                        HorizontalAlignment = Element.ALIGN_CENTER,
-                        Padding = 5
-                    };
-                    table.AddCell(cell);
-                }
-
-                // **Tablo İçeriği - Tarih Küçükten Büyüğe Sıralandı**
-                foreach (var expense in report.ExpenseDetails.OrderBy(e => e.Date))
-                {
-                    table.AddCell(new Phrase(expense.Date.ToString("dd.MM.yyyy"), fontRegular));
-                    table.AddCell(new Phrase(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(expense.Category), fontRegular));
-                    table.AddCell(new Phrase(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(expense.Description), fontRegular));
-                    table.AddCell(new Phrase(expense.PaymentMethod.ToString(), fontRegular));
-                    table.AddCell(new Phrase($"{expense.Amount:N2} ₺", fontRegular));
-                }
-
-                document.Add(table);
-
-                // **Toplam Tutar Sağ Alt Köşeye Taşındı**
-                PdfPTable totalAmountTable = new PdfPTable(1);
-                totalAmountTable.WidthPercentage = 30;
-                totalAmountTable.HorizontalAlignment = Element.ALIGN_RIGHT;
-                PdfPCell totalAmountCell = new PdfPCell(new Phrase($"Toplam Tutar: {report.TotalAmount:N2} ₺", fontRedBold))
-                {
-                    HorizontalAlignment = Element.ALIGN_RIGHT,
-                    Border = PdfPCell.NO_BORDER,
-                    PaddingTop = 10
-                };
-
-                iTextSharp.text.Paragraph signature = new iTextSharp.text.Paragraph("\n\nİmza :..................", fontRegular);
-                signature.Alignment = Element.ALIGN_LEFT;
-                signature.SpacingBefore = 30;
-                document.Add(signature);
-
-                totalAmountTable.AddCell(totalAmountCell);
-                document.Add(totalAmountTable);
-
-                document.Close();
-
-                byte[] pdfBytes = memoryStream.ToArray();
-                return File(pdfBytes, "application/pdf");
-            }
-
-
-        }
 
         //Aylık deneme raporu 
         [HttpGet]
         public IActionResult Create()
         {
-            return View(new CreateReportViewModel());
+            return View(new CreateReportViewModel
+            {
+                Year = DateTime.Now.Year,
+                Month = DateTime.Now.Month
+            });
         }
 
+        // Yeni rapor oluşturma (POST)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateReportViewModel model)
         {
-            if (!ModelState.IsValid)
-                return View(model);
+            if (!ModelState.IsValid) return View(model);
 
             try
             {
                 var user = await _userManager.GetUserAsync(User);
-
-                var existing = await _context.ExpenseReports
-                    .FirstOrDefaultAsync(r => r.UserId == user.Id && r.MonthYear.Month == model.Month && r.MonthYear.Year == model.Year);
-
-                if (existing != null)
+                var exists = await _context.ExpenseReports
+                                           .AnyAsync(r => r.UserId == user.Id &&
+                                                          r.MonthYear.Year == model.Year &&
+                                                          r.MonthYear.Month == model.Month);
+                if (exists)
                 {
                     TempData["Warning"] = "Bu aya ait rapor zaten mevcut.";
-                    return RedirectToAction("InputDetails", new { year = model.Year, month = model.Month }); // ✅ DOĞRU ROUTE
+                    return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
                 }
 
                 var report = new ExpenseReport
@@ -346,8 +390,8 @@ namespace CRMOzem.Web.Controllers
                 _context.ExpenseReports.Add(report);
                 await _context.SaveChangesAsync();
 
-                TempData["Success"] = "Rapor başarıyla oluşturuldu.";
-                return RedirectToAction("InputDetails", new { year = model.Year, month = model.Month }); // ✅ DOĞRU ROUTE
+                TempData["SuccessMessage"] = "Rapor başarıyla oluşturuldu.";
+                return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
             }
             catch (Exception ex)
             {
@@ -355,6 +399,7 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> AddToReport(int reportId)
@@ -409,18 +454,84 @@ namespace CRMOzem.Web.Controllers
             return RedirectToAction("InputDetails", new { year = report.MonthYear.Year, month = report.MonthYear.Month });
         }
 
-        public async Task<IActionResult> MonthlyReports()
+        // ================== ANA LİSTE (YENİ) ==================
+        [HttpGet]
+        public async Task<IActionResult> MonthlyReports(int? year)
         {
             var user = await _userManager.GetUserAsync(User);
-            var reports = await _context.ExpenseReports
-                .Include(r => r.ExpenseDetails)
-                .Where(r => r.UserId == user.Id)
-                .OrderByDescending(r => r.MonthYear)
-                .ToListAsync();
+
+            var q = _context.ExpenseReports
+                            .Include(r => r.ExpenseDetails)
+                            .Where(r => r.UserId == user.Id);
+
+            if (year.HasValue)
+                q = q.Where(r => r.MonthYear.Year == year.Value);
+
+            var reports = await q.OrderByDescending(r => r.MonthYear).ToListAsync();
+
+            ViewBag.SelectedYear = year;
+            ViewBag.Years = await _context.ExpenseReports
+                                          .Where(r => r.UserId == user.Id)
+                                          .Select(r => r.MonthYear.Year)
+                                          .Distinct()
+                                          .OrderByDescending(y => y)
+                                          .ToListAsync();
+
+            ViewBag.AddExpenseModel = new AddExpenseInputModel(); // modal model
+            ViewBag.CreateReportModel = new CreateReportViewModel
+            {
+                Year = DateTime.Now.Year,
+                Month = DateTime.Now.Month
+            };
 
             return View("MonthlyReports", reports);
         }
+        // ================== YENİ RAPOR (MODAL POST) ==================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateReportModal(CreateReportViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["OpenCreateModal"] = "1";
+                TempData["Error"] = "Ay/Yıl seçimini kontrol edin.";
+                return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
+            }
 
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                bool exists = await _context.ExpenseReports
+                    .AnyAsync(r => r.UserId == user.Id &&
+                                   r.MonthYear.Year == model.Year &&
+                                   r.MonthYear.Month == model.Month);
+
+                if (exists)
+                {
+                    TempData["Warning"] = "Bu aya ait rapor zaten mevcut.";
+                    return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
+                }
+
+                _context.ExpenseReports.Add(new ExpenseReport
+                {
+                    UserId = user.Id,
+                    MonthYear = new DateTime(model.Year, model.Month, 1),
+                    ExpenseDetails = new List<ExpenseDetail>()
+                });
+
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Rapor oluşturuldu.";
+                return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
+            }
+            catch (Exception ex)
+            {
+                TempData["OpenCreateModal"] = "1";
+                TempData["Error"] = $"Rapor oluşturulamadı: {ex.Message}";
+                return RedirectToAction(nameof(MonthlyReports), new { year = model.Year });
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> InputDetails(int year, int month)

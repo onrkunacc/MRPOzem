@@ -20,10 +20,20 @@ namespace CRMOzem.Web.Controllers
             _userManager = userManager;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var activeReport = await _expenseService.GetCurrentMonthExpenseAsync(user.Id);
+            ViewBag.TotalExpense = activeReport;
+
             return View();
         }
+
 
         [HttpGet]
         public async Task<IActionResult> GetTotalExpense()

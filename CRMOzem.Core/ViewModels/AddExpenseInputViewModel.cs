@@ -10,23 +10,12 @@ namespace CRMOzem.Core.ViewModels
 {
     public class AddExpenseInputModel
     {
-        public int ReportId { get; set; }
-
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Required]
-        public string Description { get; set; }
-
-        [Required]
-        public decimal Amount { get; set; }
-
-        [Required]
-        public string Category { get; set; }
-
-        [Required]
-        public PaymentMethod PaymentMethod { get; set; }
-
+        [Required] public int ReportId { get; set; }
+        [Required] public DateTime Date { get; set; }
+        [Required, StringLength(128)] public string Category { get; set; }
+        [Required, StringLength(512)] public string Description { get; set; }
+        [Range(0.01, double.MaxValue)] public decimal Amount { get; set; }
+        [Required] public PaymentMethod PaymentMethod { get; set; }
         public bool UserConfirmed { get; set; } = false;
     }
 

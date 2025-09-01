@@ -1,208 +1,156 @@
-﻿@model CRMOzem.Core.ViewModels.ExpenseReportViewModel
+﻿@model CRMOzem.Core.Models.ExpenseReport
 @using System.Globalization
-
+@using CRMOzem.Core.ViewModels
 @{
-    ViewData["Title"] = "Masraf Raporu Detayları";
+    ViewData["Title"] = "Rapor Detayı";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var total = (decimal)(ViewBag.CalculatedTotal ?? Model.ExpenseDetails.Sum(x => x.Amount));
 }
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-<div class="container mt-4">
-    <h2 class="text-center">@Model.MonthYear.ToString("MMMM yyyy") Masraf Raporu</h2>
-    <hr />
+<div class="d-flex justify-content-between align-items-center mt-3 mb-3 flex-wrap gap-2">
+    <h3>@Model.MonthYear.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR")) Raporu</h3>
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end flex-wrap">
+        <a class="btn btn-outline-danger btn-sm" asp-action="PrintReport" asp-route-id="@Model.Id" target="_blank">🖨️ PDF</a>
+        &nbsp;
+        <a class="btn btn-outline-secondary btn-sm" asp-action="MonthlyReports">📚 Tüm Raporlar</a>
+        &nbsp;
+        <button class="btn btn-success btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#addExpenseModal"
+                data-report-id="@Model.Id"
+                data-report-month="@Model.MonthYear.Month"
+                data-report-year="@Model.MonthYear.Year">
+            ➕ Masraf Ekle
+        </button>
+    </div>
+</div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <h5 class="card-title">Toplam Tutar: <strong>@Model.TotalAmount.ToString("C2")</strong></h5>
-
-            <table class="table table-bordered table-striped mt-3">
-                <thead class="table-dark">
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
                     <tr>
                         <th>Tarih</th>
                         <th>Kategori</th>
                         <th>Açıklama</th>
-                        <th>Ödeme Yöntemi</th>
-                        <th>Tutar (₺)</th>
-                        <th>Ekstre Dönemi</th>
-                        <th>İşlemler</th>
+                        <th>Ödeme</th>
+                        <th class="text-end">Tutar</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var detail in Model.ExpenseDetails)
+                    @foreach (var e in Model.ExpenseDetails.OrderBy(x => x.Date))
                     {
                         <tr>
-                            <td>@detail.Date.ToString("dd.MM.yyyy")</td>
-                            <td>@detail.Category</td>
-                            <td>@detail.Description</td>
-                            <td>@detail.PaymentMethod</td>
-                            <td>@detail.Amount.ToString("C2")</td>
-                            <td class="d-flex flex-wrap align-items-center gap-2">
-                                @if (detail.OverrideCycleMonth.HasValue && detail.OverrideCycleYear.HasValue)
-                                {
-                                    <div class="d-flex align-items-center flex-wrap gap-2">
-                                        <span class="fw-semibold">
-                                            <strong>@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(detail.OverrideCycleMonth.Value) @detail.OverrideCycleYear</strong>
-                                        </span>
-                                        <button type="button"
-                                                class="btn btn-outline-secondary btn-sm px-2 py-1 edit-cycle-btn"
-                                                data-id="@detail.Id"
-                                                data-month="@detail.OverrideCycleMonth"
-                                                data-year="@detail.OverrideCycleYear"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#editCycleModal"
-                                                title="Ekstre dönemini düzenle">
-                                            <i class="fa fa-pen"></i>
-                                        </button>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <form class="cycle-form row gx-2 gy-1 align-items-center" data-id="@detail.Id">
-                                        <div class="col-12 col-sm-auto">
-                                            <select name="overrideMonth" class="form-select form-select-sm">
-                                                <option value="">Otomatik</option>
-                                                @for (int i = 1; i <= 12; i++)
-                                                {
-                                                    <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-12 col-sm-auto">
-                                            <input name="overrideYear" type="number" min="2020" max="2100"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="Yıl" />
-                                        </div>
-                                        <div class="col-12 col-sm-auto">
-                                            <button type="submit" class="btn btn-success btn-sm px-3">
-                                                <i class="fa fa-check"></i>
-                                            </button>
-                                        </div>
-                                    </form>
-                                }
-                            </td>
-
-
-                            <td>
-                                <a href="@Url.Action("Edit", "ExpenseReport", new { id = detail.Id })" class="btn btn-sm btn-warning">
-                                    <i class="fa fa-edit"></i> Düzenle
-                                </a>
-                                <form asp-action="DeleteExpense" asp-controller="ExpenseReport" method="post" class="d-inline"
-                                      onsubmit="return confirm('Bu masrafı silmek istediğinize emin misiniz?');">
-                                    <input type="hidden" name="expenseId" value="@detail.Id" />
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fa fa-trash"></i> Sil
-                                    </button>
-                                </form>
-                            </td>
+                            <td>@e.Date.ToString("dd.MM.yyyy")</td>
+                            <td>@e.Category</td>
+                            <td>@e.Description</td>
+                            <td>@e.PaymentMethod</td>
+                            <td class="text-end">@e.Amount.ToString("N2") ₺</td>
                         </tr>
                     }
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-end">Toplam</th>
+                        <th class="text-end">@total.ToString("N2") ₺</th>
+                    </tr>
+                </tfoot>
             </table>
+        </div>
+    </div>
+</div>
 
-            <div class="text-end mt-4">
-                <a asp-action="ExportToExcel" asp-route-reportId="@Model.Id" class="btn btn-outline-success">
-                    <i class="fa fa-download"></i> Excel Olarak İndir
-                </a>
-                <a href="@Url.Action("AddExpense", "ExpenseReport", new { reportId = Model.Id })" class="btn btn-outline-primary">
-                    <i class="fa fa-plus"></i> Masraf Ekle
-                </a>
-                <a asp-action="Index" class="btn btn-outline-secondary">⬅️ Geri Dön</a>
+@await Html.PartialAsync("_AddExpenseModal", (AddExpenseInputModel)ViewBag.AddExpenseModel)
+
+<!-- ⚠️ Tarih uyuşmazlığı uyarı modalı -->
+<div class="modal fade" id="confirmMismatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">⚠️ Tarih Uyuşmazlığı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMismatchMessage" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="confirmMismatchBtn">Onayla</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="editCycleModal" tabindex="-1" aria-labelledby="editCycleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="modalCycleForm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editCycleModalLabel">Ekstre Dönemini Düzenle</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
-                </div>
-                <div class="modal-body d-flex gap-2">
-                    <input type="hidden" name="id" id="modal-expense-id" />
-                    <select name="overrideMonth" id="modal-override-month" class="form-select">
-                        @for (int i = 1; i <= 12; i++)
-                        {
-                            <option value="@i">@CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                        }
-                    </select>
-                    <input type="number" name="overrideYear" id="modal-override-year" class="form-control"
-                           placeholder="Yıl" style="width:100px;" min="2020" max="2100" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 
 @section Scripts {
     <script>
-        // INLINE form submit (ilk görünümdeki alan)
-        document.querySelectorAll(".cycle-form").forEach(form => {
-            form.addEventListener("submit", function (e) {
+        (function(){
+          const addModalEl = document.getElementById('addExpenseModal');
+          const addModal   = addModalEl ? new bootstrap.Modal(addModalEl) : null;
+
+          const mismatchModalEl = document.getElementById('confirmMismatchModal');
+          const mismatchModal   = mismatchModalEl ? new bootstrap.Modal(mismatchModalEl) : null;
+          const mismatchMsg     = document.getElementById('confirmMismatchMessage');
+          const mismatchBtn     = document.getElementById('confirmMismatchBtn');
+
+          const form = document.getElementById('addExpenseForm');
+
+          // Modal açılırken bu raporun bilgileri girilsin
+          if (addModalEl) {
+            addModalEl.addEventListener('show.bs.modal', function () {
+              addModalEl.querySelector('input[name="ReportId"]').value     = '@Model.Id';
+              addModalEl.querySelector('input[name="ReportMonth"]').value  = '@Model.MonthYear.Month';
+              addModalEl.querySelector('input[name="ReportYear"]').value   = '@Model.MonthYear.Year';
+              addModalEl.querySelector('input[name="UserConfirmed"]').value= "false";
+              addModalEl.querySelector('input[name="Date"]').valueAsDate   = new Date();
+              addModalEl.querySelector('input[name="Amount"]').value       = "";
+              addModalEl.querySelector('input[name="Category"]').value     = "";
+              addModalEl.querySelector('input[name="Description"]').value  = "";
+              const pm = addModalEl.querySelector('select[name="PaymentMethod"]');
+              if (pm) pm.selectedIndex = 0;
+            });
+          }
+
+          // Uyuşmazlık kontrolü
+          if (form) {
+            form.addEventListener('submit', function (e) {
+              const dt = new Date(form.Date.value);
+              const m  = dt.getMonth() + 1;
+              const y  = dt.getFullYear();
+              const rm = parseInt(form.ReportMonth.value || "0");
+              const ry = parseInt(form.ReportYear.value  || "0");
+
+              if ((m !== rm || y !== ry) && form.UserConfirmed.value !== "true") {
                 e.preventDefault();
-                const id = form.getAttribute("data-id");
-                const formData = new FormData(form);
-                const year = form.querySelector('input[name="overrideYear"]').value;
-
-                if (!year) {
-                    alert("⚠️ Lütfen bir yıl giriniz.");
-                    return;
+                if (mismatchMsg) {
+                  mismatchMsg.innerText = `${dt.toLocaleDateString()} tarihli masraf, ${rm}.${ry} raporuna eklenecek. Devam edilsin mi?`;
                 }
-
-                fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
-                    method: "POST",
-                    body: formData
-                }).then(async res => {
-                    if (res.ok) {
-                        alert("✅ Ekstre dönemi başarıyla güncellendi.");
-                        location.reload();
-                    } else {
-                        const error = await res.json();
-                        alert("❌ Hata: " + (error.message || "Güncelleme başarısız."));
-                    }
-                });
+                mismatchModal?.show();
+                mismatchBtn.onclick = () => {
+                  form.UserConfirmed.value = "true";
+                  mismatchModal?.hide();
+                  form.submit();
+                };
+              }
             });
-        });
+          }
 
-        // Modal tetikleme (butona tıklanıldığında değerleri doldurur)
-        document.querySelectorAll(".edit-cycle-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                document.getElementById("modal-expense-id").value = btn.dataset.id;
-                document.getElementById("modal-override-month").value = btn.dataset.month;
-                document.getElementById("modal-override-year").value = btn.dataset.year;
-            });
-        });
-
-        // MODAL form submit
-        document.getElementById("modalCycleForm").addEventListener("submit", function (e) {
-            e.preventDefault();
-            const id = document.getElementById("modal-expense-id").value;
-            const year = document.getElementById("modal-override-year").value;
-
-            if (!year) {
-                alert("⚠️ Lütfen yıl alanını doldurunuz.");
-                return;
-            }
-
-            const formData = new FormData(this);
-            fetch(`/ExpenseReport/UpdateCycleInline?id=${id}`, {
-                method: "POST",
-                body: formData
-            }).then(async res => {
-                if (res.ok) {
-                    alert("✅ Ekstre dönemi başarıyla kaydedildi.");
-                    location.reload();
-                } else {
-                    const error = await res.json();
-                    alert("❌ Hata: " + (error.message || "Güncelleme başarısız."));
-                }
-            });
-        });
+          // Kaydet & Yeni sonrası modalı otomatik aç
+          const openId = '@(TempData["OpenAddModal"] ?? "")';
+          if (openId && addModal) {
+            addModal.show();
+            // reset
+            addModalEl.querySelector('input[name="ReportId"]').value     = openId;
+            addModalEl.querySelector('input[name="Date"]').valueAsDate   = new Date();
+            addModalEl.querySelector('input[name="Amount"]').value       = "";
+            addModalEl.querySelector('input[name="Category"]').value     = "";
+            addModalEl.querySelector('input[name="Description"]').value  = "";
+            const pm = addModalEl.querySelector('select[name="PaymentMethod"]');
+            if (pm) pm.selectedIndex = 0;
+          }
+        })();
     </script>
 }
+

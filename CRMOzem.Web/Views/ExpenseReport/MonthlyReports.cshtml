@@ -1,85 +1,203 @@
 ﻿@model List<CRMOzem.Core.Models.ExpenseReport>
 @using System.Globalization
-@using CRMOzem.Core.Enums
+@using CRMOzem.Core.ViewModels
 @{
     ViewData["Title"] = "Yeni Aylık Masraf Raporları";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var years = (IEnumerable<int>)(ViewBag.Years ?? new List<int>());
+    int? selectedYear = (int?)ViewBag.SelectedYear;
+
+    // 📌 Raporları önce yıla göre (desc), sonra aya göre (asc) sırala
+    var orderedReports = Model
+        .OrderByDescending(r => r.MonthYear.Year)
+        .ThenBy(r => r.MonthYear.Month)
+        .ToList();
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>📘 Yeni Aylık Masraf Raporları</h2>
-        <a class="btn btn-primary" asp-action="Create">➕ Yeni Rapor Oluştur</a>
-    </div>
+<style>
+    /* Kart hover efekti */
+    .report-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
+        .report-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.15);
+        }
+</style>
+<div class="text-center mt-4 mb-4">
+    <h2 class="fw-bold text-primary">Masraf Raporlarım</h2>
+</div>
 
-    <hr />
+<div class="d-flex justify-content-end align-items-center mb-4 flex-wrap gap-2">
+    <form method="get" asp-action="MonthlyReports" class="d-flex align-items-center">
+        <select name="year" class="form-select form-select-sm rounded-pill shadow-sm me-2" onchange="this.form.submit()">
+            <option value="">Tüm Yıllar</option>
+            @foreach (var y in years)
+            {
+                <option value="@y" selected="@(selectedYear == y ? "selected" : null)">@y</option>
+            }
+        </select>
+        <noscript><button class="btn btn-outline-secondary">Filtrele</button></noscript>
+    </form>
+    <button class="btn btn-primary rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createReportModal">➕ Yeni Rapor</button>
+</div>
 
-    @foreach (var report in Model)
-    {
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <h4 class="card-title">@report.MonthYear.ToString("MMMM yyyy", CultureInfo.CurrentCulture)</h4>
-                <p class="card-text">
-                    Toplam Masraf: <strong>@report.TotalAmount.ToString("C")</strong>
-                </p>
-
-                <a asp-action="Details" asp-route-id="@report.Id" class="btn btn-outline-primary btn-sm">Detay</a>
-                <a asp-action="PrintReport" asp-route-reportId="@report.Id" target="_blank" class="btn btn-outline-danger btn-sm">PDF Yazdır</a>
-
-                <hr />
-                <form asp-controller="ExpenseDetail" asp-action="Add" method="post" onsubmit="return validateDate(this, @report.MonthYear.Month, @report.MonthYear.Year);">
-                    <input type="hidden" name="ReportId" value="@report.Id" />
-
-                    <div class="row">
-                        <div class="col-md-3">
-                            <input type="date" name="Date" class="form-control" required />
+@if (!orderedReports.Any())
+{
+    <div class="alert alert-info text-center">Henüz rapor yok. Sağ üstten <strong>Yeni Rapor</strong> oluşturabilirsiniz.</div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var r in orderedReports)
+        {
+            var calcTotal = r.ExpenseDetails?.Sum(x => x.Amount) ?? 0m;
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-lg h-100 text-center rounded-4 border-0 mb-4 report-card">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h4 class="card-title fw-bold text-dark">@r.MonthYear.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR"))</h4>
+                            <p class="card-text mt-2 mb-2 text-muted">Toplam: <strong class="text-success">@calcTotal.ToString("C")</strong></p>
                         </div>
-                        <div class="col-md-2">
-                            <input type="text" name="Category" class="form-control" placeholder="Kategori" required />
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" name="Description" class="form-control" placeholder="Açıklama" required />
-                        </div>
-                        <div class="col-md-2">
-                            <select name="PaymentMethod" class="form-control">
-                                @foreach (var method in Enum.GetValues(typeof(PaymentMethod)))
-                                {
-                                    <option value="@((int)method)">@method</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" name="Amount" step="0.01" class="form-control" placeholder="Tutar" required />
+                        <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+                            <a class="btn btn-outline-primary btn-sm rounded-pill" asp-action="Details" asp-route-id="@r.Id">📄 Detay</a>
+                            &nbsp;&nbsp;&nbsp;
+                            <a class="btn btn-outline-danger btn-sm rounded-pill" asp-action="PrintReport" asp-route-id="@r.Id" target="_blank">🖨️ PDF</a>
+                            &nbsp;&nbsp;&nbsp;
+                            <button class="btn btn-success btn-sm rounded-pill"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#addExpenseModal"
+                                    data-report-id="@r.Id"
+                                    data-report-month="@r.MonthYear.Month"
+                                    data-report-year="@r.MonthYear.Year">
+                                ➕ Masraf Ekle
+                            </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success btn-sm mt-2">Masraf Ekle</button>
-                    <input type="hidden" name="UserConfirmed" value="false" />
-                </form>
-                <a asp-action="AddToReport" asp-route-reportId="@report.Id" class="btn btn-sm btn-outline-success">➕ Masraf Ekle</a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@await Html.PartialAsync("_AddExpenseModal", (AddExpenseInputModel)ViewBag.AddExpenseModel)
+@await Html.PartialAsync("_CreateReportModal", (CreateReportViewModel)ViewBag.CreateReportModel)
+
+
+
+
+<!-- Tarih uyuşmazlığı onay modali -->
+<div class="modal fade" id="confirmMismatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">⚠️ Tarih Uyuşmazlığı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMismatchMessage" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="confirmMismatchBtn">Onayla</button>
             </div>
         </div>
-    }
+    </div>
 </div>
 
 @section Scripts {
     <script>
-        function validateDate(form, month, year) {
-            const dateInput = new Date(form.Date.value);
-            const formMonth = dateInput.getMonth() + 1;
-            const formYear = dateInput.getFullYear();
+        (function () {
+          // ----- MODALLAR -----
+          const addModalEl = document.getElementById('addExpenseModal');
+          const addModal   = addModalEl ? new bootstrap.Modal(addModalEl) : null;
 
-            if (formMonth !== month || formYear !== year) {
-                const confirmed = confirm(`${formMonth}.${formYear} tarihli masraf, ${month}.${year} raporuna ekleniyor. Devam edilsin mi?`);
-                if (confirmed) {
-                    form.UserConfirmed.value = "true";
-                    return true;
-                } else {
-                    return false;
+          const mismatchModalEl = document.getElementById('confirmMismatchModal');
+          const mismatchModal   = mismatchModalEl ? new bootstrap.Modal(mismatchModalEl) : null;
+          const mismatchMsg     = document.getElementById('confirmMismatchMessage');
+          const mismatchBtn     = document.getElementById('confirmMismatchBtn');
+
+          const form = document.getElementById('addExpenseForm');
+
+          // Karttaki "Masraf Ekle" butonuna basılınca modalı doldur
+          if (addModalEl) {
+            addModalEl.addEventListener('show.bs.modal', function (evt) {
+              const btn   = evt.relatedTarget;
+              const repId = btn?.getAttribute('data-report-id')   ?? '';
+              const m     = btn?.getAttribute('data-report-month')?? '';
+              const y     = btn?.getAttribute('data-report-year') ?? '';
+
+              addModalEl.querySelector('input[name="ReportId"]').value    = repId;
+              addModalEl.querySelector('input[name="ReportMonth"]').value = m;
+              addModalEl.querySelector('input[name="ReportYear"]').value  = y;
+
+              // reset
+              addModalEl.querySelector('input[name="UserConfirmed"]').value = "false";
+              addModalEl.querySelector('input[name="Date"]').valueAsDate    = new Date();
+              addModalEl.querySelector('input[name="Amount"]').value        = "";
+              addModalEl.querySelector('input[name="Category"]').value      = "";
+              addModalEl.querySelector('input[name="Description"]').value   = "";
+              const pm = addModalEl.querySelector('select[name="PaymentMethod"]');
+              if (pm) pm.selectedIndex = 0;
+            });
+          }
+
+          // Tutar girişinde virgül -> nokta normalize (server tarafı kültüre göre yine parse edecek)
+          const amount = addModalEl?.querySelector('input[name="Amount"]');
+          if (amount) {
+            amount.addEventListener('change', () => {
+              amount.value = amount.value.replace(',', '.');
+            });
+          }
+
+          // Form submit: tarih-rapor uyuşmazlığı varsa onay modali aç
+          if (form) {
+            form.addEventListener('submit', function (e) {
+              const dt = new Date(form.Date.value);
+              const m  = dt.getMonth() + 1;
+              const y  = dt.getFullYear();
+              const rm = parseInt(form.ReportMonth.value || "0");
+              const ry = parseInt(form.ReportYear.value  || "0");
+
+              if ((m !== rm || y !== ry) && form.UserConfirmed.value !== "true") {
+                e.preventDefault();
+                if (mismatchMsg) {
+                  mismatchMsg.innerText = `${dt.toLocaleDateString()} tarihli masraf, ${rm}.${ry} raporuna eklenecek. Devam edilsin mi?`;
                 }
-            }
+                mismatchModal?.show();
 
-            return true;
-        }
+                mismatchBtn.onclick = () => {
+                  form.UserConfirmed.value = "true";
+                  mismatchModal?.hide();
+                  form.submit();
+                };
+              }
+            });
+          }
+           
+          // Server tarafı: Kaydet & Yeni sonrası modalı tekrar açmak için işaret
+          const openId = '@(TempData["OpenAddModal"] ?? "")';
+          if (openId && addModalEl) {
+            addModal.show();
+
+            // alanları resetle (ÖNEMLİ: otomatik submit olmasın, boş kalsın)
+            addModalEl.querySelector('input[name="ReportId"]').value     = openId;
+            addModalEl.querySelector('input[name="Date"]').valueAsDate   = new Date();
+            addModalEl.querySelector('input[name="Amount"]').value       = "";
+            addModalEl.querySelector('input[name="Category"]').value     = "";
+            addModalEl.querySelector('input[name="Description"]').value  = "";
+            const pm = addModalEl.querySelector('select[name="PaymentMethod"]');
+            if (pm) pm.selectedIndex = 0;
+          }
+
+          // Yeni rapor modalını server tetiklerse
+          const createModalEl = document.getElementById('createReportModal');
+          const openCreate = '@(TempData["OpenCreateModal"] ?? "")';
+          if (openCreate && createModalEl) {
+            new bootstrap.Modal(createModalEl).show();
+          }
+        })();
     </script>
 }
+

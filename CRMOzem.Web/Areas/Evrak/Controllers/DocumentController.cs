@@ -78,7 +78,6 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
         [HttpPost]
         public async Task<IActionResult> AddDocument([FromForm] FollowDocument document)
         {
-
             if (document.CategoryId == 0)
             {
                 ModelState.AddModelError("CategoryId", "Lütfen bir kategori seçin.");
@@ -102,9 +101,22 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
 
                 var currentYear = DateTime.Now.Year;
 
+                var codes = await _context.FollowDocuments
+                    .Where(d => d.Code.StartsWith($"{category.Code}.{currentYear}."))
+                    .Select(d => d.Code)
+                    .ToListAsync(); // SQL'den string listesi al
 
-                int nextId = (await _context.FollowDocuments.MaxAsync(d => (int?)d.Id) ?? 0) + 1;
-                document.Code = $"{category.Code}.{currentYear}.{nextId}";
+                var lastSequence = codes
+                    .Select(code => code.Split('.').Last())        // son parça
+                    .Where(x => int.TryParse(x, out _))            // sayı mı?
+                    .Select(int.Parse)                             // int'e çevir
+                    .OrderByDescending(x => x)
+                    .FirstOrDefault();                             // memory LINQ
+
+
+                int nextSequence = (lastSequence == 0 ? 1 : lastSequence + 1);
+                document.Code = $"{category.Code}.{currentYear}.{nextSequence}";
+
                 document.Date = DateTime.Now;
 
                 _context.FollowDocuments.Add(document);
@@ -119,6 +131,7 @@ namespace CRMOzem.Web.Areas.Evrak.Controllers
                 return View(document);
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> EditDocument(int id)

@@ -1,0 +1,86 @@
+﻿@using CRMOzem.Core.Enums
+@model CRMOzem.Core.ViewModels.AddExpenseInputModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="modal fade" id="addExpenseModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <!--  Doğrudan MVC POST -->
+            <form id="addExpenseForm" asp-action="AddExpense" asp-controller="ExpenseReport" method="post" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ Yeni Masraf Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input asp-for="ReportId" type="hidden" />
+                    <input type="hidden" asp-for="UserConfirmed" value="false" />
+                    <input type="hidden" name="ReportMonth" />
+                    <input type="hidden" name="ReportYear" />
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label asp-for="Date" class="form-label">📅 Tarih</label>
+                            <input asp-for="Date" type="date" class="form-control" required />
+                            <span asp-validation-for="Date" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Amount" class="form-label">💰 Tutar (₺)</label>
+                            <input asp-for="Amount" type="number" step="0.01" class="form-control" required />
+                            <span asp-validation-for="Amount" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="PaymentMethod" class="form-label">💳 Ödeme Yöntemi</label>
+                            <select asp-for="PaymentMethod" class="form-control"
+                                    asp-items="Html.GetEnumSelectList<PaymentMethod>()" required></select>
+                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Category" class="form-label">📂 Kategori</label>
+                            <input asp-for="Category" class="form-control" placeholder="Yemek, Ulaşım..." required />
+                            <span asp-validation-for="Category" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Description" class="form-label">📝 Açıklama</label>
+                            <input asp-for="Description" class="form-control" placeholder="Masraf açıklaması" required />
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">❌ Kapat</button>
+                    <button class="btn btn-outline-success" type="submit" name="submitAction" value="save_and_new">💾 Kaydet & Yeni</button>
+                    <button class="btn btn-success" type="submit" name="submitAction" value="save">✅ Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script>
+        (function () {
+            const form = document.getElementById("addExpenseForm");
+
+            if (form) {
+                form.addEventListener("submit", function (e) {
+                    //  HTML5 validation kontrolü
+                    if (!form.checkValidity()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        form.classList.add("was-validated"); // Bootstrap kırmızı borderları aktif et
+                        return;
+                    }
+                });
+            }
+        })();
+
+
+    </script>
+}

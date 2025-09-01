@@ -273,15 +273,20 @@ namespace CRMOzem.Business.Services
 
         public async Task<decimal> GetCurrentMonthExpenseAsync(string userId)
         {
-            var currentMonth = DateTime.Now.Month;
-            var currentYear = DateTime.Now.Year;
+            var now = DateTime.Now;
 
-            var expenses = await _context.ExpenseReports
-                .Where(e => e.UserId == userId && e.MonthYear.Month == currentMonth && e.MonthYear.Year == currentYear)
-                .SumAsync(e => e.TotalAmount);
+            var report = await _context.ExpenseReports
+                .Include(r => r.ExpenseDetails)
+                .FirstOrDefaultAsync(r => r.UserId == userId
+                                       && r.MonthYear.Year == now.Year
+                                       && r.MonthYear.Month == now.Month);
 
-            return expenses;
+            if (report == null)
+                return 0;
+
+            return report.ExpenseDetails.Sum(e => e.Amount);
         }
+
 
 
         private DateTime GetFirstMondayOfWeek(int year, int month, int weekNumber)

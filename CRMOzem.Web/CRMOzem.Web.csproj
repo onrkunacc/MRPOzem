@@ -43,6 +43,7 @@
     <Folder Include="Areas\Finans\Controllers\" />
     <Folder Include="Areas\Finans\Views\" />
     <Folder Include="Areas\Ihale\Controllers\" />
+    <Folder Include="Areas\Istatistik\Views\" />
     <Folder Include="wwwroot\uploads\temp\" />
   </ItemGroup>
 
