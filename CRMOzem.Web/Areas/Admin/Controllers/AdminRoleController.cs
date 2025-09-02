@@ -74,7 +74,7 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
                 // Yeni rolü ata
                 await _userManager.AddToRoleAsync(user, role);
 
-                TempData["SuccessMessage"] = $"{user.FullName} adlı kullanıcının rolü başarıyla {role} olarak güncellendi! ✅";
+                TempData["SuccessMessage"] = $"{user.FullName} adlı kullanıcının rolü başarıyla {role} olarak güncellendi!";
             }
             return RedirectToAction("Index", "AdminUser");
         }

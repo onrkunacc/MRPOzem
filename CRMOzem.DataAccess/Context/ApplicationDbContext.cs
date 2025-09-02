@@ -19,6 +19,13 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<UserLeaveBalance> UserLeaveBalances { get; set; }
         public DbSet<UserSupervisor> UserSupervisors { get; set; }
+        public DbSet<Test> Tests { get; set; }
+        public DbSet<TestTemplate> TestTemplates { get; set; }
+        public DbSet<MonthlyStatistics> MonthlyStatistics { get; set; }
+        public DbSet<MonthlyShipment> MonthlyShipments { get; set; }
+        public DbSet<Hospital> Hospitals { get; set; }
+
+
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -55,6 +62,14 @@ namespace CRMOzem.DataAccess.Context
                 .WithMany()
                 .HasForeignKey(x => x.SupervisorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<MonthlyStatistics>()
+                .HasIndex(ms => new { ms.HospitalID, ms.TestID, ms.Month })
+                .IsUnique();
+
+            builder.Entity<MonthlyShipment>()
+                .HasIndex(ms => new { ms.HospitalID, ms.TestID, ms.Month })
+                .IsUnique();
 
         }
     }

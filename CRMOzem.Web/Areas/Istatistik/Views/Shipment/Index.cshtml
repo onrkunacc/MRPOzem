@@ -1,0 +1,52 @@
+﻿@model List<CRMOzem.Core.Models.MonthlyShipment>
+@{
+    ViewData["Title"] = "Gönderim Listesi";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold"><i class="bi bi-box-seam"></i> Gönderim Listesi</h2>
+        <a class="btn btn-primary" href="@Url.Action("Create")">
+            <i class="bi bi-plus-circle"></i> Yeni Gönderim
+        </a>
+    </div>
+
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label class="form-label">Hastane</label>
+            @Html.DropDownList("hospitalId", (SelectList)ViewBag.Hospitals, "Tümü", new { @class = "form-select", onchange = "this.form.submit();" })
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Başlangıç</label>
+            <input type="date" name="startDate" class="form-control" value="@ViewBag.StartDate" onchange="this.form.submit();" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Bitiş</label>
+            <input type="date" name="endDate" class="form-control" value="@ViewBag.EndDate" onchange="this.form.submit();" />
+        </div>
+    </form>
+
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col"><i class="bi bi-calendar3"></i> Tarih</th>
+                    <th scope="col"><i class="bi bi-hospital"></i> Hastane</th>
+                    <th scope="col"><i class="bi bi-capsule"></i> Test</th>
+                    <th scope="col"><i class="bi bi-123"></i> Gönderilen Adet</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Month.ToString("MMMM yyyy")</td>
+                        <td><span class="badge bg-info text-dark">@item.Hospital.HospitalName</span></td>
+                        <td>@item.Test.TestName</td>
+                        <td><span class="fw-bold text-success">@item.SentCount</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

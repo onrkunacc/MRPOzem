@@ -343,6 +343,32 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("FollowDocuments");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Hospital", b =>
+                {
+                    b.Property<int>("HospitalID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HospitalID"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("HospitalName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("HospitalID");
+
+                    b.ToTable("Hospitals");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
                 {
                     b.Property<int>("Id")
@@ -476,6 +502,110 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("LeaveTypes");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.MonthlyShipment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Month")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SentCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TestID")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestID");
+
+                    b.HasIndex("HospitalID", "TestID", "Month")
+                        .IsUnique();
+
+                    b.ToTable("MonthlyShipments");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.MonthlyStatistics", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Month")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TestCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TestID")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestID");
+
+                    b.HasIndex("HospitalID", "TestID", "Month")
+                        .IsUnique();
+
+                    b.ToTable("MonthlyStatistics");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
+                {
+                    b.Property<int>("TestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TestID"));
+
+                    b.Property<string>("TestName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("TestID");
+
+                    b.ToTable("Tests");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TestID")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HospitalID");
+
+                    b.HasIndex("TestID");
+
+                    b.ToTable("TestTemplates");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.UserLeaveBalance", b =>
@@ -750,6 +880,63 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.MonthlyShipment", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("Shipments")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Test", "Test")
+                        .WithMany("Shipments")
+                        .HasForeignKey("TestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hospital");
+
+                    b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.MonthlyStatistics", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("Statistics")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Test", "Test")
+                        .WithMany("Statistics")
+                        .HasForeignKey("TestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hospital");
+
+                    b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("TestTemplates")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Test", "Test")
+                        .WithMany("Templates")
+                        .HasForeignKey("TestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hospital");
+
+                    b.Navigation("Test");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.UserLeaveBalance", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.ApplicationUser", "User")
@@ -846,6 +1033,15 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("ExpenseDetails");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Hospital", b =>
+                {
+                    b.Navigation("Shipments");
+
+                    b.Navigation("Statistics");
+
+                    b.Navigation("TestTemplates");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveStatus", b =>
                 {
                     b.Navigation("LeaveRequests");
@@ -854,6 +1050,15 @@ namespace CRMOzem.DataAccess.Migrations
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveType", b =>
                 {
                     b.Navigation("LeaveRequests");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
+                {
+                    b.Navigation("Shipments");
+
+                    b.Navigation("Statistics");
+
+                    b.Navigation("Templates");
                 });
 #pragma warning restore 612, 618
         }

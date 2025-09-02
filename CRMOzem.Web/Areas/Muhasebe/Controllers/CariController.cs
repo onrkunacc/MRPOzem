@@ -121,7 +121,7 @@ namespace CRMOzem.Web.Areas.Muhasebe.Controllers
 
                 if (cari == null)
                 {
-                    TempData["ErrorMessage"] = "Cari bulunamadı!";
+                    TempData["Error"] = "Cari bulunamadı!";
                     return RedirectToAction("Index");
                 }
 

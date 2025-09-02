@@ -30,6 +30,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IAuditReportService, AuditReportService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 
 // Kimlik doğrulama ayarları

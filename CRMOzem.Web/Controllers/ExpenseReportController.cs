@@ -25,14 +25,6 @@ namespace CRMOzem.Web.Controllers
             _context = context;
         }
 
-        //public async Task<IActionResult> Index()
-        //{
-
-        //    var user = await _userManager.GetUserAsync(User);
-        //    var reports = await _expenseService.GetUserReportsAsync(user.Id);
-        //    return View(reports);
-        //}
-
         [HttpPost]
         public async Task<IActionResult> CreateReport()
         {
