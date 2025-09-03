@@ -1,0 +1,36 @@
+﻿@model IEnumerable<CRMOzem.Core.DTOs.HospitalTestBalanceDTO>
+
+@{
+    ViewData["Title"] = "Kalan Test Raporu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5><i class="fa fa-chart-bar me-2"></i> Kalan Testler</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Test Adı</th>
+                    <th>Gönderilen</th>
+                    <th>Kullanılan</th>
+                    <th>Kalan</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var remaining = item.TotalSent - item.TotalUsed;
+                    <tr class="@(remaining <= 0 ? "table-danger" : remaining < 1000 ? "table-warning" : "table-success")">
+                        <td>@item.TestName</td>
+                        <td>@item.TotalSent</td>
+                        <td>@item.TotalUsed</td>
+                        <td>@remaining</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

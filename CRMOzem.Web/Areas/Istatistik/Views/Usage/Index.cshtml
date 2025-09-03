@@ -1,0 +1,72 @@
+﻿@model IEnumerable<CRMOzem.Core.ViewModels.UsageViewModel>
+
+@{
+    ViewData["Title"] = "İstatistik Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fa fa-vials me-2"></i> İstatistik Listesi</h5>
+        <a asp-action="Create" class="btn btn-primary btn-sm">
+            <i class="fa fa-plus"></i> Yeni İstatistik
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <select name="hospitalId" class="form-select">
+                    <option value="">Tüm Hastaneler</option>
+                    @foreach (var h in (SelectList)ViewBag.Hospitals)
+                    {
+                        <option value="@h.Value" @(ViewBag.SelectedHospitalID == Convert.ToInt32(h.Value) ? "selected" : "")>@h.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="startDate" class="form-control" value="@ViewBag.StartDate" />
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="endDate" class="form-control" value="@ViewBag.EndDate" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-secondary w-100">
+                    <i class="fa fa-search"></i> Filtrele
+                </button>
+            </div>
+        </form>
+
+        <table class="table table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Hastane</th>
+                    <th>Test</th>
+                    <th>Ay</th>
+                    <th>Kullanılan Adet</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.HospitalName</td>
+                        <td>@item.TestName</td>
+                        <td>@item.Month.ToString("MMMM yyyy")</td>
+                        <td>@item.TestCount</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Silmek istediğinize emin misiniz?')">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

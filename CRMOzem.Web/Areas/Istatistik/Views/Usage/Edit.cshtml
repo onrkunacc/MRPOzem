@@ -1,0 +1,41 @@
+﻿@model CRMOzem.Core.ViewModels.UsageEditViewModel
+
+@{
+    ViewData["Title"] = "İstatistik Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-edit me-2"></i> Kullanım Düzenle</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" class="row g-3">
+            <input type="hidden" asp-for="Id" />
+            <div class="col-md-6">
+                <label class="form-label">Hastane</label>
+                <select asp-for="HospitalID" class="form-select" asp-items="ViewBag.Hospitals"></select>
+                <span asp-validation-for="HospitalID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Test</label>
+                <select asp-for="TestID" class="form-select" asp-items="ViewBag.Tests"></select>
+                <span asp-validation-for="TestID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ay</label>
+                <input asp-for="Month" type="month" class="form-control" />
+                <span asp-validation-for="Month" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Kullanılan Test Sayısı</label>
+                <input asp-for="TestCount" type="number" class="form-control" />
+                <span asp-validation-for="TestCount" class="text-danger"></span>
+            </div>
+            <div class="col-12 text-end">
+                <a asp-action="Index" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Geri</a>
+                <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>

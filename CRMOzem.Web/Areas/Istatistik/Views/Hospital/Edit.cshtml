@@ -1,0 +1,27 @@
+﻿@model CRMOzem.Core.ViewModels.HospitalEditViewModel
+
+@{
+    ViewData["Title"] = "Hastane Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-edit me-2"></i> Hastane Düzenle</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" class="row g-3">
+            <input type="hidden" asp-for="HospitalID" />
+            <div class="col-md-12">
+                <label class="form-label">Hastane Adı</label>
+                <input asp-for="HospitalName" class="form-control" />
+                <span asp-validation-for="HospitalName" class="text-danger"></span>
+            </div>
+            <div class="col-12 text-end">
+                <a asp-action="Index" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Geri</a>
+                <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+

@@ -67,10 +67,13 @@ namespace CRMOzem.Web.Controllers
                 return RedirectToAction("Index", "Dashboard", new { area = "Finans" });
             else if (roles.Contains("İnsan Kaynakları"))
                 return RedirectToAction("Index", "Leave", new { area = "InsanKaynaklari" });
+            else if (roles.Contains("İstatistik"))
+                return RedirectToAction("Index", "Shipment", new { area = "Istatistik" });
             else if (roles.Contains("İhale"))
                 return RedirectToAction("Index", "FileTransferWeb", new { area = "" });
             else if (roles.Contains("Evrak"))
                 return RedirectToAction("Index", "Document", new { area = "Evrak" });
+         
 
             return RedirectToAction("Index", "Home");
             

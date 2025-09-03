@@ -1,43 +1,39 @@
-﻿@{
+﻿@model CRMOzem.Core.ViewModels.ShipmentViewModel
+@{
     ViewData["Title"] = "Yeni Gönderim";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container py-4">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Yeni Gönderim</h4>
-        </div>
-        <div class="card-body">
-            <form asp-action="Create" method="post" class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Hastane</label>
-                    @Html.DropDownList("hospitalId", (SelectList)ViewBag.Hospitals, "Seçiniz", new { @class = "form-select" })
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Test</label>
-                    @Html.DropDownList("testId", (SelectList)ViewBag.Tests, "Seçiniz", new { @class = "form-select" })
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Ay</label>
-                    <input type="month" name="month" class="form-control" required />
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Gönderim Adedi</label>
-                    <input type="number" name="sentCount" class="form-control" min="0" required />
-                </div>
-
-                <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-circle"></i> Kaydet
-                    </button>
-                    <a class="btn btn-secondary" href="@Url.Action("Index")">
-                        <i class="bi bi-x-circle"></i> İptal
-                    </a>
-                </div>
-            </form>
-        </div>
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5><i class="fa fa-plus-circle me-2"></i> Yeni Gönderim</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" method="post" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Hastane</label>
+                <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
+                <span asp-validation-for="HospitalID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Test</label>
+                <select asp-for="TestID" asp-items="ViewBag.Tests" class="form-select"></select>
+                <span asp-validation-for="TestID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tarih</label>
+                <input asp-for="Month" type="date" class="form-control" />
+                <span asp-validation-for="Month" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Test Sayısı</label>
+                <input asp-for="SentCount" class="form-control" />
+                <span asp-validation-for="SentCount" class="text-danger"></span>
+            </div>
+            <div class="col-12 text-end">
+                <a asp-action="Index" class="btn btn-secondary">Geri</a>
+                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Kaydet</button>
+            </div>
+        </form>
     </div>
 </div>

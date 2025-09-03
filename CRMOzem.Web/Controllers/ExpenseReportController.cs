@@ -5,6 +5,7 @@ using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ using System.Globalization;
 
 namespace CRMOzem.Web.Controllers
 {
+    [Authorize(Roles = "Yönetici,Kullanıcı,Muhasebe")]
     public class ExpenseReportController : Controller
     {
         private readonly IExpenseReportService _expenseService;
@@ -52,7 +54,7 @@ namespace CRMOzem.Web.Controllers
             ModelState.Remove("submitAction");
             if (!ModelState.IsValid)
             {
-                TempData["Error"] = "⚠️ Zorunlu alanları doldurun.";
+                TempData["Error"] = " Zorunlu alanları doldurun.";
                 TempData["OpenAddModal"] = model.ReportId.ToString();
                 return RedirectToAction(nameof(Details), new { id = model.ReportId });
             }
@@ -65,7 +67,7 @@ namespace CRMOzem.Web.Controllers
 
                 if (report == null)
                 {
-                    TempData["Error"] = "❌ Rapor bulunamadı.";
+                    TempData["Error"] = " Rapor bulunamadı.";
                     return RedirectToAction(nameof(MonthlyReports));
                 }
 
@@ -81,7 +83,7 @@ namespace CRMOzem.Web.Controllers
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "✅ Masraf eklendi.";
+                TempData["SuccessMessage"] = " Masraf eklendi.";
 
                 if (string.Equals(submitAction, "save_and_new", StringComparison.OrdinalIgnoreCase))
                 {
@@ -93,7 +95,7 @@ namespace CRMOzem.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"❌ Masraf eklenemedi: {ex.Message}";
+                TempData["Error"] = $" Masraf eklenemedi: {ex.Message}";
                 TempData["OpenAddModal"] = model.ReportId.ToString();
                 return RedirectToAction(nameof(Details), new { id = model.ReportId });
             }
@@ -426,7 +428,7 @@ namespace CRMOzem.Web.Controllers
             // 🔍 Tarih kontrolü: aynı ay mı?
             if (model.Date.Month != report.MonthYear.Month || model.Date.Year != report.MonthYear.Year)
             {
-                TempData["Error"] = $"⚠️ Masraf tarihi ({model.Date:MMMM yyyy}) ile rapor tarihi ({report.MonthYear:MMMM yyyy}) uyuşmuyor.";
+                TempData["Error"] = $" Masraf tarihi ({model.Date:MMMM yyyy}) ile rapor tarihi ({report.MonthYear:MMMM yyyy}) uyuşmuyor.";
                 return View(model); // ya da uyarı view'ı
             }
 

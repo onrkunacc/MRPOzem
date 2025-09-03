@@ -1,0 +1,44 @@
+﻿@model IEnumerable<CRMOzem.Core.ViewModels.TestViewModel>
+
+@{
+    ViewData["Title"] = "Test Listesi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fa fa-flask me-2"></i> Test Listesi</h5>
+        <a asp-action="Create" class="btn btn-primary btn-sm">
+            <i class="fa fa-plus"></i> Yeni Test
+        </a>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Test Adı</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.TestName</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@item.TestID" class="btn btn-sm btn-warning">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@item.TestID" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Silmek istediğinize emin misiniz?')">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+

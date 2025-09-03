@@ -326,7 +326,89 @@
             </a>
         </li>
     }
-
+    @if (Model.Contains("İstatistik"))
+    {     
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#depo-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">ÖZEM Depo</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="depo-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Shipment" asp-action="Index">
+                        <i class="fe fe-book fe-14"></i>
+                        <span class="ml-1 item-text">Giden Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Shipment" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Test Gönder</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#istatistik-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">İstatistik</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="istatistik-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Usage" asp-action="Index">
+                        <i class="fe fe-book fe-14"></i>
+                        <span class="ml-1 item-text">İstatistik Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Usage" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">İstatistik Giriş</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#test-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Testler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="test-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Test" asp-action="Index">
+                        <i class="fe fe-book fe-14"></i>
+                        <span class="ml-1 item-text">Test Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Test" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Test Ekle</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#hastane-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Hastaneler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="hastane-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Hospital" asp-action="Index">
+                        <i class="fe fe-book fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Hospital" asp-action="Create">
+                        <i class="fe fe-plus fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Ekle</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+    }
     @if (Model.Contains("İhale"))
     {
         <li class="nav-item">

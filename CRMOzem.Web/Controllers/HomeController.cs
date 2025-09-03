@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CRMOzem.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Roles="Kullanýcý")]
     public class HomeController : Controller
     {
         private readonly IExpenseReportService _expenseService;

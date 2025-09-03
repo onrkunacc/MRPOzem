@@ -1,11 +1,13 @@
 ﻿using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
 namespace CRMOzem.Web.Controllers
 {
+    [Authorize(Roles = "Yönetici,Kullanıcı,Muhasebe")]
     public class ExpenseDetailController : Controller
     {
         private readonly ApplicationDbContext _context;

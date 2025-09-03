@@ -1,0 +1,41 @@
+﻿@model CRMOzem.Core.ViewModels.ShipmentViewModel
+@{
+    ViewData["Title"] = "Gönderim Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5><i class="fa fa-edit me-2"></i> Gönderim Düzenle</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" class="row g-3">
+            <input type="hidden" asp-for="Id" />
+            <div class="col-md-6">
+                <label class="form-label">Hastane</label>
+                <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
+                <span asp-validation-for="HospitalID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Test</label>
+                <select asp-for="TestID" asp-items="ViewBag.Tests" class="form-select"></select>
+                <span asp-validation-for="TestID" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ay</label>
+                <input asp-for="Month" type="date" class="form-control" />
+                <span asp-validation-for="Month" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Gönderim Adedi</label>
+                <input asp-for="SentCount" class="form-control" />
+                <span asp-validation-for="SentCount" class="text-danger"></span>
+            </div>
+            <div class="col-12 text-end">
+                <a asp-action="Index" class="btn btn-secondary">Geri</a>
+                <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
