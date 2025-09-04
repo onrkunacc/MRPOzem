@@ -100,6 +100,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
                 var model = new ShipmentViewModel
                 {
+                    Id = shipment.Id, // ekle
                     HospitalID = shipment.HospitalID,
                     TestID = shipment.TestID,
                     Month = shipment.Month,
@@ -137,7 +138,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     TempData["Error"] = "Gönderim bulunamadı.";
                     return RedirectToAction("Index");
                 }
-
+                shipment.Id = model.Id; 
                 shipment.HospitalID = model.HospitalID;
                 shipment.TestID = model.TestID;
                 shipment.Month = model.Month;

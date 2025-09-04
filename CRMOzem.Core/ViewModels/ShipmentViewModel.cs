@@ -9,6 +9,7 @@ namespace CRMOzem.Core.ViewModels
 {
     public class ShipmentViewModel
     {
+        public int Id { get; set; }
         [Required(ErrorMessage = "Hastane seçimi zorunludur.")]
         public int HospitalID { get; set; }
 

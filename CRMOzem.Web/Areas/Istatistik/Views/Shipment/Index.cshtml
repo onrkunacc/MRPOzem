@@ -18,7 +18,9 @@
                     <option value="">Tüm Hastaneler</option>
                     @foreach (var h in (SelectList)ViewBag.Hospitals)
                     {
-                        <option value="@h.Value" @(ViewBag.SelectedHospitalID == Convert.ToInt32(h.Value) ? "selected" : "")>@h.Text</option>
+                        <option value="@h.Value" selected="@(ViewBag.SelectedHospitalID != null && ViewBag.SelectedHospitalID.ToString() == h.Value ? "selected" : null)">
+                            @h.Text
+                        </option>
                     }
                 </select>
             </div>
