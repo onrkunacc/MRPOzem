@@ -34,8 +34,9 @@
                         </div>
                         <div class="col-md-3">
                             <label asp-for="PaymentMethod" class="form-label">💳 Ödeme Yöntemi</label>
-                            <select asp-for="PaymentMethod" class="form-control"
-                                    asp-items="Html.GetEnumSelectList<PaymentMethod>()" required></select>
+                            <select asp-for="PaymentMethod" class="form-control" required>
+                                <option value="3" selected>Kart</option>
+                            </select>
                             <span asp-validation-for="PaymentMethod" class="text-danger"></span>
                         </div>
                         <div class="col-md-3">

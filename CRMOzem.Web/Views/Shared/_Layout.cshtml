@@ -1,5 +1,6 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using System.Text.Json
+<!DOCTYPE html>
+<html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -125,50 +126,30 @@
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            @if (TempData["SuccessMessage"] != null)
-            {
-                    <text>
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Başarılı',
-                            text: '@TempData["SuccessMessage"]',
-                            timer: 3000,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
-                        });
-                    </text>
-            }
+        const msgs = {
+        success: @Html.Raw(JsonSerializer.Serialize(TempData["SuccessMessage"])),
+        error: @Html.Raw(JsonSerializer.Serialize(TempData["Error"])),
+        warning: @Html.Raw(JsonSerializer.Serialize(TempData["Warning"]))
+        };
 
-            @if (TempData["Error"] != null)
-            {
-                    <text>
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Hata',
-                            text: '@TempData["Error"]',
-                            timer: 4000,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
-                        });
-                    </text>
-            }
 
-            @if (TempData["Warning"] != null)
-            {
-                    <text>
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Uyarı',
-                            text: '@TempData["Warning"]',
-                            timer: 3500,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
-                        });
-                    </text>
-            }
+        const showToast = (icon, title, text, timer) => {
+        if (!text) return;
+        Swal.fire({
+        icon,
+        title,
+        text,
+        timer,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+        });
+        };
+
+
+        showToast('success', 'Başarılı', msgs.success, 3000);
+        showToast('error', 'Hata', msgs.error, 4000);
+        showToast('warning', 'Uyarı', msgs.warning, 3500);
         });
     </script>
 
