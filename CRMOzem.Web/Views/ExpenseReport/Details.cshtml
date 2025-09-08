@@ -37,6 +37,7 @@
                         <th>Açıklama</th>
                         <th>Ödeme</th>
                         <th class="text-end">Tutar</th>
+                        <th class="text-center">İşlem</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,6 +49,17 @@
                             <td>@e.Description</td>
                             <td>@e.PaymentMethod</td>
                             <td class="text-end">@e.Amount.ToString("N2") ₺</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary edit-expense-btn"
+                                        data-id="@e.Id"
+                                        data-date="@e.Date.ToString("yyyy-MM-dd")"
+                                        data-category="@e.Category"
+                                        data-description="@e.Description"
+                                        data-amount="@e.Amount.ToString("0.##", CultureInfo.InvariantCulture)"   
+                                        data-report-id="@Model.Id">
+                                    ✏️ Düzenle
+                                </button>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -63,6 +75,7 @@
 </div>
 
 @await Html.PartialAsync("_AddExpenseModal", (AddExpenseInputModel)ViewBag.AddExpenseModel)
+@await Html.PartialAsync("_EditExpenseModal", new ExpenseDetailViewModel())
 
 <!-- ⚠️ Tarih uyuşmazlığı uyarı modalı -->
 <div class="modal fade" id="confirmMismatchModal" tabindex="-1" aria-hidden="true">
@@ -150,6 +163,30 @@
             const pm = addModalEl.querySelector('select[name="PaymentMethod"]');
             if (pm) pm.selectedIndex = 0;
           }
+
+          // Düzenle Modal
+          document.querySelectorAll(".edit-expense-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const modalEl = document.getElementById("editExpenseModal");
+                    const modal = new bootstrap.Modal(modalEl);
+
+                    modalEl.querySelector('input[name="Id"]').value = this.dataset.id;
+                    modalEl.querySelector('input[name="ReportId"]').value = this.dataset.reportId;
+                    modalEl.querySelector('input[name="Date"]').value = this.dataset.date;
+                    modalEl.querySelector('input[name="Category"]').value = this.dataset.category;
+                    modalEl.querySelector('input[name="Description"]').value = this.dataset.description;
+                    const amountInput = modalEl.querySelector('input[name="Amount"]');
+                    if (amountInput) {
+                        amountInput.value = parseFloat(this.dataset.amount) || 0;
+                    }
+
+                    const pm = modalEl.querySelector('select[name="PaymentMethod"]');
+                    if (pm) pm.value = "3"; // Kart default
+
+                    modal.show();
+                });
+          });
+
         })();
     </script>
 }
