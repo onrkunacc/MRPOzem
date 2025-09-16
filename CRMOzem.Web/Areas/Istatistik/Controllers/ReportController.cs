@@ -51,6 +51,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     HospitalName = b.HospitalName,
                     TestID = b.TestID,
                     TestName = b.TestName,
+                    Month = b.Month,
                     TotalSent = b.TotalSent,
                     TotalUsed = b.TotalUsed
                 }).ToList();

@@ -12,6 +12,7 @@ namespace CRMOzem.Core.ViewModels
         public string HospitalName { get; set; }
         public int TestID { get; set; }
         public string TestName { get; set; }
+        public DateTime Month { get; set; }
         public int TotalSent { get; set; }
         public int TotalUsed { get; set; }
         public int Remaining => TotalSent - TotalUsed;

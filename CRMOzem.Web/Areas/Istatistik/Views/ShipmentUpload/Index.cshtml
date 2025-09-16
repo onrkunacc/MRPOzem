@@ -1,0 +1,93 @@
+﻿@model CRMOzem.Core.ViewModels.ShipmentUploadViewModel
+@{
+    ViewData["Title"] = "Toplu Gönderim Yükleme";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5><i class="fa fa-upload me-2"></i> Excel / PDF Yükle</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Index" method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Hastane Seç</label>
+                <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
+                <span asp-validation-for="HospitalID" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Ay</label>
+                <input asp-for="Month" type="month" class="form-control" />
+                <span asp-validation-for="Month" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Dosya Seç</label>
+                <input asp-for="File" type="file" class="form-control" />
+                <span asp-validation-for="File" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn btn-success"><i class="fa fa-search"></i> Önizle</button>
+        </form>
+    </div>
+</div>
+
+@if (Model.PreviewItems.Any())
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6><i class="fa fa-table me-2"></i> Önizleme</h6>
+        </div>
+        <div class="card-body">
+            <form asp-action="Confirm" method="post">
+                <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+                <input type="hidden" name="month" value="@Model.Month.ToString("yyyy-MM-dd")" />
+
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Test</th>
+                            <th>Adet</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.PreviewItems.Count; i++)
+                        {
+                            var item = Model.PreviewItems[i];
+                            <tr class="@(item.HasError ? "table-danger" : "table-success")">
+                                <td>
+                                    @item.TestName
+                                    <input type="hidden" name="items[@i].TestID" value="@item.TestID" />
+                                    <input type="hidden" name="items[@i].TestName" value="@item.TestName" />
+                                </td>
+                                <td>
+                                    <input type="number" name="items[@i].SentCount" value="@item.SentCount" class="form-control" />
+                                </td>
+                                <td>
+                                    @if (item.HasError)
+                                    {
+                                        <span class="text-danger">@item.ErrorMessage</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success">✔ Geçerli</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" name="confirmSave" value="true" class="form-check-input" id="confirmSave" />
+                    <label for="confirmSave" class="form-check-label">
+                        Tüm verileri kontrol ettim, kaydetmek istiyorum.
+                    </label>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

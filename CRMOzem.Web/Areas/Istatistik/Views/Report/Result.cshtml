@@ -14,6 +14,7 @@
         <table class="table table-striped table-hover">
             <thead class="table-light">
                 <tr>
+                    <th>Ay</th>
                     <th>Test Adı</th>
                     <th>Gönderilen</th>
                     <th>Kullanılan</th>
@@ -24,6 +25,7 @@
                 @foreach (var item in Model)
                 {
                     <tr>
+                        <td>@item.Month.ToString("yyyy-MM")</td>
                         <td>@item.TestName</td>
                         <td>@item.TotalSent</td>
                         <td>@item.TotalUsed</td>
@@ -45,7 +47,8 @@
     <script>
         const ctx = document.getElementById('balanceChart').getContext('2d');
         const chartData = {
-            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.TestName))),
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.Select(m => $"{m.TestName} ({m.Month:yyyy-MM})"))),
             datasets: [
                 {
                     label: 'Gönderilen',

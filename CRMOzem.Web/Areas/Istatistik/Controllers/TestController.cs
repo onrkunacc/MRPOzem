@@ -58,6 +58,13 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
             try
             {
+                var exists = await _context.Tests.AnyAsync(t => t.TestName.ToLower() == model.TestName.ToLower());
+                if (exists)
+                {
+                    ModelState.AddModelError("TestName", "Bu test adı zaten kayıtlı.");
+                    return View(model);
+                }
+
                 var test = new Test
                 {
                     TestName = model.TestName
