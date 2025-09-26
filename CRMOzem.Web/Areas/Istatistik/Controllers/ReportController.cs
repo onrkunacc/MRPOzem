@@ -4,6 +4,7 @@ using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using X.PagedList.Extensions;
 
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
@@ -29,7 +30,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(ReportFilterViewModel model)
+        public async Task<IActionResult> Index(ReportFilterViewModel model, int page = 1)
         {
             if (!ModelState.IsValid)
             {
@@ -51,16 +52,19 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     HospitalName = b.HospitalName,
                     TestID = b.TestID,
                     TestName = b.TestName,
-                    Month = b.Month,
                     TotalSent = b.TotalSent,
-                    TotalUsed = b.TotalUsed
+                    TotalUsed = b.TotalUsed,
+                    Month = b.Month // burayı eklediğine emin ol!
                 }).ToList();
 
                 ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
                 ViewBag.StartDate = model.StartDate?.ToString("yyyy-MM-dd");
                 ViewBag.EndDate = model.EndDate?.ToString("yyyy-MM-dd");
 
-                return View("Result", viewModel);
+                // 🔹 Sayfalama: 10 kayıt
+                var pagedList = viewModel.ToPagedList(page, 10);
+
+                return View("Result", pagedList);
             }
             catch (Exception ex)
             {
@@ -68,5 +72,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 return RedirectToAction("Index");
             }
         }
+
     }
 }

@@ -26,7 +26,11 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         public IActionResult Index()
         {
             ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName");
-            return View(new UploadStatisticsViewModel());
+            return View(new UploadStatisticsViewModel
+            {
+                Month = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1) 
+            });
+
         }
 
         [HttpPost]

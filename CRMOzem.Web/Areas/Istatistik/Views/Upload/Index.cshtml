@@ -17,7 +17,7 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Ay Seç</label>
-                <input asp-for="Month" type="month" class="form-control" />
+                <input asp-for="Month" type="month" class="form-control" value="@DateTime.Now.ToString("yyyy-MM")" />
                 <span asp-validation-for="Month" class="text-danger"></span>
             </div>
             <div class="mb-3">
@@ -39,7 +39,7 @@
         <div class="card-body">
             <form asp-action="Confirm" method="post">
                 <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
-                <input type="hidden" name="month" value="@Model.Month.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="month" value="@(Model.Month == DateTime.MinValue ? DateTime.Now.ToString("yyyy-MM-dd") : Model.Month.ToString("yyyy-MM-dd"))" />
 
                 <table class="table table-bordered table-striped">
                     <thead>
@@ -53,17 +53,27 @@
                         @for (int i = 0; i < Model.PreviewItems.Count; i++)
                         {
                             var item = Model.PreviewItems[i];
-                            <tr class="@(item.HasError ? "table-danger" : "table-success")">
+                            <tr id="row-@i" class="@(item.HasError ? "table-danger" : "table-success")">
                                 <td>
                                     @item.TestName
-                                    <input type="hidden" name="items[@i].TestID" value="@item.TestID" />
+                                    <input type="hidden" name="items[@i].TestID" value="@item.TestID" id="testId-@i" />
                                     <input type="hidden" name="items[@i].TestName" value="@item.TestName" />
                                 </td>
                                 <td>
                                     <input type="number" name="items[@i].TestCount" value="@item.TestCount" class="form-control" />
                                 </td>
-                                <td>
-                                    @if (item.HasError)
+                                <td id="status-@i">
+                                    @if (item.HasError && item.ErrorMessage.Contains("Test bulunamadı"))
+                                    {
+                                        <span class="text-danger">Test bulunamadı.</span>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary ms-2 btnAddTest"
+                                                data-index="@i"
+                                                data-testname="@item.TestName">
+                                            + Ekle
+                                        </button>
+                                    }
+                                    else if (item.HasError)
                                     {
                                         <span class="text-danger">@item.ErrorMessage</span>
                                     }
@@ -83,4 +93,75 @@
             </form>
         </div>
     </div>
+}
+
+<!-- Modal: Yeni Test Ekle -->
+<div class="modal fade" id="addTestModal" tabindex="-1" aria-labelledby="addTestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addTestForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Test Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rowIndex" />
+                    <div class="mb-3">
+                        <label class="form-label">Test Adı</label>
+                        <input type="text" id="modalTestName" class="form-control" readonly />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Modal açma
+        $(document).on("click", ".btnAddTest", function () {
+            var testName = $(this).data("testname");
+            var index = $(this).data("index");
+
+            $("#modalTestName").val(testName);
+            $("#rowIndex").val(index);
+
+            var modal = new bootstrap.Modal(document.getElementById('addTestModal'));
+            modal.show();
+        });
+
+        // Modal form submit (AJAX)
+        $("#addTestForm").submit(function (e) {
+            e.preventDefault();
+
+            var testName = $("#modalTestName").val();
+            var index = $("#rowIndex").val();
+
+            $.ajax({
+                url: '@Url.Action("CreateFromUpload", "Test", new { area = "Istatistik" })',
+                type: "POST",
+                data: { testName: testName },
+                success: function (res) {
+                    if (res.success) {
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('addTestModal'));
+                        modal.hide();
+
+                        // ✅ Satırı güncelle
+                        $("#status-" + index).html('<span class="text-success">✔ Geçerli</span>');
+                        $("#row-" + index).removeClass("table-danger").addClass("table-success");
+                        $("#testId-" + index).val(res.testId);
+                    } else {
+                        alert("Hata: " + res.message);
+                    }
+                },
+                error: function () {
+                    alert("Sunucu hatası oluştu!");
+                }
+            });
+        });
+    </script>
 }

@@ -1,4 +1,7 @@
-﻿@model IEnumerable<CRMOzem.Core.ViewModels.HospitalTestBalanceViewModel>
+﻿@model IPagedList<CRMOzem.Core.ViewModels.HospitalTestBalanceViewModel>
+@using X.PagedList
+@using X.PagedList.Mvc.Core
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Rapor Sonuçları";
@@ -11,33 +14,62 @@
         <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Filtreye Geri Dön</a>
     </div>
     <div class="card-body">
-        <table class="table table-striped table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Ay</th>
-                    <th>Test Adı</th>
-                    <th>Gönderilen</th>
-                    <th>Kullanılan</th>
-                    <th>Kalan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <td>@item.Month.ToString("yyyy-MM")</td>
-                        <td>@item.TestName</td>
-                        <td>@item.TotalSent</td>
-                        <td>@item.TotalUsed</td>
-                        <td class="fw-bold @(item.Remaining < 0 ? "text-danger" : "text-success")">@item.Remaining</td>
+                        <th>Ay</th>
+                        <th>Test Adı</th>
+                        <th>Gönderilen</th>
+                        <th>Kullanılan</th>
+                        <th>Kalan</th> 
+                        <th>Detay</th>
                     </tr>
-                }
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))</td>
+                            <td>@item.TestName</td>
+                            <td>@item.TotalSent</td>
+                            <td>@item.TotalUsed</td>
+                            <td class="fw-bold @(item.Remaining < 0 ? "text-danger" : "text-success")">@item.Remaining</td>
+                            <td>
+                                <button type="button" class="btn btn-outline-info btn-sm btnChart"
+                                        data-test="@item.TestName"
+                                        data-month="@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))"
+                                        data-sent="@item.TotalSent"
+                                        data-used="@item.TotalUsed"
+                                        data-remaining="@item.Remaining">
+                                    <i class="fa fa-chart-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
-            </tbody>
-        </table>
+        <!-- Sayfalama -->
+        <div class="d-flex justify-content-center mt-3">
+            @Html.PagedListPager(Model, page => Url.Action("Index", new { page }),
+            new PagedListRenderOptions { LiElementClasses = new[] { "page-item" }, PageClasses = new[] { "page-link" } })
+        </div>
+    </div>
+</div>
 
-        <div class="mt-4">
-            <canvas id="balanceChart" height="120"></canvas>
+<!-- Modal -->
+<div class="modal fade" id="chartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Detayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="detailChart" height="100"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -45,41 +77,39 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const ctx = document.getElementById('balanceChart').getContext('2d');
-        const chartData = {
-            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.Select(m => $"{m.TestName} ({m.Month:yyyy-MM})"))),
-            datasets: [
-                {
-                    label: 'Gönderilen',
-                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.TotalSent))),
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                },
-                {
-                    label: 'Kullanılan',
-                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.TotalUsed))),
-                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
-                },
-                {
-                    label: 'Kalan',
-                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.Remaining))),
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                }
-            ]
-        };
+        var detailChart;
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: chartData,
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+        $(document).on("click", ".btnChart", function () {
+            var test = $(this).data("test");
+            var month = $(this).data("month");
+            var sent = $(this).data("sent");
+            var used = $(this).data("used");
+            var remaining = $(this).data("remaining");
+
+            if (detailChart) {
+                detailChart.destroy();
             }
+
+            const ctx = document.getElementById('detailChart').getContext('2d');
+            detailChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ["Gönderilen", "Kullanılan", "Kalan"],
+                    datasets: [{
+                        label: test + " (" + month + ")",
+                        data: [sent, used, remaining],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(75, 192, 192, 0.6)'
+                        ]
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            var modal = new bootstrap.Modal(document.getElementById('chartModal'));
+            modal.show();
         });
     </script>
 }
-

@@ -18,8 +18,7 @@ namespace CRMOzem.Core.ViewModels
 
         [Required(ErrorMessage = "Lütfen ay seçiniz.")]
         [DataType(DataType.Date)]
-        public DateTime Month { get; set; }
-
+        public DateTime Month { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
         public List<StatisticsPreviewItem> PreviewItems { get; set; } = new();
     }
 

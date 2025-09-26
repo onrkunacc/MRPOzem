@@ -1,0 +1,97 @@
+﻿@model UserTrainingListViewModel
+
+@{
+    ViewData["Title"] = "Eğitimlerim";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">Eğitimler</h2>
+
+    <div class="row">
+        @foreach (var item in Model.Items)
+        {
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title">@item.Title</h5>
+                            <p><strong>Tarih:</strong> @item.TrainingDate.ToShortDateString()</p>
+                            <p>
+                                <span class="badge @(item.IsCompleted ? "bg-success" : (item.IsJoined ? "bg-info" : "bg-secondary"))">
+                                    @(item.IsCompleted ? "Tamamlandı" : item.IsJoined ? "Katıldınız" : "Katılmadınız")
+                                </span>
+                            </p>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary w-100"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detailModal-@item.Id">
+                                Detay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detay Modal -->
+            <div class="modal fade" id="detailModal-@item.Id" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Eğitim Detay - @item.Title</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            @{
+                                var training = item; // sadece kısa erişim
+                            }
+                            <p><strong>Başlık:</strong> @training.Title</p>
+                            <p><strong>Tarih:</strong> @training.TrainingDate.ToShortDateString()</p>
+                            <p>
+                                <span class="badge @(training.IsCompleted ? "bg-success" : (training.IsJoined ? "bg-info" : "bg-secondary"))">
+                                    @(training.IsCompleted ? "Tamamlandı" : training.IsJoined ? "Katıldınız" : "Katılmadınız")
+                                </span>
+                            </p>
+
+                            <div class="d-flex gap-2 mt-3">
+                                @if (!training.IsJoined)
+                                {
+                                    <form asp-action="Join" asp-route-id="@training.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-success">
+                                            Katıl
+                                        </button>
+                                    </form>
+                                }
+                                else if (!training.IsCompleted)
+                                {
+                                    <form asp-action="Complete" asp-route-id="@training.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-warning">
+                                            Tamamla
+                                        </button>
+                                    </form>
+                                    <a href="@Url.Action("Join", "Education", new { area = "User", id = training.Id })"
+                                       target="_blank"
+                                       class="btn btn-outline-primary">
+                                        Eğitimi Aç (Google Drive)
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("Join", "Education", new { area = "User", id = training.Id })"
+                                       target="_blank"
+                                       class="btn btn-outline-secondary">
+                                        Yeniden Aç
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,6 +1,7 @@
 ﻿using CRMOzem.Core.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace CRMOzem.DataAccess.Context
 {
@@ -24,7 +25,8 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<MonthlyStatistics> MonthlyStatistics { get; set; }
         public DbSet<MonthlyShipment> MonthlyShipments { get; set; }
         public DbSet<Hospital> Hospitals { get; set; }
-
+        public DbSet<Training> Trainings => Set<Training>();
+        public DbSet<TrainingParticipation> TrainingParticipations => Set<TrainingParticipation>();
 
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
@@ -71,6 +73,21 @@ namespace CRMOzem.DataAccess.Context
                 .HasIndex(ms => new { ms.HospitalID, ms.TestID, ms.Month })
                 .IsUnique();
 
+            builder.Entity<Training>()
+                .HasMany(t => t.Participations)
+                .WithOne(p => p.Training)
+                .HasForeignKey(p => p.TrainingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            builder.Entity<Training>()
+            .Property(t => t.Title).HasMaxLength(200).IsRequired();
+            builder.Entity<Training>()
+            .Property(t => t.Link).HasMaxLength(500).IsRequired();
+
+
+            builder.Entity<TrainingParticipation>()
+            .HasIndex(p => new { p.TrainingId, p.UserId }).IsUnique();
         }
     }
 }

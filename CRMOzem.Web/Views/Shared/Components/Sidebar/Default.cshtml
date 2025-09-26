@@ -25,26 +25,20 @@
             </ul>
         </li>
 
-       @*  <li class="nav-item dropdown">
+        <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#ik-menu">
                 <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">İnsan Kaynakları</span>
+                <span class="ml-3 item-text">insan Kaynakları</span>
             </a>
             <ul class="collapse list-unstyled pl-4 w-100" id="ik-menu">
                 <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="" asp-controller="LeaveRequest" asp-action="MyLeaves">
+                    <a class="nav-link pl-3" asp-area="" asp-controller="Education" asp-action="Index">
                         <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">İzinlerim</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="" asp-controller="LeaveRequest" asp-action="Create">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">İzin Talep</span>
+                        <span class="ml-1 item-text">Eğitimlerim</span>
                     </a>
                 </li>
             </ul>
-        </li> *@
+        </li>
     }
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
@@ -320,9 +314,15 @@
     @if (Model.Contains("İnsan Kaynakları"))
     {
         <li class="nav-item">
-            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
+            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Tre" asp-action="Index">
                 <i class="fe fe-user-check fe-16"></i>
                 <span class="ml-3 item-text">İzin İşlemleri</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Training" asp-action="List">
+                <i class="fe fe-user-check fe-16"></i>
+                <span class="ml-3 item-text">Eğitimler</span>
             </a>
         </li>
     }

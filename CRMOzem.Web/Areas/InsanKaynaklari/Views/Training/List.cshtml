@@ -1,0 +1,161 @@
+﻿@model HrTrainingListViewModel
+
+@{
+    ViewData["Title"] = "Eğitimler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">Eğitim Listesi</h2>
+
+    <!-- Yeni Eğitim Modal Aç -->
+    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal">
+        + Yeni Eğitim
+    </button>
+
+    <div class="row">
+        @foreach (var t in Model.Trainings)
+        {
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@t.Title</h5>
+                        <p class="card-text text-muted">@t.Description</p>
+                        <p><strong>Tarih:</strong> @t.TrainingDate.ToShortDateString()</p>
+                        <p>
+                            <span class="badge @(t.IsPublished ? "bg-success" : "bg-secondary")">
+                                @(t.IsPublished ? "Yayınlandı" : "Taslak")
+                            </span>
+                        </p>
+
+                        <div class="d-flex gap-2">
+                            <!-- Düzenle Modal -->
+                            <button class="btn btn-sm btn-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editModal-@t.Id">
+                                Düzenle
+                            </button>
+
+                            <!-- Sil Modal -->
+                            <button class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal-@t.Id">
+                                Sil
+                            </button>
+
+                            <!-- Yayınla/Kaldır -->
+                            <form asp-con asp-action="TogglePublish" asp-route-id="@t.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-warning">
+                                    @(t.IsPublished ? "Kaldır" : "Yayınla")
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Düzenle Modal -->
+            <div class="modal fade" id="editModal-@t.Id" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Eğitim Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Edit" asp-route-id="@t.Id" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">Eğitim Başlığı</label>
+                                    <input type="text" name="Title" value="@t.Title" class="form-control" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Açıklama</label>
+                                    <textarea name="Description" class="form-control">@t.Description</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tarih</label>
+                                    <input type="date" name="TrainingDate"
+                                           value="@t.TrainingDate.ToString("yyyy-MM-dd")"
+                                           class="form-control" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Google Drive Link</label>
+                                    <input type="url" name="Link" value="@t.Link" class="form-control" required />
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="IsPublished" class="form-check-input" @(t.IsPublished ? "checked" : "") />
+                                    <label class="form-check-label">Yayınla</label>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sil Modal -->
+            <div class="modal fade" id="deleteModal-@t.Id" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">Eğitimi Sil</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>@t.Title</strong> eğitimini silmek istediğinize emin misiniz?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Delete" asp-route-id="@t.Id" method="post">
+                                <button type="submit" class="btn btn-danger">Evet, Sil</button>
+                            </form>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Yeni Eğitim Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Yeni Eğitim Oluştur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Create" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Eğitim Başlığı</label>
+                        <input type="text" name="Title" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea name="Description" class="form-control"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tarih</label>
+                        <input type="date" name="TrainingDate" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Google Drive Link</label>
+                        <input type="url" name="Link" class="form-control" required />
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="IsPublished" class="form-check-input" />
+                        <label class="form-check-label">Yayınla</label>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success">Kaydet</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

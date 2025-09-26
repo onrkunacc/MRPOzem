@@ -161,5 +161,32 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 return RedirectToAction("Index");
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateFromUpload(string testName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(testName))
+                    return Json(new { success = false, message = "Test adı boş olamaz." });
+
+                // Aynı test var mı kontrol et
+                var exists = await _context.Tests.AnyAsync(t => t.TestName == testName);
+                if (exists)
+                    return Json(new { success = false, message = "Bu test zaten kayıtlı." });
+
+                var test = new Test { TestName = testName };
+                _context.Tests.Add(test);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, testId = test.TestID });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
     }
 }
