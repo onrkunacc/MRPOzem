@@ -53,7 +53,7 @@
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
-                            <a class="text-decoration-none" asp-area="" asp-controller="BillingCycleReport" asp-action="Index">
+                            <a class="text-decoration-none" asp-area="" asp-controller="ExpenseReport" asp-action="MonthlyReports">
                                 <i class="fa fa-receipt text-success"></i> Masraf Raporlarım
                             </a>
                         </li>
@@ -114,5 +114,5 @@
              .catch(error => console.error('Masraf yüklenirken hata oluştu:', error));
      });
 
-    document.getElementById('remainingLeave').innerText = '... Gün';  // Örnektir, API'den çekilebilir.
+    document.getElementById('remainingLeave').innerText = '... Gün'; 
 </script>

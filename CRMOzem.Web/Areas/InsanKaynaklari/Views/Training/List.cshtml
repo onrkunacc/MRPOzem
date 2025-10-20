@@ -31,15 +31,16 @@
                         <div class="d-flex gap-2">
                             <!-- Düzenle Modal -->
                             <button class="btn btn-sm btn-primary"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editModal-@t.Id">
+                                                      data-bs-toggle="modal"
+                                                      data-bs-target="#editModal-@t.Id">
+
                                 Düzenle
                             </button>
 
                             <!-- Sil Modal -->
                             <button class="btn btn-sm btn-danger"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteModal-@t.Id">
+                                                      data-bs-toggle="modal"
+                                                      data-bs-target="#deleteModal-@t.Id">
                                 Sil
                             </button>
 
@@ -53,7 +54,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Düzenle Modal -->
             <div class="modal fade" id="editModal-@t.Id" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -75,8 +75,8 @@
                                 <div class="mb-3">
                                     <label class="form-label">Tarih</label>
                                     <input type="date" name="TrainingDate"
-                                           value="@t.TrainingDate.ToString("yyyy-MM-dd")"
-                                           class="form-control" required />
+                                                                 value="@t.TrainingDate.ToString("yyyy-MM-dd")"
+                                                                 class="form-control" required />
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Google Drive Link</label>

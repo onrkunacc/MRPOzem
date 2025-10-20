@@ -1,0 +1,124 @@
+﻿@model HrTrainingReportViewModel
+
+@{
+    ViewData["Title"] = "Eğitim Raporu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">Eğitim Raporu</h2>
+
+    <form method="get" asp-action="Report">
+        <div class="mb-3">
+            <label class="form-label">Eğitim Seç</label>
+            <select name="trainingId" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Eğitim Seçiniz --</option>
+                @foreach (var t in Model.AvailableTrainings)
+                {
+                    if (Model.SelectedTrainingId == t.Id)
+                    {
+                        <option value="@t.Id" selected>
+                            @t.Title (@t.TrainingDate.ToShortDateString())
+                        </option>
+                    }
+                    else
+                    {
+                        <option value="@t.Id">
+                            @t.Title (@t.TrainingDate.ToShortDateString())
+                        </option>
+                    }
+                }
+            </select>
+        </div>
+    </form>
+
+    @if (Model.Participations != null && Model.Participations.Any())
+    {
+        var total = Model.Participations.Count();
+        var completed = Model.Participations.Count(x => x.IsCompleted);
+        var percent = total == 0 ? 0 : (int)Math.Round((double)completed / total * 100);
+
+        <!-- 📊 Progress Bar -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Tamamlanma Durumu</h5>
+                    <a asp-area="InsanKaynaklari" asp-controller="Training" asp-action="DownloadReportPdf"
+                       asp-route-trainingId="@Model.SelectedTrainingId" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF İndir
+                    </a>
+                </div>
+
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width:@percent%;"
+                         aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100">
+                        @percent%
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">@completed kullanıcı tamamladı, toplam @total kullanıcı</small>
+            </div>
+        </div>
+
+        <!-- 👥 Katılım Tablosu -->
+        <div class="card shadow-sm mt-4" id="reportContent">
+            <div class="card-body">
+                <h5 class="card-title">Katılım Listesi</h5>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kullanıcı</th>
+                                <th>Katılma Tarihi</th>
+                                <th>Durum</th>
+                                <th>Tamamlama Tarihi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.Participations)
+                            {
+                                <tr>
+                                    <td>@p.UserName</td>
+                                    <td>@(p.HasParticipated ? p.JoinedAt?.ToString("dd.MM.yyyy HH:mm") : "-")</td>
+                                    <td>
+                                        @if (!p.HasParticipated)
+                                        {
+                                            <span class="bg-danger">Katılmadı</span>
+                                        }
+                                        else if (p.IsCompleted)
+                                        {
+                                            <span class="bg-success">Tamamlandı</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="bg-warning text-dark">Devam Ediyor</span>
+                                        }
+                                    </td>
+                                    <td>@(p.CompletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.SelectedTrainingId.HasValue)
+    {
+        <div class="alert alert-info mt-3">Seçilen eğitim için katılım bulunamadı.</div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Sayfa yüklendiğinde smooth scroll ve minik UX düzeni
+        document.addEventListener("DOMContentLoaded", function () {
+            const table = document.querySelector("#reportContent");
+            if (table) {
+                table.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
+    </script>
+}

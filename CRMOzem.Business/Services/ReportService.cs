@@ -36,6 +36,7 @@ namespace CRMOzem.Business.Services
                 {
                     Id = d.Id,
                     ReportId = d.ReportId,
+
                     Category = d.Category,
                     Description = d.Description,
                     Amount = d.Amount,
@@ -101,6 +102,7 @@ namespace CRMOzem.Business.Services
                 }).ToList()
             }).ToList();
         }
+
 
         public async Task<List<MonthlyExpenseSummaryViewModel>> GetMonthlyExpenseSummaryAsync(int year)
         {
