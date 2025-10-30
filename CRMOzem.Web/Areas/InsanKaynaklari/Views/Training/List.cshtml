@@ -6,156 +6,271 @@
 }
 
 <div class="container mt-4">
-    <h2 class="mb-3">Eğitim Listesi</h2>
-
-    <!-- Yeni Eğitim Modal Aç -->
-    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal">
-        + Yeni Eğitim
-    </button>
-
-    <div class="row">
-        @foreach (var t in Model.Trainings)
-        {
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">@t.Title</h5>
-                        <p class="card-text text-muted">@t.Description</p>
-                        <p><strong>Tarih:</strong> @t.TrainingDate.ToShortDateString()</p>
-                        <p>
-                            <span class="badge @(t.IsPublished ? "bg-success" : "bg-secondary")">
-                                @(t.IsPublished ? "Yayınlandı" : "Taslak")
-                            </span>
-                        </p>
-
-                        <div class="d-flex gap-2">
-                            <!-- Düzenle Modal -->
-                            <button class="btn btn-sm btn-primary"
-                                                      data-bs-toggle="modal"
-                                                      data-bs-target="#editModal-@t.Id">
-
-                                Düzenle
-                            </button>
-
-                            <!-- Sil Modal -->
-                            <button class="btn btn-sm btn-danger"
-                                                      data-bs-toggle="modal"
-                                                      data-bs-target="#deleteModal-@t.Id">
-                                Sil
-                            </button>
-
-                            <!-- Yayınla/Kaldır -->
-                            <form asp-con asp-action="TogglePublish" asp-route-id="@t.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-warning">
-                                    @(t.IsPublished ? "Kaldır" : "Yayınla")
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Düzenle Modal -->
-            <div class="modal fade" id="editModal-@t.Id" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">Eğitim Düzenle</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Edit" asp-route-id="@t.Id" method="post">
-                                <div class="mb-3">
-                                    <label class="form-label">Eğitim Başlığı</label>
-                                    <input type="text" name="Title" value="@t.Title" class="form-control" required />
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Açıklama</label>
-                                    <textarea name="Description" class="form-control">@t.Description</textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Tarih</label>
-                                    <input type="date" name="TrainingDate"
-                                                                 value="@t.TrainingDate.ToString("yyyy-MM-dd")"
-                                                                 class="form-control" required />
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Google Drive Link</label>
-                                    <input type="url" name="Link" value="@t.Link" class="form-control" required />
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input type="checkbox" name="IsPublished" class="form-check-input" @(t.IsPublished ? "checked" : "") />
-                                    <label class="form-check-label">Yayınla</label>
-                                </div>
-                                <div class="text-end">
-                                    <button type="submit" class="btn btn-primary">Kaydet</button>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sil Modal -->
-            <div class="modal fade" id="deleteModal-@t.Id" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title">Eğitimi Sil</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p><strong>@t.Title</strong> eğitimini silmek istediğinize emin misiniz?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Delete" asp-route-id="@t.Id" method="post">
-                                <button type="submit" class="btn btn-danger">Evet, Sil</button>
-                            </form>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold text-primary">Eğitim Listesi</h2>
+        <button id="openCreateModal" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Yeni Eğitim
+        </button>
     </div>
-</div>
 
-<!-- Yeni Eğitim Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Yeni Eğitim Oluştur</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Create" method="post">
-                    <div class="mb-3">
-                        <label class="form-label">Eğitim Başlığı</label>
-                        <input type="text" name="Title" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Açıklama</label>
-                        <textarea name="Description" class="form-control"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tarih</label>
-                        <input type="date" name="TrainingDate" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Google Drive Link</label>
-                        <input type="url" name="Link" class="form-control" required />
-                    </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" name="IsPublished" class="form-check-input" />
-                        <label class="form-check-label">Yayınla</label>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-success">Kaydet</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                    </div>
-                </form>
-            </div>
+    @if (Model.Trainings == null || !Model.Trainings.Any())
+    {
+        <div class="alert alert-info text-center shadow-sm">
+            Henüz herhangi bir eğitim bulunmamaktadır.
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var t in Model.Trainings)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div>
+                                <h5 class="card-title text-dark">@t.Title</h5>
+                                <p class="text-muted">@t.Description</p>
+                                <p><strong>Tarih:</strong> @t.TrainingDate.ToShortDateString()</p>
+                                <p>
+                                    <span class="badge @(t.IsPublished ? "bg-success" : "bg-secondary")">
+                                        @(t.IsPublished ? "Yayınlandı" : "Taslak")
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal-@t.Id">
+                                        <i class="bi bi-pencil"></i> Düzenle
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@t.Id">
+                                        <i class="bi bi-trash"></i> Sil
+                                    </button>
+                                </div>
+
+                                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="TogglePublish" asp-route-id="@t.Id" method="post" class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-warning">
+                                        @(t.IsPublished ? "Kaldır" : "Yayınla")
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Düzenle Modal -->
+                <div class="modal fade" id="editModal-@t.Id" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">Eğitim Düzenle</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Edit" asp-route-id="@t.Id" method="post">
+                                    <div class="mb-3">
+                                        <label class="form-label">Eğitim Başlığı</label>
+                                        <input type="text" name="Title" value="@t.Title" class="form-control" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Açıklama</label>
+                                        <textarea name="Description" class="form-control">@t.Description</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Tarih</label>
+                                        <input type="date" name="TrainingDate" value="@t.TrainingDate.ToString("yyyy-MM-dd")" class="form-control" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Google Drive Link</label>
+                                        <input type="url" name="Link" value="@t.Link" class="form-control" required />
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input type="checkbox" name="IsPublished" class="form-check-input" @(t.IsPublished ? "checked" : "") />
+                                        <label class="form-check-label">Yayınla</label>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sil Modal -->
+                <div class="modal fade" id="deleteModal-@t.Id" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">Eğitimi Sil</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>@t.Title</strong> eğitimini silmek istediğinize emin misiniz?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Delete" asp-route-id="@t.Id" method="post">
+                                    <button type="submit" class="btn btn-danger">Evet, Sil</button>
+                                </form>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
+
+<!-- Dinamik modal container -->
+<div id="createModalContainer"></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        // 🔹 Yeni Eğitim Modalını açma
+        document.addEventListener("DOMContentLoaded", function () {
+            const openButton = document.getElementById("openCreateModal");
+
+            openButton.addEventListener("click", function () {
+                fetch('@Url.Action("Create", "Training", new { area = "InsanKaynaklari" })')
+                    .then(response => {
+                        if (!response.ok) throw new Error("Sunucu hatası");
+                        return response.text();
+                    })
+                    .then(html => {
+                        const container = document.getElementById("createModalContainer");
+                        container.innerHTML = html;
+
+                        const modalEl = container.querySelector(".modal");
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+
+                        // Modal eklendikten sonra initialize et
+                        initUserSelection();
+                        initQuestionBuilder();
+
+                        modalEl.addEventListener("hidden.bs.modal", () => {
+                            container.innerHTML = "";
+                        });
+                    })
+                    .catch(err => {
+                        console.error("Modal yüklenemedi:", err);
+                        alert("Eğitim oluşturma ekranı yüklenemedi.");
+                    });
+            });
+        });
+
+        // 🔹 Kullanıcı seçim işlevleri
+        function initUserSelection() {
+            const availableList = document.getElementById("availableUsers");
+            const selectedList = document.getElementById("selectedUsers");
+            const hiddenInput = document.getElementById("SelectedUserIdsString");
+            const searchInput = document.getElementById("userSearch");
+
+            const btnAdd = document.getElementById("btnAdd");
+            const btnRemove = document.getElementById("btnRemove");
+
+            if (!availableList || !selectedList || !hiddenInput) return;
+
+            // 🧩 Tıklama ile taşıma
+            availableList.addEventListener("click", e => {
+                if (e.target.tagName === "LI") {
+                    e.target.classList.add("bg-primary", "text-white");
+                    selectedList.appendChild(e.target);
+                    updateHiddenInput();
+                }
+            });
+
+            selectedList.addEventListener("click", e => {
+                if (e.target.tagName === "LI") {
+                    e.target.classList.remove("bg-primary", "text-white");
+                    availableList.appendChild(e.target);
+                    updateHiddenInput();
+                }
+            });
+
+            // 🧩 Ekle / Kaldır butonları
+            if (btnAdd) {
+                btnAdd.addEventListener("click", () => {
+                    const selected = availableList.querySelector("li.bg-primary");
+                    if (selected) {
+                        selectedList.appendChild(selected);
+                        selected.classList.remove("bg-primary", "text-white");
+                        updateHiddenInput();
+                    }
+                });
+            }
+
+            if (btnRemove) {
+                btnRemove.addEventListener("click", () => {
+                    const selected = selectedList.querySelector("li.bg-primary");
+                    if (selected) {
+                        availableList.appendChild(selected);
+                        selected.classList.remove("bg-primary", "text-white");
+                        updateHiddenInput();
+                    }
+                });
+            }
+
+            // 🧩 Hidden input güncelleme
+            function updateHiddenInput() {
+                const ids = Array.from(selectedList.querySelectorAll("li"))
+                    .map(li => li.dataset.id);
+                hiddenInput.value = ids.join(",");
+            }
+
+            // 🧩 Arama filtresi
+            if (searchInput) {
+                searchInput.addEventListener("keyup", e => {
+                    const filter = e.target.value.toLowerCase();
+                    availableList.querySelectorAll("li").forEach(li => {
+                        li.style.display = li.textContent.toLowerCase().includes(filter) ? "" : "none";
+                    });
+                });
+            }
+        }
+
+        // 🔹 Sınav soru ekleme işlevleri
+        function initQuestionBuilder() {
+            const container = document.getElementById("questions-container");
+            const addBtn = document.getElementById("add-question-btn");
+            if (!addBtn || !container) return;
+
+            let questionCount = 0;
+
+            addBtn.addEventListener("click", () => {
+                questionCount++;
+                const qHtml = `
+                    <div class="border rounded p-3 mb-3 bg-light position-relative">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 me-2 mt-2 remove-question" aria-label="Kaldır"></button>
+                        <label class="fw-bold">Soru ${questionCount}</label>
+                        <input type="text" name="Questions[${questionCount - 1}].QuestionText" class="form-control mb-2" placeholder="Soru metni" required>
+                        <div class="row g-2">
+                            <div class="col-md-6"><input type="text" name="Questions[${questionCount - 1}].OptionA" class="form-control" placeholder="A şıkkı" required></div>
+                            <div class="col-md-6"><input type="text" name="Questions[${questionCount - 1}].OptionB" class="form-control" placeholder="B şıkkı" required></div>
+                            <div class="col-md-6"><input type="text" name="Questions[${questionCount - 1}].OptionC" class="form-control" placeholder="C şıkkı" required></div>
+                            <div class="col-md-6"><input type="text" name="Questions[${questionCount - 1}].OptionD" class="form-control" placeholder="D şıkkı" required></div>
+                        </div>
+                        <label class="mt-2 fw-semibold">Doğru Şık:</label>
+                        <select name="Questions[${questionCount - 1}].CorrectOption" class="form-select w-auto d-inline-block ms-2">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', qHtml);
+                bindRemoveButtons();
+            });
+
+            function bindRemoveButtons() {
+                container.querySelectorAll(".remove-question").forEach(btn => {
+                    btn.onclick = () => btn.closest(".border").remove();
+                });
+            }
+        }
+    </script>
+}
+

@@ -5,93 +5,269 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-3">Eğitimler</h2>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary mb-0">📘 Eğitimlerim</h2>
+        <span class="text-muted small">@DateTime.Now.ToString("dd MMMM yyyy")</span>
+    </div>
 
-    <div class="row">
-        @foreach (var item in Model.Items)
-        {
-            <div class="col-12 col-md-6 col-lg-4 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body d-flex flex-column justify-content-between">
-                        <div>
-                            <h5 class="card-title">@item.Title</h5>
-                            <p><strong>Tarih:</strong> @item.TrainingDate.ToShortDateString()</p>
-                            <p>
-                                <span class="badge @(item.IsCompleted ? "bg-success" : (item.IsJoined ? "bg-info" : "bg-secondary"))">
-                                    @(item.IsCompleted ? "Tamamlandı" : item.IsJoined ? "Katıldınız" : "Katılmadınız")
-                                </span>
-                            </p>
-                        </div>
-                        <div class="mt-3">
-                            <button class="btn btn-primary w-100"
-                                                      data-bs-toggle="modal"
-                                                      data-bs-target="#detailModal-@item.Id">
-                                Detay
-                            </button>
-                        </div>
+    @if (Model.Items == null || !Model.Items.Any())
+    {
+        <div class="alert alert-info text-center shadow-sm">
+            Şu anda size atanmış bir eğitim bulunmamaktadır.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var item in Model.Items)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card shadow-lg border-0 h-100 hover-scale">
+                        <div class="card-body d-flex flex-column justify-content-between p-4">
+                            <div>
+                                <h5 class="card-title fw-semibold text-dark">@item.Title</h5>
+                                <p class="text-muted mb-2">
+                                    <i class="bi bi-calendar3"></i>
+                                    @item.TrainingDate.ToString("dd MMMM yyyy")
+                                </p>
+
+                                <span class="badge px-3 py-2 fs-6
+                                            @(item.IsCompleted ? "bg-success" :
+                                                                            item.IsJoined ? "bg-info text-dark" :
+                                                                            "bg-secondary")">
+                                    @(item.IsCompleted ? "✅ Tamamlandı"
+                                                                : item.IsJoined ? "🟡 Katıldınız"
+                                                                : "⚪ Katılmadınız")
+                        </span>
                     </div>
-                </div>
-            </div>
 
-            <!-- Detay Modal -->
-            <div class="modal fade" id="detailModal-@item.Id" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">Eğitim Detay - @item.Title</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            @{
-                                var training = item; // sadece kısa erişim
-                            }
-                            <p><strong>Başlık:</strong> @training.Title</p>
-                            <p><strong>Tarih:</strong> @training.TrainingDate.ToShortDateString()</p>
-                            <p>
-                                <span class="badge @(training.IsCompleted ? "bg-success" : (training.IsJoined ? "bg-info" : "bg-secondary"))">
-                                    @(training.IsCompleted ? "Tamamlandı" : training.IsJoined ? "Katıldınız" : "Katılmadınız")
-                                </span>
-                            </p>
-
-                            <div class="d-flex gap-2 mt-3">
-                                @if (!training.IsJoined)
-                                {
-                                    <form asp-action="Join" asp-route-id="@training.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-success">
-                                            Katıl
-                                        </button>
-                                    </form>
-                                }
-                                else if (!training.IsCompleted)
-                                {
-                                    <form asp-action="Complete" asp-route-id="@training.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-warning">
-                                            Tamamla
-                                        </button>
-                                    </form>
-                                    <a href="@Url.Action("Join", "Education", new { area = "User", id = training.Id })"
-                                                           target="_blank"
-                                                           class="btn btn-outline-primary">
-                                        Eğitimi Aç (Google Drive)
-                                    </a>
-                                }
-                                else
-                                {
-                                    <a href="@Url.Action("Join", "Education", new { area = "User", id = training.Id })"
-                                                           target="_blank"
-                                                           class="btn btn-outline-secondary">
-                                        Yeniden Aç
-                                    </a>
-                                }
+                            <div class="mt-4">
+                                <button class="btn btn-outline-primary w-100"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#detailModal-@item.Id">
+                                    <i class="bi bi-info-circle"></i> Detay
+                                </button>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    </div>
+                </div>
+
+                <!-- 🔹 Detay Modal -->
+                <div class="modal fade" id="detailModal-@item.Id" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 shadow-lg rounded-3">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-mortarboard"></i> @item.Title
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><strong>Tarih:</strong> @item.TrainingDate.ToString("dd.MM.yyyy")</p>
+                                        <p>
+                                            <strong>Durum:</strong>
+                                            <span class="badge @(item.IsCompleted ? "bg-success" :
+                                                                                                                  item.IsJoined ? "bg-info text-dark" :
+                                                                                                                  "bg-secondary")">
+                                                @(item.IsCompleted ? "Tamamlandı"
+                                                                                        : item.IsJoined ? "Katıldınız"
+                                                                                        : "Katılmadınız")
+                                    </span>
+                                </p>
+
+                                        <div class="d-flex flex-wrap gap-2 mt-3">
+                                    @if (!item.IsJoined)
+                                            {
+                                                <form asp-action="Join" asp-route-id="@item.Id" method="post">
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="bi bi-box-arrow-in-right"></i> Katıl
+                                                    </button>
+                                                </form>
+                                            }
+                                            else if (!item.IsCompleted)
+                                            {
+                                                <form asp-action="Complete" asp-route-id="@item.Id" method="post">
+                                                    <button type="submit" class="btn btn-warning text-dark">
+                                                        <i class="bi bi-check2-circle"></i> Tamamla
+                                                    </button>
+                                                </form>
+                                                <a href="@Url.Action("Join", "Education", new { id = item.Id })"
+                                                   target="_blank" class="btn btn-outline-primary">
+                                                    <i class="bi bi-play-circle"></i> Eğitimi Aç
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a href="@Url.Action("Join", "Education", new { id = item.Id })"
+                                                   target="_blank" class="btn btn-outline-secondary">
+                                                    <i class="bi bi-arrow-repeat"></i> Yeniden Aç
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle"></i> Kapat
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
+            }
+        </div>
+    }
+    <!-- 🔹 Sınav Modal -->
+    <div class="modal fade" id="examModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-ui-checks"></i> Eğitim Sınavı</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div id="questionContainer" class="py-2 text-center">
+                        <p>Sorular yükleniyor...</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer d-flex justify-content-between">
+                    <button id="prevQuestionBtn" class="btn btn-outline-secondary" disabled>Önceki</button>
+                    <button id="nextQuestionBtn" class="btn btn-primary">Sonraki</button>
+                </div>
             </div>
-        }
+        </div>
     </div>
+
 </div>
+
+@section Scripts {
+    <script>
+        // Hover efekt için küçük JS
+        document.querySelectorAll('.hover-scale').forEach(card => {
+            card.addEventListener('mouseenter', () => card.style.transform = 'scale(1.03)');
+            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)');
+            card.style.transition = 'transform 0.2s ease';
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const modal = new bootstrap.Modal(document.getElementById("examModal"));
+            const questionContainer = document.getElementById("questionContainer");
+            const nextBtn = document.getElementById("nextQuestionBtn");
+            const prevBtn = document.getElementById("prevQuestionBtn");
+
+            let questions = [];
+            let currentIndex = 0;
+            let answers = [];
+            let currentTrainingId = null;
+
+            // 🔹 "Tamamla" butonuna tıklanınca sınavı başlat
+            document.querySelectorAll("form[action*='Complete']").forEach(form => {
+                form.addEventListener("submit", e => {
+                    e.preventDefault();
+                    const trainingId = form.action.split("/").pop();
+                    currentTrainingId = trainingId;
+
+                    fetch(`/Education/GetQuestions?id=${trainingId}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!data.length) {
+                                form.submit(); // soru yoksa direkt tamamla
+                                return;
+                            }
+                            questions = data;
+                            currentIndex = 0;
+                            answers = [];
+                            showQuestion();
+                            modal.show();
+                        });
+                });
+            });
+
+            // 🔹 Soru render etme
+            function showQuestion() {
+                const q = questions[currentIndex];
+                questionContainer.innerHTML = `
+                    <div class="mb-3">
+                        <h5 class="fw-bold text-primary text-start">
+                            Soru ${currentIndex + 1}/${questions.length}
+                        </h5>
+                        <p class="fs-5 mb-4">${q.questionText}</p>
+                        ${["A","B","C","D"].map(opt => `
+                            <div class="form-check text-start">
+                                <input class="form-check-input" type="radio" name="answer" value="${opt}" id="opt_${opt}"
+                                ${answers[currentIndex]?.selectedOption === opt ? 'checked' : ''}>
+                                <label class="form-check-label" for="opt_${opt}">
+                                    ${q["option" + opt]}
+                                </label>
+                            </div>
+                        `).join("")}
+                    </div>
+                `;
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.textContent = currentIndex === questions.length - 1 ? "Gönder" : "Sonraki";
+            }
+
+            // 🔹 "Sonraki" veya "Gönder" butonu
+            nextBtn.addEventListener("click", () => {
+                const selected = document.querySelector("input[name='answer']:checked");
+                if (!selected) {
+                    alert("Lütfen bir seçenek seçin.");
+                    return;
+                }
+
+                // cevabı kaydet
+                answers[currentIndex] = {
+                    questionId: questions[currentIndex].id,
+                    selectedOption: selected.value,
+                    trainingId: currentTrainingId
+                };
+
+                if (currentIndex < questions.length - 1) {
+                    currentIndex++;
+                    showQuestion();
+                } else {
+                    // son soru => gönder
+                    submitAnswers();
+                }
+            });
+
+            // 🔹 "Önceki" butonu
+            prevBtn.addEventListener("click", () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    showQuestion();
+                }
+            });
+
+            // 🔹 Cevapları kaydet
+            function submitAnswers() {
+                    fetch(`/Education/SubmitAnswers`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(answers)
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.success) {
+                            modal.hide();
+                            Swal.fire({
+                                title: 'Sınav Tamamlandı!',
+                                html: `<b>${result.correctCount}</b> / <b>${result.total}</b> doğru cevap verdiniz 🎯`,
+                                icon: result.correctCount / result.total >= 0.6 ? 'success' : 'warning',
+                                confirmButtonText: 'Tamam'
+                            }).then(() => window.location.reload());
+                        } else {
+                            alert("Cevaplar kaydedilemedi.");
+                        }
+                    })
+                    .catch(() => alert("Sunucu hatası oluştu."));
+            }
+        });
+    </script>
+}

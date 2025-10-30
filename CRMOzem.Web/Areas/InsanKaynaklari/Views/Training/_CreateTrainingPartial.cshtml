@@ -1,0 +1,101 @@
+﻿@model TrainingCreateViewModel
+
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-3">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Yeni Eğitim Oluştur
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Create" method="post" id="trainingForm">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3">
+
+                        <!-- 📘 Eğitim Bilgileri -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Eğitim Başlığı</label>
+                            <input type="text" name="Title" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tarih</label>
+                            <input type="date" name="TrainingDate" class="form-control" required />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Açıklama</label>
+                            <textarea name="Description" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Google Drive Linki</label>
+                            <input type="url" name="Link" class="form-control" placeholder="https://drive.google.com/..." required />
+                        </div>
+
+                        <!-- 🧑‍💼 Katılımcı Seçimi -->
+                        <div class="col-12 mt-4">
+                            <label class="form-label fw-semibold">Eğitim Alacak Kullanıcılar</label>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <input type="text" id="userSearch" class="form-control mb-2" placeholder="Kullanıcı ara..." />
+                                    <ul id="availableUsers" class="list-group border rounded" style="max-height:300px; overflow-y:auto;">
+                                        @foreach (var u in Model.AvailableUsers ?? new List<SelectListItem>())
+                                        {
+                                            <li class="list-group-item list-group-item-action" data-id="@u.Value">@u.Text</li>
+                                        }
+                                    </ul>
+                                </div>
+
+                                <div class="col-md-2 d-flex flex-column align-items-center justify-content-center">
+                                    <button type="button" id="btnAdd" class="btn btn-outline-success mb-2 w-75">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </button>
+                                    <button type="button" id="btnRemove" class="btn btn-outline-danger w-75">
+                                        <i class="bi bi-arrow-left"></i>
+                                    </button>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <ul id="selectedUsers" class="list-group border rounded" style="max-height:300px; overflow-y:auto;"></ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="SelectedUserIdsString" name="SelectedUserIdsString" />
+                        </div>
+
+                        <!-- ✅ Yayın Durumu -->
+                        <div class="col-md-6 form-check mt-4">
+                            <input type="checkbox" name="IsPublished" class="form-check-input" id="isPublishedCheck" />
+                            <label for="isPublishedCheck" class="form-check-label">Yayınla</label>
+                        </div>
+
+                        <!-- 🧠 Eğitim Sınavı -->
+                        <div class="col-12 mt-5">
+                            <h5 class="fw-bold text-primary"><i class="bi bi-ui-checks"></i> Eğitim Sınavı</h5>
+                            <p class="text-muted small">Eğitim içeriğine dayalı sınav sorularını ekleyiniz.</p>
+
+                            <div id="questions-container"></div>
+
+                            <button type="button" id="add-question-btn" class="btn btn-outline-secondary mt-2">
+                                <i class="bi bi-plus-circle"></i> Soru Ekle
+                            </button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="SelectedUserIdsString" name="SelectedUserIdsString" />
+                    <!-- 🔘 Kaydet Butonları -->
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-success px-4">
+                            <i class="bi bi-check2"></i> Kaydet
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+

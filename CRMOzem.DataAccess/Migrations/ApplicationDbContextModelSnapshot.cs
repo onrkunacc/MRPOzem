@@ -648,6 +648,36 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("Trainings");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingAnswer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SelectedOption")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TrainingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrainingAnswers");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingParticipation", b =>
                 {
                     b.Property<int>("Id")
@@ -678,6 +708,101 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsUnique();
 
                     b.ToTable("TrainingParticipations");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CorrectOption")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OptionA")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OptionB")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OptionC")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OptionD")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TrainingId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrainingId");
+
+                    b.ToTable("TrainingQuestions");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CorrectCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TrainingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WrongCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrainingResults");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingVisibleUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("TrainingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrainingId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TrainingVisibleUsers");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.UserLeaveBalance", b =>
@@ -1020,6 +1145,36 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Training");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingQuestion", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Training", "Training")
+                        .WithMany("Questions")
+                        .HasForeignKey("TrainingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Training");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TrainingVisibleUser", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Training", "Training")
+                        .WithMany()
+                        .HasForeignKey("TrainingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Training");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.UserLeaveBalance", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.ApplicationUser", "User")
@@ -1147,6 +1302,8 @@ namespace CRMOzem.DataAccess.Migrations
             modelBuilder.Entity("CRMOzem.Core.Models.Training", b =>
                 {
                     b.Navigation("Participations");
+
+                    b.Navigation("Questions");
                 });
 #pragma warning restore 612, 618
         }

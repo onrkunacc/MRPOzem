@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -9,22 +10,27 @@ namespace CRMOzem.Core.ViewModels
 {
     public class TrainingCreateViewModel
     {
-        [Required, MaxLength(200)]
         public string Title { get; set; } = string.Empty;
-
-
-        [MaxLength(500)]
         public string? Description { get; set; }
-
-
-        [Required]
-        public DateTime TrainingDate { get; set; } = DateTime.Now;
-
-
-        [Required, Url]
+        public DateTime TrainingDate { get; set; }
         public string Link { get; set; } = string.Empty;
+        public bool IsPublished { get; set; }
 
+        // Eğitim soruları
+        public List<TrainingQuestionViewModel>? Questions { get; set; }
 
-        public bool IsPublished { get; set; } = false;
+        // Kullanıcı seçimi
+        public List<SelectListItem>? AvailableUsers { get; set; }
+
+        // JS tarafından gönderilen comma-separated string
+        public string? SelectedUserIdsString { get; set; }
+
+        // Parse edilmiş liste (otomatik)
+        public List<string> SelectedUserIds =>
+            string.IsNullOrWhiteSpace(SelectedUserIdsString)
+                ? new List<string>()
+                : SelectedUserIdsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(x => x.Trim()).ToList();
+
     }
 }

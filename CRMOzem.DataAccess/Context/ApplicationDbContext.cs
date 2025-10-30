@@ -27,7 +27,10 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<Hospital> Hospitals { get; set; }
         public DbSet<Training> Trainings => Set<Training>();
         public DbSet<TrainingParticipation> TrainingParticipations => Set<TrainingParticipation>();
-
+        public DbSet<TrainingVisibleUser> TrainingVisibleUsers { get; set; }
+        public DbSet<TrainingQuestion> TrainingQuestions { get; set; }
+        public DbSet<TrainingAnswer> TrainingAnswers { get; set; }
+        public DbSet<TrainingResult> TrainingResults { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 

@@ -36,5 +36,7 @@ namespace CRMOzem.Core.Models
 
 
         public ICollection<TrainingParticipation> Participations { get; set; } = new List<TrainingParticipation>();
+        public ICollection<TrainingQuestion>? Questions { get; set; }
+
     }
 }

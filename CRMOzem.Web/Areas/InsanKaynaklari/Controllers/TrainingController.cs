@@ -5,6 +5,7 @@ using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
 {
@@ -26,7 +27,7 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
         {
             try
             {
-                var list = _context.Trainings
+                var trainings = _context.Trainings
                     .OrderByDescending(t => t.CreatedAt)
                     .Select(t => new HrTrainingItemViewModel
                     {
@@ -36,14 +37,60 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
                         TrainingDate = t.TrainingDate,
                         IsPublished = t.IsPublished,
                         Link = t.Link
-                    }).ToList();
+                    })
+                    .ToList();
 
-                var vm = new HrTrainingListViewModel { Trainings = list };
-                return View(vm);
+                return View(new HrTrainingListViewModel
+                {
+                    Trainings = trainings
+                });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "HR/List hatası");
+                TempData["Error"] = "Eğitim listesi yüklenemedi.";
                 return View(new HrTrainingListViewModel());
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Create()
+        {
+            try
+            {
+                var userRole = _context.Roles.FirstOrDefault(r => r.Name == "Kullanıcı");
+                if (userRole == null)
+                    return BadRequest("Kullanıcı rolü bulunamadı.");
+
+                var userIds = _context.UserRoles
+                    .Where(ur => ur.RoleId == userRole.Id)
+                    .Select(ur => ur.UserId)
+                    .ToList();
+
+                var users = _context.Users
+                    .Where(u => userIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.FullName, u.UserName })
+                    .AsEnumerable()
+                    .Select(u => new SelectListItem
+                    {
+                        Value = u.Id,
+                        Text = $"{u.FullName} ({u.UserName})"
+                    })
+                    .OrderBy(u => u.Text)
+                    .ToList();
+
+                var vm = new TrainingCreateViewModel
+                {
+                    AvailableUsers = users,
+                    TrainingDate = DateTime.Now
+                };
+
+                return PartialView("~/Areas/InsanKaynaklari/Views/Training/_CreateTrainingPartial.cshtml", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "HR/Create GET hatası");
+                return BadRequest("Eğitim oluşturma ekranı yüklenemedi.");
             }
         }
 
@@ -55,32 +102,75 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    TempData["Error"] = "Geçersiz veri. Lütfen tüm alanları doldurun.";
-                    return RedirectToAction(nameof(List));
+                    TempData["Error"] = "Lütfen gerekli alanları doldurun.";
+                    return RedirectToAction(nameof(Create));
                 }
 
-                var entity = new Training
+                if (string.IsNullOrWhiteSpace(vm.Title) || string.IsNullOrWhiteSpace(vm.Link))
                 {
-                    Title = vm.Title,
-                    Description = vm.Description,
+                    TempData["Error"] = "Eğitim başlığı ve link zorunludur.";
+                    return RedirectToAction(nameof(Create));
+                }
+
+                var training = new Training
+                {
+                    Title = vm.Title.Trim(),
+                    Description = vm.Description?.Trim(),
                     TrainingDate = vm.TrainingDate,
-                    Link = vm.Link,
+                    Link = vm.Link.Trim(),
                     IsPublished = vm.IsPublished,
-                    CreatedBy = User.Identity?.Name ?? "hr",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = User.Identity?.Name ?? "hr"
                 };
 
-                _context.Trainings.Add(entity);
+                _context.Trainings.Add(training);
                 await _context.SaveChangesAsync(ct);
 
-                TempData["Success"] = "Eğitim başarıyla oluşturuldu.";
-                return RedirectToAction(nameof(List));
+                // 🔹 Eğitim soruları kaydet
+                if (vm.Questions != null && vm.Questions.Any())
+                {
+                    var questions = vm.Questions.Select(q => new TrainingQuestion
+                    {
+                        TrainingId = training.Id,
+                        QuestionText = q.QuestionText,
+                        OptionA = q.OptionA,
+                        OptionB = q.OptionB,
+                        OptionC = q.OptionC,
+                        OptionD = q.OptionD,
+                        CorrectOption = q.CorrectOption
+                    }).ToList();
+
+                    _context.TrainingQuestions.AddRange(questions);
+                }
+
+                // Kullanıcı atamaları
+                var userIds = vm.SelectedUserIds;
+                if (userIds != null && userIds.Any())
+                {
+                    var visibleUsers = userIds.Select(uid => new TrainingVisibleUser
+                    {
+                        TrainingId = training.Id,
+                        UserId = uid
+                    }).ToList();
+
+                    _context.TrainingVisibleUsers.AddRange(visibleUsers);
+                    _logger.LogInformation($"Eğitim {training.Id} için {visibleUsers.Count} kullanıcı atandı.");
+                }
+                else
+                {
+                    _logger.LogWarning($"Eğitim {training.Id} için hiçbir kullanıcı seçilmedi.");
+                }
+
+                await _context.SaveChangesAsync(ct);
+
+                TempData["Success"] = "Eğitim ve sınav başarıyla oluşturuldu.";
+                return RedirectToAction("List");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "HR/Create POST hatası");
-                TempData["Error"] = "Eğitim oluşturulamadı.";
-                return RedirectToAction(nameof(List));
+                TempData["Error"] = "Eğitim oluşturulurken hata oluştu.";
+                return RedirectToAction(nameof(Create));
             }
         }
 
@@ -90,12 +180,6 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    TempData["Error"] = "Geçersiz veri. Lütfen kontrol edin.";
-                    return RedirectToAction(nameof(List));
-                }
-
                 var t = _context.Trainings.FirstOrDefault(x => x.Id == id);
                 if (t == null)
                 {
@@ -103,10 +187,10 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
                     return RedirectToAction(nameof(List));
                 }
 
-                t.Title = vm.Title;
-                t.Description = vm.Description;
+                t.Title = vm.Title?.Trim();
+                t.Description = vm.Description?.Trim();
                 t.TrainingDate = vm.TrainingDate;
-                t.Link = vm.Link;
+                t.Link = vm.Link?.Trim();
                 t.IsPublished = vm.IsPublished;
 
                 _context.Trainings.Update(t);
