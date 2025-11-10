@@ -13,5 +13,8 @@ namespace CRMOzem.Core.ViewModels
         public DateTime TrainingDate { get; set; }
         public bool IsJoined { get; set; }
         public bool IsCompleted { get; set; }
+
+        public string Link { get; set; } = string.Empty; 
+
     }
 }

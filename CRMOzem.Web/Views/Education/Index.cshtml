@@ -5,108 +5,233 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<style>
+    @@media (prefers-reduced-motion: no-preference) {
+        .hover-scale
+
+    {
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .hover-scale:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 .5rem 1.25rem rgba(0,0,0,.08) !important;
+    }
+
+    }
+
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Durum görünümü (badge değil) */
+    .status-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem 1rem;
+        align-items: center;
+    }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .35rem .7rem;
+        border-radius: 999px;
+        background: rgba(0,0,0,.04);
+        font-size: .875rem;
+        color: #495057;
+    }
+
+        .status-chip .dot {
+            width: .5rem;
+            height: .5rem;
+            border-radius: 999px;
+            display: inline-block
+        }
+
+    .dot-completed {
+        background: #28a745
+    }
+
+    .dot-joined {
+        background: #0d6efd
+    }
+
+    .dot-notjoined {
+        background: #6c757d
+    }
+
+    /* Aksiyon alanı boşlukları */
+    .actions {
+        display: grid;
+        gap: 1rem;
+    }
+    @@media (min-width:768px) {
+        .actions
+
+    {
+        gap: 1rem;
+    }
+
+    }
+
+    /* Modal sapmasını engelle */
+    .modal {
+        will-change: transform;
+    }
+</style>
+
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-primary mb-0">📘 Eğitimlerim</h2>
-        <span class="text-muted small">@DateTime.Now.ToString("dd MMMM yyyy")</span>
+    <!-- Üst Başlık & Tarih -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <h2 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+            <span>📘 Eğitimlerim</span>
+        </h2>
+        <div class="text-muted small">@DateTime.Now.ToString("dd MMMM yyyy")</div>
     </div>
 
-    @if (Model.Items == null || !Model.Items.Any())
+    <!-- Araç Çubuğu -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input id="searchInput" type="search" class="form-control" placeholder="Başlıkta ara...">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select id="statusFilter" class="form-select" aria-label="Durum filtresi">
+                        <option value="all" selected>Tümü (Durum)</option>
+                        <option value="completed">Tamamlandı</option>
+                        <option value="joined">Katıldınız</option>
+                        <option value="notjoined">Katılmadınız</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select id="sortSelect" class="form-select" aria-label="Sırala">
+                        <option value="date_desc" selected>Tarihe göre (Yeni → Eski)</option>
+                        <option value="date_asc">Tarihe göre (Eski → Yeni)</option>
+                        <option value="title_asc">Başlık (A → Z)</option>
+                        <option value="title_desc">Başlık (Z → A)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model?.Items == null || !Model.Items.Any())
     {
-        <div class="alert alert-info text-center shadow-sm">
-            Şu anda size atanmış bir eğitim bulunmamaktadır.
+        <div class="border-0 text-center p-5 rounded-3 shadow-sm bg-light">
+            <div class="display-6 mb-2">😌</div>
+            <h5 class="fw-semibold">Şu anda size atanmış bir eğitim bulunmuyor.</h5>
+            <p class="text-muted mb-0">Yeni eğitimler atandığında burada görünecek.</p>
         </div>
     }
     else
     {
-        <div class="row g-4">
+        <div id="cardsRow" class="row g-3 g-md-4 row-cols-1 row-cols-sm-2 row-cols-lg-3">
             @foreach (var item in Model.Items)
             {
-                <div class="col-12 col-sm-6 col-lg-4">
-                    <div class="card shadow-lg border-0 h-100 hover-scale">
-                        <div class="card-body d-flex flex-column justify-content-between p-4">
-                            <div>
-                                <h5 class="card-title fw-semibold text-dark">@item.Title</h5>
-                                <p class="text-muted mb-2">
-                                    <i class="bi bi-calendar3"></i>
-                                    @item.TrainingDate.ToString("dd MMMM yyyy")
-                                </p>
+                var status = item.IsCompleted ? "completed" : (item.IsJoined ? "joined" : "notjoined");
+                var statusText = item.IsCompleted ? "Tamamlandı" : (item.IsJoined ? "Katıldınız" : "Katılmadınız");
+                var statusIcon = item.IsCompleted ? "bi-check-circle" : (item.IsJoined ? "bi-person-check" : "bi-person-x");
 
-                                <span class="badge px-3 py-2 fs-6
-                                            @(item.IsCompleted ? "bg-success" :
-                                                                            item.IsJoined ? "bg-info text-dark" :
-                                                                            "bg-secondary")">
-                                    @(item.IsCompleted ? "✅ Tamamlandı"
-                                                                : item.IsJoined ? "🟡 Katıldınız"
-                                                                : "⚪ Katılmadınız")
-                        </span>
-                    </div>
+                <div class="col">
+                    <div class="card shadow-sm border-0 h-100 hover-scale"
+                         data-title="@item.Title.ToLower()"
+                         data-status="@status"
+                         data-date="@item.TrainingDate.ToString("yyyy-MM-dd")"
+                         data-link="@item.Link"
+                         data-id="@item.Id">
+                        <div class="card-body d-flex flex-column p-4">
+                            <div class="d-flex flex-column gap-2">
+                                <h5 class="card-title fw-semibold text-dark line-clamp-2" title="@item.Title">
+                                    @item.Title
+                                </h5>
 
-                            <div class="mt-4">
-                                <button class="btn btn-outline-primary w-100"
+                                <!-- Durum alanı (geliştirilmiş görünüm) -->
+                                <div class="status-wrap">
+                                    <span class="status-chip js-status-chip">
+                                        <span class="dot @(status == "completed" ? "dot-completed" : status == "joined" ? "dot-joined" : "dot-notjoined") js-status-dot"></span>
+                                        <i class="bi @statusIcon js-status-icon"></i>
+                                        <span class="js-status-text">@statusText</span>
+                                    </span>
+                                    <span class="text-muted small d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-calendar3"></i> @item.TrainingDate.ToString("dd MMMM yyyy")
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Aksiyonlar -->
+                            <div class="mt-4 actions">
+                                <button class="btn btn-outline-primary"
                                         data-bs-toggle="modal"
                                         data-bs-target="#detailModal-@item.Id">
                                     <i class="bi bi-info-circle"></i> Detay
                                 </button>
+
+                                <!-- 1) Katıl -->
+                                <div class="section-join @(status != "notjoined" ? "d-none" : "")">
+                                    <button type="button"
+                                            class="btn btn-success join-open-btn w-100"
+                                            data-join-url="@Url.Action("Join", "Education", new { id = item.Id })"
+                                            data-link="@item.Link"
+                                            data-id="@item.Id">
+                                        <i class="bi bi-box-arrow-in-right"></i> Katıl ve Aç
+                                    </button>
+                                </div>
+
+                                <!-- 2) Katıldı ama tamamlanmadı -->
+                                <div class="section-joined @(status != "joined" ? "d-none" : "")">
+                                    <div class="d-grid gap-3">
+                                        <form asp-action="Complete" asp-route-id="@item.Id" method="post" class="start-exam-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-warning text-dark w-100">
+                                                <i class="bi bi-check2-circle"></i> Sınava Başla
+                                            </button>
+                                        </form>
+                                        <a href="@item.Link" target="_blank" rel="noopener" class="btn btn-outline-primary w-100">
+                                            <i class="bi bi-play-circle"></i> Eğitimi Aç (Yeni Sekme)
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- 3) Tamamlandı -->
+                                <div class="section-completed @(status != "completed" ? "d-none" : "")">
+                                    <a href="@item.Link" target="_blank" rel="noopener" class="btn btn-outline-secondary w-100">
+                                        <i class="bi bi-arrow-repeat"></i> Yeniden Aç
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 🔹 Detay Modal -->
-                <div class="modal fade" id="detailModal-@item.Id" tabindex="-1" aria-hidden="true">
+                <!-- Detay Modal (merkezde) -->
+                <div class="modal fade" id="detailModal-@item.Id" tabindex="-1" aria-hidden="true" aria-labelledby="detailLabel-@item.Id" data-bs-backdrop="static" data-bs-keyboard="false">
                     <div class="modal-dialog modal-dialog-centered modal-lg">
                         <div class="modal-content border-0 shadow-lg rounded-3">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
+                                <h5 class="modal-title d-flex align-items-center gap-2" id="detailLabel-@item.Id">
                                     <i class="bi bi-mortarboard"></i> @item.Title
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <p><strong>Tarih:</strong> @item.TrainingDate.ToString("dd.MM.yyyy")</p>
-                                        <p>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <p class="mb-1"><strong>Tarih:</strong> @item.TrainingDate.ToString("dd.MM.yyyy")</p>
+                                        <p class="mb-0">
                                             <strong>Durum:</strong>
-                                            <span class="badge @(item.IsCompleted ? "bg-success" :
-                                                                                                                  item.IsJoined ? "bg-info text-dark" :
-                                                                                                                  "bg-secondary")">
-                                                @(item.IsCompleted ? "Tamamlandı"
-                                                                                        : item.IsJoined ? "Katıldınız"
-                                                                                        : "Katılmadınız")
-                                    </span>
-                                </p>
-
-                                        <div class="d-flex flex-wrap gap-2 mt-3">
-                                    @if (!item.IsJoined)
-                                            {
-                                                <form asp-action="Join" asp-route-id="@item.Id" method="post">
-                                                    <button type="submit" class="btn btn-success">
-                                                        <i class="bi bi-box-arrow-in-right"></i> Katıl
-                                                    </button>
-                                                </form>
-                                            }
-                                            else if (!item.IsCompleted)
-                                            {
-                                                <form asp-action="Complete" asp-route-id="@item.Id" method="post">
-                                                    <button type="submit" class="btn btn-warning text-dark">
-                                                        <i class="bi bi-check2-circle"></i> Tamamla
-                                                    </button>
-                                                </form>
-                                                <a href="@Url.Action("Join", "Education", new { id = item.Id })"
-                                                   target="_blank" class="btn btn-outline-primary">
-                                                    <i class="bi bi-play-circle"></i> Eğitimi Aç
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <a href="@Url.Action("Join", "Education", new { id = item.Id })"
-                                                   target="_blank" class="btn btn-outline-secondary">
-                                                    <i class="bi bi-arrow-repeat"></i> Yeniden Aç
-                                                </a>
-                                            }
-                                        </div>
+                                            <span class="text-muted d-inline-flex align-items-center gap-1">
+                                                <i class="bi @statusIcon"></i> @statusText
+                                            </span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -121,21 +246,22 @@
             }
         </div>
     }
-    <!-- 🔹 Sınav Modal -->
-    <div class="modal fade" id="examModal" tabindex="-1" aria-hidden="true">
+
+    <!-- Sınav Modal (Global) -->
+    <div class="modal fade" id="examModal" tabindex="-1" aria-hidden="true" aria-labelledby="examModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content shadow-lg">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-ui-checks"></i> Eğitim Sınavı</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="examModalLabel">
+                        <i class="bi bi-ui-checks"></i> Eğitim Sınavı
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
-
                 <div class="modal-body">
-                    <div id="questionContainer" class="py-2 text-center">
-                        <p>Sorular yükleniyor...</p>
+                    <div id="questionContainer" class="py-2">
+                        <p class="text-center">Sorular yükleniyor...</p>
                     </div>
                 </div>
-
                 <div class="modal-footer d-flex justify-content-between">
                     <button id="prevQuestionBtn" class="btn btn-outline-secondary" disabled>Önceki</button>
                     <button id="nextQuestionBtn" class="btn btn-primary">Sonraki</button>
@@ -143,131 +269,216 @@
             </div>
         </div>
     </div>
-
 </div>
+
+<!-- Anti-forgery token (tek noktadan okunur) -->
+<form id="__af" method="post" class="d-none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     <script>
-        // Hover efekt için küçük JS
-        document.querySelectorAll('.hover-scale').forEach(card => {
-            card.addEventListener('mouseenter', () => card.style.transform = 'scale(1.03)');
-            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)');
-            card.style.transition = 'transform 0.2s ease';
-        });
+        (() => {
+            const debounce = (fn, delay = 250) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); }; };
+            const qs = (s, r=document) => r.querySelector(s);
+            const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const modal = new bootstrap.Modal(document.getElementById("examModal"));
+            const cardsRow = document.getElementById('cardsRow');
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const sortSelect = document.getElementById('sortSelect');
+
+            const getCards = () => Array.from(cardsRow?.querySelectorAll('.card') ?? []);
+
+            function applyFilters() {
+                const q = (searchInput?.value || '').trim().toLowerCase();
+                const s = statusFilter?.value || 'all';
+                getCards().forEach(card => {
+                    const title = (card.dataset.title || '').toLowerCase();
+                    const status = card.dataset.status || '';
+                    const matchQ = !q || title.includes(q);
+                    const matchS = (s === 'all') || (status === s);
+                    card.closest('.col').style.display = (matchQ && matchS) ? '' : 'none';
+                });
+            }
+            function applySort() {
+                const value = sortSelect?.value || 'date_desc';
+                const cols = Array.from(cardsRow.querySelectorAll('.col'));
+                const sorted = cols.sort((a, b) => {
+                    const ca = a.querySelector('.card'); const cb = b.querySelector('.card');
+                    const da = (ca?.dataset.date || '0000-00-00');
+                    const db = (cb?.dataset.date || '0000-00-00');
+                    const ta = (ca?.dataset.title || '').toLowerCase();
+                    const tb = (cb?.dataset.title || '').toLowerCase();
+                    if (value === 'date_desc') return db.localeCompare(da);
+                    if (value === 'date_asc')  return da.localeCompare(db);
+                    if (value === 'title_asc') return ta.localeCompare(tb);
+                    if (value === 'title_desc')return tb.localeCompare(ta);
+                    return 0;
+                });
+                sorted.forEach(el => cardsRow.appendChild(el));
+            }
+
+            searchInput?.addEventListener('input', debounce(applyFilters, 200));
+            statusFilter?.addEventListener('change', applyFilters);
+            sortSelect?.addEventListener('change', () => { applySort(); applyFilters(); });
+            if (cardsRow) { applySort(); applyFilters(); }
+
+            // Modallar merkezde: body'ye taşı
+            qsa('.modal').forEach(m => {
+                m.addEventListener('show.bs.modal', () => {
+                    if (m.parentElement !== document.body) document.body.appendChild(m);
+                });
+            });
+
+            // Katıl ve Aç → yeni sekme + arka planda Join POST → kartı anlık güncelle
+            qsa('.join-open-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const link = btn.getAttribute('data-link') || '';
+                    const joinUrl = btn.getAttribute('data-join-url') || '';
+                    const id = btn.getAttribute('data-id') || '';
+                    const card = btn.closest('.card');
+                    if (!card) return;
+
+                    // Yeni sekmede eğitim
+                    if (link) window.open(link, '_blank', 'noopener');
+
+                    // Join POST
+                    let apiResult = null;
+                    try {
+                        const token = qs('#__af input[name="__RequestVerificationToken"]')?.value || '';
+                        const fd = new FormData();
+                        fd.append('__RequestVerificationToken', token);
+
+                        const resp = await fetch(joinUrl, {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'include'
+                        });
+
+                        try { apiResult = await resp.json(); } catch { /* HTML dönebilir */ }
+                    } catch { /* ignore */ }
+
+                    // Kartı anlık güncelle
+                    patchCardToJoined(card, apiResult);
+                });
+            });
+
+            // Sınav modal akışı (değişmedi)
+            const examModal = document.getElementById("examModal");
+            const modal = examModal ? new bootstrap.Modal(examModal) : null;
             const questionContainer = document.getElementById("questionContainer");
             const nextBtn = document.getElementById("nextQuestionBtn");
             const prevBtn = document.getElementById("prevQuestionBtn");
 
-            let questions = [];
-            let currentIndex = 0;
-            let answers = [];
-            let currentTrainingId = null;
+            let questions = [], currentIndex = 0, answers = [], currentTrainingId = null;
 
-            // 🔹 "Tamamla" butonuna tıklanınca sınavı başlat
-            document.querySelectorAll("form[action*='Complete']").forEach(form => {
+            qsa("form.start-exam-form").forEach(form => {
                 form.addEventListener("submit", e => {
                     e.preventDefault();
-                    const trainingId = form.action.split("/").pop();
-                    currentTrainingId = trainingId;
+                    try {
+                        const url = new URL(form.action, window.location.origin);
+                        const trainingId = url.pathname.split("/").pop();
+                        currentTrainingId = trainingId;
 
-                    fetch(`/Education/GetQuestions?id=${trainingId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (!data.length) {
-                                form.submit(); // soru yoksa direkt tamamla
-                                return;
-                            }
-                            questions = data;
-                            currentIndex = 0;
-                            answers = [];
-                            showQuestion();
-                            modal.show();
-                        });
+                        fetch(`/Education/GetQuestions?id=${encodeURIComponent(trainingId)}`)
+                            .then(res => res.ok ? res.json() : Promise.reject())
+                            .then(data => {
+                                if (!Array.isArray(data) || data.length === 0) { form.submit(); return; }
+                                questions = data; currentIndex = 0; answers = [];
+                                renderQuestion(); modal?.show();
+                            })
+                            .catch(() => form.submit());
+                    } catch { form.submit(); }
                 });
             });
 
-            // 🔹 Soru render etme
-            function showQuestion() {
-                const q = questions[currentIndex];
+            function renderQuestion() {
+                const q = questions[currentIndex]; if (!q) return;
+                const saved = answers[currentIndex]?.selectedOption ?? null;
                 questionContainer.innerHTML = `
                     <div class="mb-3">
-                        <h5 class="fw-bold text-primary text-start">
-                            Soru ${currentIndex + 1}/${questions.length}
-                        </h5>
-                        <p class="fs-5 mb-4">${q.questionText}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-primary mb-0">Soru ${currentIndex + 1}/${questions.length}</h6>
+                        </div>
+                        <p class="fs-5 mb-3">${q.questionText}</p>
                         ${["A","B","C","D"].map(opt => `
-                            <div class="form-check text-start">
-                                <input class="form-check-input" type="radio" name="answer" value="${opt}" id="opt_${opt}"
-                                ${answers[currentIndex]?.selectedOption === opt ? 'checked' : ''}>
-                                <label class="form-check-label" for="opt_${opt}">
-                                    ${q["option" + opt]}
-                                </label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="answer" value="${opt}" id="opt_${opt}" ${(saved === opt) ? 'checked' : ''}>
+                                <label class="form-check-label" for="opt_${opt}">${q["option" + opt]}</label>
                             </div>
                         `).join("")}
-                    </div>
-                `;
+                    </div>`;
                 prevBtn.disabled = currentIndex === 0;
                 nextBtn.textContent = currentIndex === questions.length - 1 ? "Gönder" : "Sonraki";
             }
-
-            // 🔹 "Sonraki" veya "Gönder" butonu
-            nextBtn.addEventListener("click", () => {
-                const selected = document.querySelector("input[name='answer']:checked");
-                if (!selected) {
-                    alert("Lütfen bir seçenek seçin.");
-                    return;
-                }
-
-                // cevabı kaydet
+            nextBtn?.addEventListener("click", () => {
+                const selected = questionContainer.querySelector("input[name='answer']:checked");
+                if (!selected) { alert("Lütfen bir seçenek seçin."); return; }
                 answers[currentIndex] = {
                     questionId: questions[currentIndex].id,
                     selectedOption: selected.value,
                     trainingId: currentTrainingId
                 };
-
-                if (currentIndex < questions.length - 1) {
-                    currentIndex++;
-                    showQuestion();
-                } else {
-                    // son soru => gönder
-                    submitAnswers();
-                }
+                if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); }
+                else { submitAnswers(); }
             });
+            prevBtn?.addEventListener("click", () => { if (currentIndex > 0) { currentIndex--; renderQuestion(); } });
 
-            // 🔹 "Önceki" butonu
-            prevBtn.addEventListener("click", () => {
-                if (currentIndex > 0) {
-                    currentIndex--;
-                    showQuestion();
-                }
-            });
-
-            // 🔹 Cevapları kaydet
             function submitAnswers() {
-                    fetch(`/Education/SubmitAnswers`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(answers)
-                    })
-                    .then(res => res.json())
-                    .then(result => {
-                        if (result.success) {
-                            modal.hide();
+                fetch(`/Education/SubmitAnswers`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(answers)
+                })
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(result => {
+                    if (result?.success) {
+                        modal?.hide();
+                        if (window.Swal) {
                             Swal.fire({
                                 title: 'Sınav Tamamlandı!',
-                                html: `<b>${result.correctCount}</b> / <b>${result.total}</b> doğru cevap verdiniz 🎯`,
-                                icon: result.correctCount / result.total >= 0.6 ? 'success' : 'warning',
+                                html: `<b>${result.correctCount}</b> / <b>${result.total}</b> doğru cevap 🎯`,
+                                icon: (result.correctCount / Math.max(result.total,1)) >= 0.6 ? 'success' : 'warning',
                                 confirmButtonText: 'Tamam'
                             }).then(() => window.location.reload());
-                        } else {
-                            alert("Cevaplar kaydedilemedi.");
-                        }
-                    })
-                    .catch(() => alert("Sunucu hatası oluştu."));
+                        } else { alert(`Sınav tamamlandı: ${result.correctCount}/${result.total}`); window.location.reload(); }
+                    } else { alert("Cevaplar kaydedilemedi."); }
+                })
+                .catch(() => alert("Sunucu hatası oluştu."));
             }
-        });
+
+            // --- JOIN PATCH: kartı anlık "Katıldınız" durumuna çevir ---
+            function patchCardToJoined(card, api) {
+                // status attr
+                card.dataset.status = 'joined';
+
+                // status ikon/metin
+                const icon = card.querySelector('.js-status-icon');
+                const text = card.querySelector('.js-status-text');
+                const dot  = card.querySelector('.js-status-dot');
+                if (icon) { icon.classList.remove('bi-person-x','bi-check-circle'); icon.classList.add('bi-person-check'); }
+                if (text) { text.textContent = 'Katıldınız'; }
+                if (dot)  { dot.classList.remove('dot-notjoined','dot-completed'); dot.classList.add('dot-joined'); }
+
+                // aksiyon bölümleri
+                const secJoin = card.querySelector('.section-join');
+                const secJoined = card.querySelector('.section-joined');
+                const secCompleted = card.querySelector('.section-completed');
+
+                if (secJoin) secJoin.classList.add('d-none');
+                if (secCompleted) secCompleted.classList.add('d-none');
+                if (secJoined) secJoined.classList.remove('d-none');
+
+                // API dönüşü tamamlandı diyorsa (edge)
+                if (api && api.isCompleted === true) {
+                    if (text) text.textContent = 'Tamamlandı';
+                    if (icon) { icon.classList.remove('bi-person-check'); icon.classList.add('bi-check-circle'); }
+                    if (dot)  { dot.classList.remove('dot-joined'); dot.classList.add('dot-completed'); }
+                    if (secJoined) secJoined.classList.add('d-none');
+                    if (secCompleted) secCompleted.classList.remove('d-none');
+                    card.dataset.status = 'completed';
+                }
+            }
+        })();
     </script>
 }

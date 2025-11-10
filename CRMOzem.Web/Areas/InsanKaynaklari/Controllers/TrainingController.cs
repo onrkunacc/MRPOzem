@@ -141,7 +141,7 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
                     }).ToList();
 
                     _context.TrainingQuestions.AddRange(questions);
-                }
+                } 
 
                 // Kullanıcı atamaları
                 var userIds = vm.SelectedUserIds;
@@ -287,7 +287,7 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
 
                 if (trainingId.HasValue)
                 {
-                    // 🔹 Sadece "Kullanıcı" rolüne sahip olanlar
+                    // Sadece "Kullanıcı" rolüne sahip olanlar
                     var roleId = _context.Roles.FirstOrDefault(r => r.Name == "Kullanıcı")?.Id;
                     if (roleId == null)
                     {
@@ -305,12 +305,12 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
                         .Select(u => new { u.Id, u.FullName, u.UserName })
                         .ToList();
 
-                    // 🔹 Eğitim katılımları
+                    // Eğitim katılımları
                     var participations = _context.TrainingParticipations
                         .Where(p => p.TrainingId == trainingId.Value)
                         .ToList();
 
-                    // 🔹 Eşleşme: TrainingParticipations.UserId = AspNetUsers.UserName
+                    // Eşleşme: TrainingParticipations.UserId = AspNetUsers.UserName
                     vm.Participations = allUsers.Select(u =>
                     {
                         var p = participations
@@ -351,41 +351,117 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
                 .Where(x => x.TrainingId == trainingId)
                 .ToList();
 
+            var roleId = _context.Roles.FirstOrDefault(r => r.Name == "Kullanıcı")?.Id;
+            var userIdsInRole = _context.UserRoles
+                .Where(ur => ur.RoleId == roleId)
+                .Select(ur => ur.UserId)
+                .ToList();
+
+            var allUsers = _context.Users
+                .Where(u => userIdsInRole.Contains(u.Id))
+                .Select(u => new { u.FullName, u.UserName })
+                .ToList();
+
             using (var memoryStream = new MemoryStream())
             {
-                // Türkçe karakter desteği (Arial Unicode)
                 string fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
                 BaseFont bf = BaseFont.CreateFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 Font normal = new Font(bf, 11, Font.NORMAL, BaseColor.BLACK);
-                Font header = new Font(bf, 13, Font.BOLD, new BaseColor(0, 70, 130));
+                Font header = new Font(bf, 14, Font.BOLD, new BaseColor(0, 70, 130));
+                Font tableHeader = new Font(bf, 12, Font.BOLD, BaseColor.WHITE);
 
-                Document doc = new Document(PageSize.A4, 40, 40, 40, 40);
+                Document doc = new Document(PageSize.A4, 40, 40, 50, 40);
                 PdfWriter.GetInstance(doc, memoryStream);
                 doc.Open();
 
-                doc.Add(new Paragraph($"Eğitim Raporu - {training.Title}", header));
-                doc.Add(new Paragraph($"Tarih: {training.TrainingDate:dd.MM.yyyy}", normal));
-                doc.Add(new Paragraph(" "));
-
-                PdfPTable table = new PdfPTable(4);
-                table.WidthPercentage = 100;
-                table.AddCell(new PdfPCell(new Phrase("Kullanıcı", header)));
-                table.AddCell(new PdfPCell(new Phrase("Katılma Tarihi", header)));
-                table.AddCell(new PdfPCell(new Phrase("Durum", header)));
-                table.AddCell(new PdfPCell(new Phrase("Tamamlama Tarihi", header)));
-
-                foreach (var p in participations)
+                //  Logo
+                string logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "tinydash-master", "light", "assets", "images", "logo.jpeg");
+                if (System.IO.File.Exists(logoPath))
                 {
-                    var user = _context.Users.FirstOrDefault(u => u.UserName == p.UserId);
-                    string fullName = user?.FullName ?? p.UserId;
+                    var logo = iTextSharp.text.Image.GetInstance(logoPath);
+                    logo.ScaleToFit(120f, 60f);
+                    logo.Alignment = Element.ALIGN_LEFT;
+                    doc.Add(logo);
+                }
 
-                    table.AddCell(new Phrase(fullName, normal));
-                    table.AddCell(new Phrase(p.JoinedAt.ToString("dd.MM.yyyy HH:mm") ?? "-", normal));
-                    table.AddCell(new Phrase(p.IsCompleted ? "Tamamlandı" : "Devam Ediyor", normal));
-                    table.AddCell(new Phrase(p.CompletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-", normal));
+                // Başlık
+                Paragraph title = new Paragraph($"Eğitim Raporu - {training.Title}", header)
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingAfter = 10f
+                };
+                doc.Add(title);
+
+                Paragraph dateInfo = new Paragraph($"Tarih: {training.TrainingDate:dd.MM.yyyy}", normal)
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingAfter = 20f
+                };
+                doc.Add(dateInfo);
+
+                // Tablo başlığı
+                PdfPTable table = new PdfPTable(4)
+                {
+                    WidthPercentage = 100
+                };
+                float[] widths = { 3f, 2.5f, 2f, 2.5f };
+                table.SetWidths(widths);
+
+                // Başlık hücreleri
+                BaseColor headerBg = new BaseColor(0, 70, 130);
+                string[] headers = { "Kullanıcı", "Katılma Tarihi", "Durum", "Tamamlama Tarihi" };
+                foreach (var h in headers)
+                {
+                    var cell = new PdfPCell(new Phrase(h, tableHeader))
+                    {
+                        BackgroundColor = headerBg,
+                        HorizontalAlignment = Element.ALIGN_CENTER,
+                        Padding = 6f
+                    };
+                    table.AddCell(cell);
+                }
+
+                // Kullanıcı listesi + katılım durumu
+                foreach (var u in allUsers)
+                {
+                    var p = participations.FirstOrDefault(x => x.UserId.Equals(u.UserName, StringComparison.OrdinalIgnoreCase));
+
+                    string joined = p?.JoinedAt.ToString("dd.MM.yyyy") ?? "-";
+                    string completed = p?.CompletedAt?.ToString("dd.MM.yyyy") ?? "-";
+                    string status = p == null
+                                        ? "Katılmadı"
+                                        : p.IsCompleted ? "Tamamlandı"
+                                        : "Devam Ediyor";
+
+                    BaseColor statusColor = status switch
+                    {
+                        "Tamamlandı" => new BaseColor(76, 175, 80),
+                        "Devam Ediyor" => new BaseColor(255, 193, 7),
+                        "Katılmadı" => new BaseColor(244, 67, 54),
+                        _ => BaseColor.LIGHT_GRAY
+                    };
+
+                    // Satır hücreleri
+                    table.AddCell(new PdfPCell(new Phrase(u.FullName, normal)) { Padding = 5f });
+                    table.AddCell(new PdfPCell(new Phrase(joined, normal)) { Padding = 5f });
+                    table.AddCell(new PdfPCell(new Phrase(status, new Font(bf, 11, Font.BOLD, BaseColor.WHITE)))
+                    {
+                        BackgroundColor = statusColor,
+                        HorizontalAlignment = Element.ALIGN_CENTER,
+                        Padding = 5f
+                    });
+                    table.AddCell(new PdfPCell(new Phrase(completed, normal)) { Padding = 5f });
                 }
 
                 doc.Add(table);
+
+                // 🔸 Alt not
+                Paragraph footer = new Paragraph($"\nRapor oluşturulma tarihi: {DateTime.Now:dd.MM.yyyy}", new Font(bf, 9, Font.ITALIC, BaseColor.GRAY))
+                {
+                    Alignment = Element.ALIGN_RIGHT
+                };
+                doc.Add(footer);
+
                 doc.Close();
 
                 return File(memoryStream.ToArray(), "application/pdf", $"EgitimRaporu_{training.Title}.pdf");

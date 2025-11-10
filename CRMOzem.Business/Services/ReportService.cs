@@ -13,6 +13,7 @@ namespace CRMOzem.Business.Services
     public class ReportService : IReportService
     {
         private readonly ApplicationDbContext _context;
+
         public ReportService(ApplicationDbContext context)
         {
             _context = context;
@@ -28,41 +29,39 @@ namespace CRMOzem.Business.Services
             return reports.Select(report => new ExpenseReportViewModel
             {
                 Id = report.Id,
-                UserId = report.User.Id,
-                UserName = report.User?.FullName,
-                MonthYear = report.MonthYear,
-                TotalAmount = report.TotalAmount,
-                ExpenseDetails = report.ExpenseDetails.Select(d => new ExpenseDetailViewModel
+                UserId = report.UserId,
+                UserName = report.User?.FullName ?? "Bilinmiyor",
+                MonthYear = report.MonthYear, 
+                TotalAmount = report.ExpenseDetails?.Sum(d => d.Amount) ?? 0,
+                ExpenseDetails = report.ExpenseDetails?.Select(d => new ExpenseDetailViewModel
                 {
                     Id = d.Id,
                     ReportId = d.ReportId,
-
                     Category = d.Category,
                     Description = d.Description,
                     Amount = d.Amount,
                     Date = d.Date,
                     PaymentMethod = d.PaymentMethod
-
-                }).ToList()
+                }).ToList() ?? new List<ExpenseDetailViewModel>()
             }).ToList();
         }
 
         public async Task<List<ExpenseReportViewModel>> GetReportsByUserIdAsync(string userId)
         {
             var reports = await _context.ExpenseReports
-            .Where(r => r.UserId == userId)
-            .Include(r => r.ExpenseDetails)
-            .Include(r => r.User)
-            .ToListAsync();
+                .Where(r => r.UserId == userId)
+                .Include(r => r.ExpenseDetails)
+                .Include(r => r.User)
+                .ToListAsync();
 
             return reports.Select(report => new ExpenseReportViewModel
             {
                 Id = report.Id,
                 UserId = report.UserId,
-                UserName = report.User?.FullName,
+                UserName = report.User?.FullName ?? "Bilinmiyor",
                 MonthYear = report.MonthYear,
-                TotalAmount = report.TotalAmount,
-                ExpenseDetails = report.ExpenseDetails.Select(d => new ExpenseDetailViewModel
+                TotalAmount = report.ExpenseDetails?.Sum(d => d.Amount) ?? 0,
+                ExpenseDetails = report.ExpenseDetails?.Select(d => new ExpenseDetailViewModel
                 {
                     Id = d.Id,
                     ReportId = d.ReportId,
@@ -71,7 +70,7 @@ namespace CRMOzem.Business.Services
                     Amount = d.Amount,
                     Date = d.Date,
                     PaymentMethod = d.PaymentMethod
-                }).ToList()
+                }).ToList() ?? new List<ExpenseDetailViewModel>()
             }).ToList();
         }
 
@@ -87,10 +86,10 @@ namespace CRMOzem.Business.Services
             {
                 Id = report.Id,
                 UserId = report.UserId,
-                UserName = report.User?.FullName,
+                UserName = report.User?.FullName ?? "Bilinmiyor",
                 MonthYear = report.MonthYear,
-                TotalAmount = report.TotalAmount,
-                ExpenseDetails = report.ExpenseDetails.Select(d => new ExpenseDetailViewModel
+                TotalAmount = report.ExpenseDetails?.Sum(d => d.Amount) ?? 0,
+                ExpenseDetails = report.ExpenseDetails?.Select(d => new ExpenseDetailViewModel
                 {
                     Id = d.Id,
                     ReportId = d.ReportId,
@@ -99,24 +98,27 @@ namespace CRMOzem.Business.Services
                     Amount = d.Amount,
                     Date = d.Date,
                     PaymentMethod = d.PaymentMethod
-                }).ToList()
+                }).ToList() ?? new List<ExpenseDetailViewModel>()
             }).ToList();
         }
 
-
         public async Task<List<MonthlyExpenseSummaryViewModel>> GetMonthlyExpenseSummaryAsync(int year)
         {
+            // Artık rapor bazlı toplam yerine detaylar üzerinden hesaplıyoruz
             var reports = await _context.ExpenseReports
+                .Include(r => r.ExpenseDetails)
                 .Where(r => r.MonthYear.Year == year)
+                .ToListAsync();
+
+            return reports
                 .GroupBy(r => r.MonthYear.Month)
                 .Select(g => new MonthlyExpenseSummaryViewModel
                 {
                     Month = g.Key,
-                    TotalAmount = g.Sum(r => r.TotalAmount)
+                    TotalAmount = g.Sum(r => r.ExpenseDetails.Sum(d => d.Amount))
                 })
-                .ToListAsync();
-
-            return reports;
+                .OrderBy(x => x.Month)
+                .ToList();
         }
     }
 }

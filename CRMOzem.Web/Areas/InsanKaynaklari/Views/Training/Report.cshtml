@@ -61,7 +61,7 @@
             </div>
         </div>
 
-        <!-- 👥 Katılım Tablosu -->
+        <!-- Katılım Tablosu -->
         <div class="card shadow-sm mt-4" id="reportContent">
             <div class="card-body">
                 <h5 class="card-title">Katılım Listesi</h5>
@@ -81,22 +81,22 @@
                             {
                                 <tr>
                                     <td>@p.UserName</td>
-                                    <td>@(p.HasParticipated ? p.JoinedAt?.ToString("dd.MM.yyyy HH:mm") : "-")</td>
+                                    <td>@(p.HasParticipated? p.JoinedAt?.ToString("dd.MM.yyyy") : "-")</td>
                                     <td>
                                         @if (!p.HasParticipated)
                                         {
-                                            <span class="bg-danger">Katılmadı</span>
+                                            <span class="badge bg-danger">Katılmadı</span>
                                         }
                                         else if (p.IsCompleted)
                                         {
-                                            <span class="bg-success">Tamamlandı</span>
+                                            <span class="badge bg-success">Tamamlandı</span>
                                         }
                                         else
                                         {
-                                            <span class="bg-warning text-dark">Devam Ediyor</span>
+                                            <span class="badge bg-warning text-dark">Devam Ediyor</span>
                                         }
                                     </td>
-                                    <td>@(p.CompletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                                    <td>@(p.CompletedAt?.ToString("dd.MM.yyyy") ?? "-")</td>
                                 </tr>
                             }
                         </tbody>

@@ -59,6 +59,7 @@ namespace CRMOzem.Web.Controllers
                             Id = t.Id,
                             Title = t.Title,
                             TrainingDate = t.TrainingDate,
+                            Link = t.Link,
                             IsJoined = p != null,
                             IsCompleted = p?.IsCompleted ?? false
                         };

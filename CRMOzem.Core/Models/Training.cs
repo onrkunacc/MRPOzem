@@ -9,34 +9,34 @@ namespace CRMOzem.Core.Models
 {
     public class Training
     {
-        public int Id { get; set; }
+        public int Id { get; set; } // eğitim kimliği
 
 
         [Required, MaxLength(200)]
-        public string Title { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty; // eğitim başlığı
 
 
         [MaxLength(500)]
-        public string? Description { get; set; }
+        public string? Description { get; set; } // eğitim açıklaması 
 
 
         [Required]
-        public DateTime TrainingDate { get; set; }
+        public DateTime TrainingDate { get; set; } // eğitim tarihi
 
 
         [Required, Url]
-        public string Link { get; set; } = string.Empty; // Google Drive linki
+        public string Link { get; set; } = string.Empty; // eğitim linki
 
 
-        public bool IsPublished { get; set; } = false;
+        public bool IsPublished { get; set; } = false; // yayında mı
 
 
-        public string CreatedBy { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string CreatedBy { get; set; } = string.Empty; // eğitimi oluşturan kullanıcı
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // oluşturulma tarihi
 
 
-        public ICollection<TrainingParticipation> Participations { get; set; } = new List<TrainingParticipation>();
-        public ICollection<TrainingQuestion>? Questions { get; set; }
+        public ICollection<TrainingParticipation> Participations { get; set; } = new List<TrainingParticipation>(); // katılımlar
+        public ICollection<TrainingQuestion>? Questions { get; set; } // eğitim soruları
 
     }
 }
