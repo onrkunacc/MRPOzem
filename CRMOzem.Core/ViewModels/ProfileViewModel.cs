@@ -22,9 +22,5 @@ namespace CRMOzem.Core.ViewModels
 
         public string? Title { get; set; }  // Unvan opsiyonel
         public string? CardNumber { get; set; }
-
-        [Required(ErrorMessage = "Kesim günü seçmek zorunludur.")]
-        [Range(1, 28, ErrorMessage = "Ekstre kesim günü 1 ile 28 arasında olmalıdır.")]
-        public int BillingCutoffDay { get; set; }
     }
 }

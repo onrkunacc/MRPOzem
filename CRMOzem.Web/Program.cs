@@ -32,6 +32,10 @@ builder.Services.AddScoped<IAuditReportService, AuditReportService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<IFileParserService, FileParserService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ITenderService, TenderService>();
+builder.Services.AddScoped<ITenderCalculatorService, TenderCalculatorService>();
+
 
 
 // Kimlik doğrulama ayarları

@@ -1,0 +1,98 @@
+﻿@model CRMOzem.Core.ViewModels.TenderViewModel
+<div class="modal-header">
+    <h5 class="modal-title">İhale Özeti — @Model.Tender.Name</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <h6>Genel Bilgiler</h6>
+    <div class="row mb-3">
+        <div class="col">
+            <div class="border rounded p-2">
+                <strong>İhale Adı:</strong> @Model.Tender.Name <br />
+                <strong>Şekli:</strong> @Model.Tender.Type <br />
+                <strong>Kayıt No:</strong> @Model.Tender.RegistrationNumber <br />
+                <strong>Tarih:</strong> @Model.Tender.TenderDate.ToString("dd.MM.yyyy HH:mm") <br />
+                <strong>Süre:</strong> @Model.Tender.DurationMonths ay
+            </div>
+        </div>
+    </div>
+
+    <h6>Testler</h6>
+    <div class="border rounded p-2 mb-3">
+        <strong>Toplam Test Maliyeti:</strong> @Model.TotalTestCost.ToString("C2")
+        <table class="table table-sm mt-2">
+            <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Puan</th>
+                    <th>Miktar</th>
+                    <th>Çarpan</th>
+                    <th>Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model.Tests)
+                {
+                    <tr>
+                        <td>@t.Name</td>
+                        <td>@t.SutPoint</td>
+                        <td>@t.Quantity</td>
+                        <td>@t.Multiplier</td>
+                        <td>@t.TotalSutPrice.ToString("C2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h6>Ek Giderler</h6>
+    <div class="border rounded p-2 mb-3">
+        <strong>Toplam Ek Gider:</strong> @Model.TotalExtraCost.ToString("C2")
+        <table class="table table-sm mt-2">
+            <thead>
+                <tr><th>Ad</th><th>Adet</th><th>Birim</th><th>Döviz</th><th>Kur</th><th>Toplam</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model.ExtraCosts)
+                {
+                    <tr>
+                        <td>@e.Name</td>
+                        <td>@e.Quantity</td>
+                        <td>@e.UnitPrice.ToString("N2")</td>
+                        <td>@e.Currency</td>
+                        <td>@e.ExchangeRate.ToString("N2")</td>
+                        <td>@e.Total.ToString("C2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h6>Personel Giderleri</h6>
+    <div class="border rounded p-2 mb-3">
+        <strong>Toplam Personel Gideri:</strong> @Model.TotalPersonnelCost.ToString("C2")
+        <table class="table table-sm mt-2">
+            <thead>
+                <tr><th>Görev</th><th>Sayı</th><th>Öğrenim</th><th>Açıklama</th><th>Birim Ücret</th><th>İhale Toplam</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Personnels)
+                {
+                    <tr>
+                        <td>@p.Role</td>
+                        <td>@p.Count</td>
+                        <td>@p.Education</td>
+                        <td>@p.FeeDescription</td>
+                        <td>@p.UnitFee.ToString("C2")</td>
+                        <td>@p.TotalForTender(Model.Tender.DurationMonths).ToString("C2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h5 class="text-end mt-3"><strong>GENEL TOPLAM:</strong> @Model.OverallCost.ToString("C2")</h5>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+</div>

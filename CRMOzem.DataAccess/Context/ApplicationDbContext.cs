@@ -31,6 +31,10 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<TrainingQuestion> TrainingQuestions { get; set; }
         public DbSet<TrainingAnswer> TrainingAnswers { get; set; }
         public DbSet<TrainingResult> TrainingResults { get; set; }
+        public DbSet<Tender> Tenders { get; set; }
+        public DbSet<TenderTest> TenderTests { get; set; }
+        public DbSet<TenderExtraCost> TenderExtraCosts { get; set; }
+        public DbSet<TenderPersonnel> TenderPersonnels { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 

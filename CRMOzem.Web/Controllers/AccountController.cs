@@ -53,7 +53,8 @@ namespace CRMOzem.Web.Controllers
             var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
             if (!result.Succeeded)
             {
-                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifre.");
+                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifr" +
+                    "e.");
                 return View(model);
             }
 
@@ -68,7 +69,7 @@ namespace CRMOzem.Web.Controllers
             else if (roles.Contains("İnsan Kaynakları"))
                 return RedirectToAction("Index", "Leave", new { area = "InsanKaynaklari" });
             else if (roles.Contains("İstatistik"))
-                return RedirectToAction("Index", "Shipment", new { area = "Istatistik" });
+                return RedirectToAction("Index", "Dashboard", new { area = "Istatistik" });
             else if (roles.Contains("İhale"))
                 return RedirectToAction("Index", "FileTransferWeb", new { area = "" });
             else if (roles.Contains("Evrak"))
@@ -266,8 +267,7 @@ namespace CRMOzem.Web.Controllers
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
                     Title = user.Title,
-                    CardNumber = user.CardNumber,
-                    BillingCutoffDay = user.BillingCutoffDay
+                    CardNumber = user.CardNumber
                 };
 
                 return View(model);
@@ -305,7 +305,6 @@ namespace CRMOzem.Web.Controllers
                 user.PhoneNumber = model.PhoneNumber;
                 user.Title = model.Title;
                 user.CardNumber = model.CardNumber;
-                user.BillingCutoffDay = model.BillingCutoffDay;
 
 
                 var result = await _userManager.UpdateAsync(user);

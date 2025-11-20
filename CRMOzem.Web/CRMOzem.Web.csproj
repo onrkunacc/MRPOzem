@@ -44,7 +44,6 @@
   <ItemGroup>
     <Folder Include="Areas\Finans\Controllers\" />
     <Folder Include="Areas\Finans\Views\" />
-    <Folder Include="Areas\Ihale\Controllers\" />
     <Folder Include="wwwroot\uploads\temp\" />
   </ItemGroup>
 

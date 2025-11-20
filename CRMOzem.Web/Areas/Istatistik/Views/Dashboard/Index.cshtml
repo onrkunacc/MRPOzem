@@ -1,0 +1,331 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = (IEnumerable<dynamic>)(ViewBag.Hospitals ?? new List<object>());
+}
+
+<style>
+    .dashboard-toolbar {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: .75rem;
+        padding: .75rem
+    }
+
+        .dashboard-toolbar .form-label {
+            font-size: .8rem;
+            color: #6c757d;
+            margin-bottom: .25rem
+        }
+
+    .kpi-card {
+        border: 1px solid #e9ecef;
+        border-radius: .75rem;
+        padding: 1rem;
+        background: #fff
+    }
+
+    .kpi-value {
+        font-weight: 700;
+        font-size: 1.25rem
+    }
+
+    .kpi-sub {
+        color: #6c757d;
+        font-size: .85rem
+    }
+
+    canvas {
+        max-height: 360px
+    }
+
+    .skeleton {
+        background: linear-gradient(90deg,#f0f0f0 25%,#e6e6e6 37%,#f0f0f0 63%);
+        background-size: 400% 100%;
+        animation: shimmer 1.2s infinite
+    }
+
+    @@keyframes shimmer {
+        0% {
+            background-position: 100% 0
+        }
+
+        100% {
+            background-position: -100% 0
+        }
+    }
+</style>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0"><i class="fa fa-chart-line me-2"></i> İstatistik Özet</h5>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btnRefresh" class="btn btn-sm btn-outline-primary"><i class="fa fa-rotate"></i> Yenile</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="dashboard-toolbar mb-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Hastane</label>
+                    <select class="form-select form-select-sm" id="hospitalId">
+                        <option value="">Tümü</option>
+                        @foreach (var h in hospitals)
+                        {
+                            <option value="@h.HospitalID">@h.HospitalName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Başlangıç</label>
+                    <input type="date" class="form-control form-control-sm" id="startDate" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Bitiş</label>
+                    <input type="date" class="form-control form-control-sm" id="endDate" />
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <button id="btnApply" class="btn btn-sm btn-primary"><i class="fa fa-filter"></i> Uygula</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-3">
+                <div class="kpi-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-sub">Toplam Gönderim</div>
+                            <div id="kpiShipment" class="kpi-value skeleton">—</div>
+                        </div>
+                        <i class="fa fa-truck-fast fs-3 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="kpi-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-sub">Toplam Kullanım</div>
+                            <div id="kpiUsage" class="kpi-value skeleton">—</div>
+                        </div>
+                        <i class="fa fa-vials fs-3 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="kpi-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-sub">Benzersiz Test</div>
+                            <div id="kpiTests" class="kpi-value skeleton">—</div>
+                        </div>
+                        <i class="fa fa-flask fs-3 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="kpi-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-sub">Aktif Hastane</div>
+                            <div id="kpiHospitals" class="kpi-value skeleton">—</div>
+                        </div>
+                        <i class="fa fa-hospital fs-3 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashAlert" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+            <div class="col-12 col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header"><strong>Aylık Trend — Gönderim & Kullanım</strong></div>
+                    <div class="card-body"><canvas id="trendChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header"><strong>Hastaneye Göre Toplamlar</strong></div>
+                    <div class="card-body"><canvas id="hospitalChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>En Çok Gönderilen Testler</strong>
+                        <small class="text-muted">Top 10</small>
+                    </div>
+                    <div class="card-body"><canvas id="topShipChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>En Çok Kullanılan Testler</strong>
+                        <small class="text-muted">Top 10</small>
+                    </div>
+                    <div class="card-body"><canvas id="topUseChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    <script>
+        (function(){
+          function fatal(msg){
+            console.error(msg);
+            const a = document.getElementById('dashAlert');
+            if(a){ a.textContent = msg; a.classList.remove('d-none'); }
+          }
+          function ensureDom(){
+            const ids = ['hospitalId','startDate','endDate','btnApply','btnRefresh',
+                         'kpiShipment','kpiUsage','kpiTests','kpiHospitals',
+                         'trendChart','hospitalChart','topShipChart','topUseChart'];
+            for(const id of ids){ if(!document.getElementById(id)) return false; }
+            return true;
+          }
+
+          document.addEventListener('DOMContentLoaded', init, { once:true });
+
+          async function init(){
+            try{
+              if(!ensureDom()) return fatal('Dashboard DOM yüklenemedi. Layout veya kısmi görünüm sırası kontrol edin.');
+              if(!window.Chart) return fatal('Chart.js yüklenemedi. Yerel dosyadan yüklemeyi deneyin: ~/lib/chart.js/chart.umd.min.js');
+
+              const els = {
+                hospitalId: document.getElementById('hospitalId'),
+                startDate: document.getElementById('startDate'),
+                endDate: document.getElementById('endDate'),
+                btnApply: document.getElementById('btnApply'),
+                btnRefresh: document.getElementById('btnRefresh'),
+                kpiShipment: document.getElementById('kpiShipment'),
+                kpiUsage: document.getElementById('kpiUsage'),
+                kpiTests: document.getElementById('kpiTests'),
+                kpiHospitals: document.getElementById('kpiHospitals')
+              };
+
+              const state = { hospitalId:'', startDate:'', endDate:'' };
+              const charts = { trend:null, hospital:null, topShip:null, topUse:null };
+
+              function params(){
+                const p = new URLSearchParams();
+                if(state.hospitalId) p.append('hospitalId', state.hospitalId);
+                if(state.startDate)  p.append('startDate', state.startDate);
+                if(state.endDate)    p.append('endDate', state.endDate);
+                return p.toString();
+              }
+
+              function setKpiLoading(on){
+                [els.kpiShipment,els.kpiUsage,els.kpiTests,els.kpiHospitals].forEach(el=>{
+                  if(on){ el.classList.add('skeleton'); el.textContent='—'; }
+                  else  { el.classList.remove('skeleton'); }
+                });
+              }
+
+              async function safeJson(url){
+                try{
+                  const res = await fetch(url,{headers:{'Accept':'application/json'}});
+                  if(!res.ok) throw new Error(res.status+' '+res.statusText);
+                  return await res.json();
+                }catch(e){ console.error('İstek hatası:', url, e); return null; }
+              }
+              const guard = a => Array.isArray(a) ? a : [];
+
+              async function loadKpis(){
+                setKpiLoading(true);
+                const data = await safeJson(`@Url.Action("GetKpis", "Dashboard", new { area = "Istatistik" })?${params()}`);
+                els.kpiShipment.textContent = ((data?.totalShipment)||0).toLocaleString('tr-TR');
+                els.kpiUsage.textContent    = ((data?.totalUsage)||0).toLocaleString('tr-TR');
+                els.kpiTests.textContent    = ((data?.uniqueTests)||0).toLocaleString('tr-TR');
+                els.kpiHospitals.textContent= ((data?.activeHospitals)||0).toLocaleString('tr-TR');
+                setKpiLoading(false);
+              }
+              async function loadTrends(){
+                const data = guard(await safeJson(`@Url.Action("GetTrends", "Dashboard", new { area = "Istatistik" })?${params()}`));
+                chartTrend(data.map(x=>x.month), data.map(x=>x.shipment), data.map(x=>x.usage));
+              }
+              async function loadTop(){
+                const data = await safeJson(`@Url.Action("GetTopTests", "Dashboard", new { area = "Istatistik" })?${params()}`);
+                const ship = guard(data?.shipments), use = guard(data?.usage);
+                chartTopShip(ship.map(x=>x.name), ship.map(x=>x.value));
+                chartTopUse(use.map(x=>x.name),   use.map(x=>x.value));
+              }
+              async function loadByHospital(){
+                const rows = guard(await safeJson(`@Url.Action("GetByHospital", "Dashboard", new { area = "Istatistik" })?${params()}`));
+                chartHospital(rows.map(x=>x.hospital), rows.map(x=>x.shipment), rows.map(x=>x.usage));
+              }
+
+              function destroy(c){ if(c) c.destroy(); }
+              function chartTrend(labels, ship, use){
+                destroy(charts.trend);
+                charts.trend = new Chart(document.getElementById('trendChart'), {
+                  type:'line',
+                  data:{ labels, datasets:[
+                    { label:'Gönderim', data:ship, tension:.2, borderWidth:2, pointRadius:2 },
+                    { label:'Kullanım', data:use,  tension:.2, borderWidth:2, pointRadius:2 }
+                  ]},
+                  options:{ responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
+                });
+              }
+              function chartHospital(labels, ship, use){
+                destroy(charts.hospital);
+                charts.hospital = new Chart(document.getElementById('hospitalChart'), {
+                  type:'bar',
+                  data:{ labels, datasets:[
+                    { label:'Gönderim', data:ship, borderWidth:1 },
+                    { label:'Kullanım', data:use, borderWidth:1 }
+                  ]},
+                  options:{ responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
+                });
+              }
+              function chartTopShip(labels, values){
+                destroy(charts.topShip);
+                charts.topShip = new Chart(document.getElementById('topShipChart'), {
+                  type:'bar',
+                  data:{ labels, datasets:[{ label:'Gönderim', data:values, borderWidth:1 }] },
+                  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{beginAtZero:true}}, plugins:{legend:{display:false}} }
+                });
+              }
+              function chartTopUse(labels, values){
+                destroy(charts.topUse);
+                charts.topUse = new Chart(document.getElementById('topUseChart'), {
+                  type:'bar',
+                  data:{ labels, datasets:[{ label:'Kullanım', data:values, borderWidth:1 }] },
+                  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{beginAtZero:true}}, plugins:{legend:{display:false}} }
+                });
+              }
+
+              async function refreshAll(){
+                state.hospitalId = (els.hospitalId.value||'').trim();
+                state.startDate  = (els.startDate.value||'').trim();
+                state.endDate    = (els.endDate.value||'').trim();
+                await Promise.all([loadKpis(), loadTrends(), loadTop(), loadByHospital()]);
+              }
+
+              els.btnApply.addEventListener('click', refreshAll);
+              els.btnRefresh.addEventListener('click', refreshAll);
+
+              // Varsayılan tarih: yıl başı → bugün
+              const today = new Date(), yyyy = today.getFullYear();
+              els.startDate.value = `${yyyy}-01-01`;
+              els.endDate.value   = today.toISOString().slice(0,10);
+
+              // İlk yükleme
+              refreshAll();
+
+            }catch(err){
+              fatal('Dashboard başlatılamadı: ' + (err?.message || err));
+            }
+          }
+        })();
+    </script>
+}

@@ -564,6 +564,158 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("MonthlyStatistics");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Tender", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DurationMonths")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("OverallCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RegistrationNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TenderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalExtraCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPersonnelCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalTestCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tenders");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderExtraCost", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ExchangeRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("TenderExtraCosts");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderPersonnel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Education")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FeeDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("TenderPersonnels");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderTest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Multiplier")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderNo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SutCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("SutPoint")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TenderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderId");
+
+                    b.ToTable("TenderTests");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
                 {
                     b.Property<int>("TestID")
@@ -1115,6 +1267,39 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Test");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderExtraCost", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
+                        .WithMany("ExtraCosts")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderPersonnel", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
+                        .WithMany("Personnels")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TenderTest", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
+                        .WithMany("Tests")
+                        .HasForeignKey("TenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tender");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
@@ -1288,6 +1473,15 @@ namespace CRMOzem.DataAccess.Migrations
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveType", b =>
                 {
                     b.Navigation("LeaveRequests");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.Tender", b =>
+                {
+                    b.Navigation("ExtraCosts");
+
+                    b.Navigation("Personnels");
+
+                    b.Navigation("Tests");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
