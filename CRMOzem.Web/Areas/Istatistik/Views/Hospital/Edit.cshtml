@@ -11,6 +11,7 @@
     </div>
     <div class="card-body">
         <form asp-action="Edit" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="HospitalID" />
             <div class="col-md-12">
                 <label class="form-label">Hastane Adı</label>
@@ -24,4 +25,3 @@
         </form>
     </div>
 </div>
-

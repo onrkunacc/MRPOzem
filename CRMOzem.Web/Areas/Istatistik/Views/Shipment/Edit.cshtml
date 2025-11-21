@@ -4,7 +4,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-
 <div class="card shadow-sm">
     <div class="card-header">
         <h5><i class="fa fa-edit me-2"></i> Gönderim Düzenle</h5>
@@ -14,13 +13,11 @@
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
 
-
             <div class="col-md-6">
                 <label asp-for="HospitalID" class="form-label"></label>
                 <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
                 <span asp-validation-for="HospitalID" class="text-danger"></span>
             </div>
-
 
             <div class="col-md-6">
                 <label asp-for="TestID" class="form-label"></label>
@@ -28,20 +25,17 @@
                 <span asp-validation-for="TestID" class="text-danger"></span>
             </div>
 
-
             <div class="col-md-6">
                 <label asp-for="Month" class="form-label"></label>
-                <input asp-for="Month" type="date" class="form-control" />
+                <input asp-for="Month" type="month" class="form-control" />
                 <span asp-validation-for="Month" class="text-danger"></span>
             </div>
 
-
             <div class="col-md-6">
                 <label asp-for="SentCount" class="form-label"></label>
-                <input asp-for="SentCount" class="form-control" />
+                <input asp-for="SentCount" type="number" min="0" class="form-control" />
                 <span asp-validation-for="SentCount" class="text-danger"></span>
             </div>
-
 
             <div class="col-12 text-end">
                 <a asp-action="Index" class="btn btn-outline-secondary">Geri</a>

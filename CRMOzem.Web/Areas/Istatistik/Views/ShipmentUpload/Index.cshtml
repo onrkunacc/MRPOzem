@@ -10,6 +10,7 @@
     </div>
     <div class="card-body">
         <form asp-action="Index" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label class="form-label">Hastane Seç</label>
                 <br />
@@ -31,7 +32,7 @@
     </div>
 </div>
 
-@if (Model.PreviewItems.Any())
+@if (Model?.PreviewItems != null && Model.PreviewItems.Any())
 {
     <div class="card mt-4">
         <div class="card-header">
@@ -39,6 +40,7 @@
         </div>
         <div class="card-body">
             <form asp-action="Confirm" method="post">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
                 <input type="hidden" name="month" value="@Model.Month.ToString("yyyy-MM-dd")" />
 
@@ -59,6 +61,8 @@
                                     @item.TestName
                                     <input type="hidden" name="items[@i].TestID" value="@item.TestID" />
                                     <input type="hidden" name="items[@i].TestName" value="@item.TestName" />
+                                    <input type="hidden" name="items[@i].HasError" value="@item.HasError" />
+                                    <input type="hidden" name="items[@i].ErrorMessage" value="@item.ErrorMessage" />
                                 </td>
                                 <td>
                                     <input type="number" name="items[@i].SentCount" value="@item.SentCount" class="form-control" />

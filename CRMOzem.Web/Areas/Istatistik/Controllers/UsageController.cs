@@ -21,13 +21,12 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             _context = context;
         }
 
-        // Listeleme
         [HttpGet]
-        public async Task<IActionResult> Index(int? hospitalId, DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> Index(int? hospitalId, DateTime? startDate, DateTime? endDate, CancellationToken ct)
         {
             try
             {
-                var usages = await _statisticsService.GetUsagesAsync(hospitalId ?? 0, startDate, endDate);
+                var usages = await _statisticsService.GetUsagesAsync(hospitalId ?? 0, startDate, endDate, ct);
 
                 var viewModel = usages.Select(u => new UsageViewModel
                 {
@@ -40,7 +39,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     TestCount = u.TestCount
                 }).ToList();
 
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.ToListAsync(), "HospitalID", "HospitalName");
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
                 ViewBag.SelectedHospitalID = hospitalId;
                 ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
                 ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
@@ -50,68 +49,65 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // Yeni Kullanım Formu
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create(CancellationToken ct)
         {
             try
             {
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName");
-                ViewBag.Tests = new SelectList(_context.Tests, "TestID", "TestName");
-                return View(new UsageCreateViewModel());
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
+                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName");
+                return View(new UsageCreateViewModel { Month = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1) });
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                TempData["ErrorMessage"] = $"Hata oluştu: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // Yeni Kullanım Kaydet
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(UsageCreateViewModel model)
+        public async Task<IActionResult> Create(UsageCreateViewModel model, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
+                return View(model);
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
-                    ViewBag.Tests = new SelectList(_context.Tests, "TestID", "TestName", model.TestID);
-                    return View(model);
-                }
-
-                await _statisticsService.AddUsageAsync(model.HospitalID, model.TestID, model.Month, model.TestCount);
-
+                await _statisticsService.AddUsageAsync(model.HospitalID, model.TestID, model.Month, model.TestCount, ct);
                 TempData["SuccessMessage"] = "Kullanım başarıyla kaydedildi.";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                TempData["ErrorMessage"] = $"Hata oluştu: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // Düzenleme Formu
         [HttpGet]
-        public async Task<IActionResult> Edit(int id)
+        public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
             try
             {
                 var usage = await _context.MonthlyStatistics
+                    .AsNoTracking()
                     .Include(u => u.Hospital)
                     .Include(u => u.Test)
-                    .FirstOrDefaultAsync(u => u.Id == id);
+                    .FirstOrDefaultAsync(u => u.Id == id, ct);
 
                 if (usage == null)
                 {
-                    TempData["Error"] = "Kayıt bulunamadı.";
-                    return RedirectToAction("Index");
+                    TempData["ErrorMessage"] = "Kayıt bulunamadı.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 var model = new UsageEditViewModel
@@ -123,81 +119,85 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     TestCount = usage.TestCount
                 };
 
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
-                ViewBag.Tests = new SelectList(_context.Tests, "TestID", "TestName", model.TestID);
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
 
                 return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                TempData["ErrorMessage"] = $"Hata oluştu: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // Düzenleme Kaydet
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(UsageEditViewModel model)
+        public async Task<IActionResult> Edit(UsageEditViewModel model, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
+                return View(model);
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
-                    ViewBag.Tests = new SelectList(_context.Tests, "TestID", "TestName", model.TestID);
-                    return View(model);
-                }
-
-                var usage = await _context.MonthlyStatistics.FindAsync(model.Id);
+                var usage = await _context.MonthlyStatistics.FirstOrDefaultAsync(x => x.Id == model.Id, ct);
                 if (usage == null)
                 {
-                    TempData["Error"] = "Kayıt bulunamadı.";
-                    return RedirectToAction("Index");
+                    TempData["ErrorMessage"] = "Kayıt bulunamadı.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 usage.HospitalID = model.HospitalID;
                 usage.TestID = model.TestID;
-                usage.Month = model.Month;
+                usage.Month = new DateTime(model.Month.Year, model.Month.Month, 1);
                 usage.TestCount = model.TestCount;
 
-                _context.MonthlyStatistics.Update(usage);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Kullanım başarıyla güncellendi.";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
+            }
+            catch (DbUpdateException ex)
+            {
+                ModelState.AddModelError("", $"Güncelleme hatası: {ex.Message}");
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
+                return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                TempData["ErrorMessage"] = $"Hata oluştu: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // Silme
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             try
             {
-                var usage = await _context.MonthlyStatistics.FindAsync(id);
+                var usage = await _context.MonthlyStatistics.FindAsync(new object?[] { id }, ct);
                 if (usage == null)
                 {
                     TempData["Error"] = "Kayıt bulunamadı.";
-                    return RedirectToAction("Index");
+                    return RedirectToAction(nameof(Index));
                 }
 
                 _context.MonthlyStatistics.Remove(usage);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Kayıt başarıyla silindi.";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
     }

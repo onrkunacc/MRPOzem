@@ -18,140 +18,109 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             _context = context;
         }
 
-        // Listeleme
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            try
+            var hospitals = await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct);
+            var viewModel = hospitals.Select(h => new HospitalViewModel
             {
-                var hospitals = await _context.Hospitals.ToListAsync();
-
-                var viewModel = hospitals.Select(h => new HospitalViewModel
-                {
-                    HospitalID = h.HospitalID,
-                    HospitalName = h.HospitalName
-                }).ToList();
-
-                return View(viewModel);
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Hata: {ex.Message}";
-                return RedirectToAction("Index");
-            }
-        }
-
-        // Yeni Hastane Formu
-        [HttpGet]
-        public IActionResult Create()
-        {
-            return View(new HospitalCreateViewModel());
-        }
-
-        // Yeni Hastane Kaydet
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(HospitalCreateViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            try
-            {
-                var hospital = new Hospital
-                {
-                    HospitalName = model.HospitalName
-                };
-
-                _context.Hospitals.Add(hospital);
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Hastane başarıyla eklendi.";
-                return RedirectToAction("Index");
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Hata: {ex.Message}";
-                return View(model);
-            }
-        }
-
-        // Düzenleme Formu
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            var hospital = await _context.Hospitals.FindAsync(id);
-            if (hospital == null)
-            {
-                TempData["Error"] = "Hastane bulunamadı.";
-                return RedirectToAction("Index");
-            }
-
-            var viewModel = new HospitalEditViewModel
-            {
-                HospitalID = hospital.HospitalID,
-                HospitalName = hospital.HospitalName
-            };
-
+                HospitalID = h.HospitalID,
+                HospitalName = h.HospitalName
+            }).ToList();
             return View(viewModel);
         }
 
-        // Düzenleme Kaydet
+        [HttpGet]
+        public IActionResult Create() => View(new HospitalCreateViewModel());
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(HospitalEditViewModel model)
+        public async Task<IActionResult> Create(HospitalCreateViewModel model, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return View(model);
+            if (!ModelState.IsValid) return View(model);
 
             try
             {
-                var hospital = await _context.Hospitals.FindAsync(model.HospitalID);
-                if (hospital == null)
-                {
-                    TempData["Error"] = "Hastane bulunamadı.";
-                    return RedirectToAction("Index");
-                }
-
-                hospital.HospitalName = model.HospitalName;
-
-                _context.Hospitals.Update(hospital);
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Hastane başarıyla güncellendi.";
-                return RedirectToAction("Index");
+                _context.Hospitals.Add(new Hospital { HospitalName = model.HospitalName });
+                await _context.SaveChangesAsync(ct);
+                TempData["SuccessMessage"] = "Hastane başarıyla eklendi.";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata: {ex.Message}";
+                ModelState.AddModelError("", $"Hata: {ex.Message}");
                 return View(model);
             }
         }
 
-        // Silme
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id, CancellationToken ct)
+        {
+            var hospital = await _context.Hospitals.FindAsync(new object?[] { id }, ct);
+            if (hospital == null)
+            {
+                TempData["Error"] = "Hastane bulunamadı.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(new HospitalEditViewModel
+            {
+                HospitalID = hospital.HospitalID,
+                HospitalName = hospital.HospitalName
+            });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Edit(HospitalEditViewModel model, CancellationToken ct)
         {
+            if (!ModelState.IsValid) return View(model);
+
             try
             {
-                var hospital = await _context.Hospitals.FindAsync(id);
+                var hospital = await _context.Hospitals.FindAsync(new object?[] { model.HospitalID }, ct);
                 if (hospital == null)
                 {
                     TempData["Error"] = "Hastane bulunamadı.";
-                    return RedirectToAction("Index");
+                    return RedirectToAction(nameof(Index));
+                }
+
+                hospital.HospitalName = model.HospitalName;
+                await _context.SaveChangesAsync(ct);
+
+                TempData["SuccessMessage"] = "Hastane başarıyla güncellendi.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Hata: {ex.Message}");
+                return View(model);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        {
+            try
+            {
+                var hospital = await _context.Hospitals.FindAsync(new object?[] { id }, ct);
+                if (hospital == null)
+                {
+                    TempData["Error"] = "Hastane bulunamadı.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 _context.Hospitals.Remove(hospital);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Hastane başarıyla silindi.";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Hata: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
     }

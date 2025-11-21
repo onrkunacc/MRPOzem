@@ -10,6 +10,7 @@
     </div>
     <div class="card-body">
         <form asp-action="Index" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label class="form-label">Hastane Seç</label>
                 <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
@@ -17,7 +18,7 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Ay Seç</label>
-                <input asp-for="Month" type="month" class="form-control" value="@DateTime.Now.ToString("yyyy-MM")" />
+                <input asp-for="Month" type="month" class="form-control" />
                 <span asp-validation-for="Month" class="text-danger"></span>
             </div>
             <div class="mb-3">
@@ -30,7 +31,7 @@
     </div>
 </div>
 
-@if (Model.PreviewItems.Any())
+@if (Model?.PreviewItems != null && Model.PreviewItems.Any())
 {
     <div class="card mt-4">
         <div class="card-header">
@@ -38,6 +39,7 @@
         </div>
         <div class="card-body">
             <form asp-action="Confirm" method="post">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
                 <input type="hidden" name="month" value="@(Model.Month == DateTime.MinValue ? DateTime.Now.ToString("yyyy-MM-dd") : Model.Month.ToString("yyyy-MM-dd"))" />
 
@@ -58,6 +60,8 @@
                                     @item.TestName
                                     <input type="hidden" name="items[@i].TestID" value="@item.TestID" id="testId-@i" />
                                     <input type="hidden" name="items[@i].TestName" value="@item.TestName" />
+                                    <input type="hidden" name="items[@i].HasError" value="@item.HasError" />
+                                    <input type="hidden" name="items[@i].ErrorMessage" value="@item.ErrorMessage" />
                                 </td>
                                 <td>
                                     <input type="number" name="items[@i].TestCount" value="@item.TestCount" class="form-control" />
@@ -95,7 +99,6 @@
     </div>
 }
 
-<!-- Modal: Yeni Test Ekle -->
 <div class="modal fade" id="addTestModal" tabindex="-1" aria-labelledby="addTestModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -122,7 +125,6 @@
 
 @section Scripts {
     <script>
-        // Modal açma
         $(document).on("click", ".btnAddTest", function () {
             var testName = $(this).data("testname");
             var index = $(this).data("index");
@@ -134,7 +136,6 @@
             modal.show();
         });
 
-        // Modal form submit (AJAX)
         $("#addTestForm").submit(function (e) {
             e.preventDefault();
 
@@ -150,7 +151,6 @@
                         var modal = bootstrap.Modal.getInstance(document.getElementById('addTestModal'));
                         modal.hide();
 
-                        // ✅ Satırı güncelle
                         $("#status-" + index).html('<span class="text-success">✔ Geçerli</span>');
                         $("#row-" + index).removeClass("table-danger").addClass("table-success");
                         $("#testId-" + index).val(res.testId);

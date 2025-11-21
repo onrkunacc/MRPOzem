@@ -4,6 +4,7 @@ using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
@@ -15,7 +16,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         private readonly IStatisticsService _statisticsService;
         private readonly ApplicationDbContext _context;
 
-        public UploadController(IFileParserService fileParser, IStatisticsService statisticsService,ApplicationDbContext context)
+        public UploadController(IFileParserService fileParser, IStatisticsService statisticsService, ApplicationDbContext context)
         {
             _fileParser = fileParser;
             _statisticsService = statisticsService;
@@ -23,40 +24,47 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName");
+            ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
             return View(new UploadStatisticsViewModel
             {
-                Month = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1) 
+                Month = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1)
             });
-
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(UploadStatisticsViewModel model)
+        public async Task<IActionResult> Index(UploadStatisticsViewModel model, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
                 return View(model);
             }
 
             try
             {
-                if (model.File.FileName.EndsWith(".xlsx"))
+                if (model.File == null || model.File.Length == 0)
+                {
+                    TempData["ErrorMessage"] = "Lütfen bir dosya seçiniz.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var ext = Path.GetExtension(model.File.FileName).ToLowerInvariant();
+
+                if (ext == ".xlsx")
                 {
                     model.PreviewItems = await _fileParser.ParseExcelAsync(model.File);
                 }
-                else if (model.File.FileName.EndsWith(".pdf"))
+                else if (ext == ".pdf")
                 {
                     model.PreviewItems = await _fileParser.ParsePdfAsync(model.File);
                 }
                 else
                 {
-                    TempData["Error"] = "Sadece Excel veya PDF dosyaları yükleyebilirsiniz.";
-                    return RedirectToAction("Index");
+                    TempData["Error"] = "Sadece Excel (.xlsx) veya PDF (.pdf) dosyaları yükleyebilirsiniz.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 if (!model.PreviewItems.Any())
@@ -64,7 +72,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     TempData["Warning"] = "Dosyadan veri okunamadı.";
                 }
 
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
                 return View(model);
             }
             catch (Exception ex)
@@ -74,18 +82,16 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
         }
 
-
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Confirm(int hospitalId, DateTime month, List<StatisticsPreviewItem> items)
+        public async Task<IActionResult> Confirm(int hospitalId, DateTime month, List<StatisticsPreviewItem> items, CancellationToken ct)
         {
             try
             {
                 if (items == null || !items.Any())
                 {
                     TempData["Error"] = "Kaydedilecek veri bulunamadı.";
-                    return RedirectToAction("Index");
+                    return RedirectToAction(nameof(Index));
                 }
 
                 foreach (var item in items.Where(x => !x.HasError))
@@ -94,17 +100,18 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                         hospitalId,
                         item.TestID ?? 0,
                         month,
-                        item.TestCount
+                        item.TestCount,
+                        ct
                     );
                 }
 
-                TempData["SuccessMessage"] = "Dosyadaki geçerli veriler başarıyla kaydedildi.";
+                TempData["Success"] = "Dosyadaki geçerli veriler başarıyla kaydedildi.";
                 return RedirectToAction("Index", "Usage");
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Kayıt sırasında hata: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
     }

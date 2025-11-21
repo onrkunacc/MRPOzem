@@ -314,12 +314,10 @@
               els.btnApply.addEventListener('click', refreshAll);
               els.btnRefresh.addEventListener('click', refreshAll);
 
-              // Varsayılan tarih: yıl başı → bugün
               const today = new Date(), yyyy = today.getFullYear();
               els.startDate.value = `${yyyy}-01-01`;
               els.endDate.value   = today.toISOString().slice(0,10);
 
-              // İlk yükleme
               refreshAll();
 
             }catch(err){

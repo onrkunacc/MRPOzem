@@ -4,22 +4,19 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-
 <div class="card shadow-sm">
     <div class="card-header">
         <h5 class="mb-0"><i class="fa fa-plus-circle me-2"></i> Yeni Hastane</h5>
     </div>
     <div class="card-body">
         <form asp-area="Istatistik" asp-controller="Hospital" asp-action="Create" method="post" class="row g-3">
-            @Html.AntiForgeryToken() 
-
+            @Html.AntiForgeryToken()
 
             <div class="col-md-12">
                 <label asp-for="HospitalName" class="form-label">Hastane Adı</label>
                 <input asp-for="HospitalName" class="form-control" />
                 <span asp-validation-for="HospitalName" class="text-danger"></span>
             </div>
-
 
             <div class="col-12 text-end">
                 <a asp-area="Istatistik" asp-controller="Hospital" asp-action="Index" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> Geri</a>

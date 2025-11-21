@@ -4,6 +4,7 @@ using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
@@ -23,36 +24,45 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName");
+            ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
             return View(new ShipmentUploadViewModel { Month = DateTime.Now });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(ShipmentUploadViewModel model)
+        public async Task<IActionResult> Index(ShipmentUploadViewModel model, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
                 return View(model);
             }
 
             try
             {
-                if (model.File.FileName.EndsWith(".xlsx"))
+                if (model.File == null || model.File.Length == 0)
+                {
+                    TempData["Error"] = "Lütfen bir dosya seçiniz.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var fileName = model.File.FileName;
+                var ext = Path.GetExtension(fileName).ToLowerInvariant();
+
+                if (ext == ".xlsx")
                 {
                     model.PreviewItems = await _fileParser.ParseShipmentExcelAsync(model.File);
                 }
-                else if (model.File.FileName.EndsWith(".pdf"))
+                else if (ext == ".pdf")
                 {
                     model.PreviewItems = await _fileParser.ParseShipmentPdfAsync(model.File);
                 }
                 else
                 {
-                    TempData["Error"] = "Sadece Excel veya PDF dosyaları yükleyebilirsiniz.";
-                    return RedirectToAction("Index");
+                    TempData["ErrorMessage"] = "Sadece Excel (.xlsx) veya PDF (.pdf) dosyaları yükleyebilirsiniz.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 if (!model.PreviewItems.Any())
@@ -60,32 +70,32 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     TempData["Warning"] = "Dosyadan veri okunamadı.";
                 }
 
-                ViewBag.Hospitals = new SelectList(_context.Hospitals, "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
                 return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Yükleme sırasında hata: {ex.Message}";
+                TempData["ErrorMessage"] = $"Yükleme sırasında hata: {ex.Message}";
                 return View(model);
             }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Confirm(int hospitalId, DateTime month, List<ShipmentPreviewItem> items, bool confirmSave)
+        public async Task<IActionResult> Confirm(int hospitalId, DateTime month, List<ShipmentPreviewItem> items, bool confirmSave, CancellationToken ct)
         {
             try
             {
                 if (!confirmSave)
                 {
-                    TempData["Error"] = "Kaydetmeden önce onay kutusunu işaretleyin.";
-                    return RedirectToAction("Index");
+                    TempData["ErrorMessage"] = "Kaydetmeden önce onay kutusunu işaretleyin.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 if (items == null || !items.Any())
                 {
-                    TempData["Error"] = "Kaydedilecek veri bulunamadı.";
-                    return RedirectToAction("Index");
+                    TempData["ErrorMessage"] = "Kaydedilecek veri bulunamadı.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 foreach (var item in items.Where(x => !x.HasError))
@@ -94,7 +104,8 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                         hospitalId,
                         item.TestID ?? 0,
                         month,
-                        item.SentCount
+                        item.SentCount,
+                        ct
                     );
                 }
 
@@ -104,7 +115,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = $"Kayıt sırasında hata: {ex.Message}";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index));
             }
         }
     }

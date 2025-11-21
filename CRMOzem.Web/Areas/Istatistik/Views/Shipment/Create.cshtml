@@ -10,6 +10,7 @@
     </div>
     <div class="card-body">
         <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
             <div class="col-md-6">
                 <label class="form-label">Hastane</label>
                 <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
@@ -21,13 +22,13 @@
                 <span asp-validation-for="TestID" class="text-danger"></span>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Tarih</label>
-                <input asp-for="Month" type="date" class="form-control" />
+                <label class="form-label">Ay</label>
+                <input asp-for="Month" type="month" class="form-control" />
                 <span asp-validation-for="Month" class="text-danger"></span>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Test Sayısı</label>
-                <input asp-for="SentCount" class="form-control" />
+                <input asp-for="SentCount" type="number" min="0" class="form-control" />
                 <span asp-validation-for="SentCount" class="text-danger"></span>
             </div>
             <div class="col-12 text-end">

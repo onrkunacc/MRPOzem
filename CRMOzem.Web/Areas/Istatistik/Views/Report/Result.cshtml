@@ -22,7 +22,7 @@
                         <th>Test Adı</th>
                         <th>Gönderilen</th>
                         <th>Kullanılan</th>
-                        <th>Kalan</th> 
+                        <th>Kalan</th>
                         <th>Detay</th>
                     </tr>
                 </thead>
@@ -51,15 +51,25 @@
             </table>
         </div>
 
-        <!-- Sayfalama -->
         <div class="d-flex justify-content-center mt-3">
-            @Html.PagedListPager(Model, page => Url.Action("Index", new { page }),
-            new PagedListRenderOptions { LiElementClasses = new[] { "page-item" }, PageClasses = new[] { "page-link" } })
+            @Html.PagedListPager(
+            Model,
+            page => Url.Action("Result", new
+            {
+                page,
+                hospitalId = ViewBag.HospitalID,
+                startDate = ViewBag.StartDate,
+                endDate = ViewBag.EndDate
+            }),
+                        new PagedListRenderOptions
+                        {
+                            LiElementClasses = new[] { "page-item" },
+                            PageClasses = new[] { "page-link" }
+                        })
         </div>
     </div>
 </div>
 
-<!-- Modal -->
 <div class="modal fade" id="chartModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">

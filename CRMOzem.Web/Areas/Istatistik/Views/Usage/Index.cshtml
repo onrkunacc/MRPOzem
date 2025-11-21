@@ -25,7 +25,6 @@
 }
 
 <style>
-    /* UI iyileştirmeleri */
     .filter-toolbar {
         background: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -106,7 +105,6 @@
     </div>
 
     <div class="card-body">
-        <!-- FİLTRE ÇUBUĞU -->
         <form class="filter-toolbar mb-3" id="filterForm" onsubmit="return false;">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-lg-3">
@@ -194,7 +192,6 @@
             </div>
         </form>
 
-        <!-- TABLO -->
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle sticky-head" id="dataTable">
                 <thead class="table-light">
@@ -212,7 +209,6 @@
             </table>
         </div>
 
-        <!-- PAGER -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-2">
             <div id="pageInfo" class="text-muted small">Sayfa 1 / 1</div>
             <nav aria-label="Sayfalama">
@@ -222,7 +218,6 @@
     </div>
 </div>
 
-<!-- Anti-forgery -->
 <div id="af" class="d-none">
     <form method="post">
         @Html.AntiForgeryToken()
@@ -239,7 +234,7 @@
             startDate:'', endDate:'',
             minCount:'', maxCount:'',
             sortKey:'month', sortDir:'desc',
-            page:1, pageSize:10
+            page:1, pageSize: parseInt(document.getElementById('pageSize').value, 10) || 20
         };
 
         const els = {
@@ -260,27 +255,22 @@
             totalBadge: document.getElementById('totalBadge')
         };
 
-        // Distinct listeler
         const hospitals = [...new Map(raw.map(x => [x.hospitalID, { id: x.hospitalID, name: x.hospitalName }])).values()]
             .sort((a,b)=>a.name.localeCompare(b.name, trTR));
         const tests = [...new Map(raw.map(x => [x.testID, { id: x.testID, name: x.testName }])).values()]
             .sort((a,b)=>a.name.localeCompare(b.name, trTR));
 
-        // Select doldurma
         hospitals.forEach(h=>{ const o=document.createElement('option'); o.value=h.id; o.textContent=h.name; els.hospitalId.appendChild(o); });
         tests.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; els.testId.appendChild(o); });
 
-        // Eventler
         [els.hospitalId, els.testId, els.startDate, els.endDate, els.minCount, els.maxCount, els.pageSize]
             .forEach(e=>e.addEventListener('change', applyFilters));
         els.applyBtn.addEventListener('click', applyFilters);
         els.clearBtn.addEventListener('click', resetAll);
 
-        // Debounce arama
         let t=null;
         els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 200); });
 
-        // Header sort
         els.thead.addEventListener('click', (ev)=>{
             const th = ev.target.closest('.sortable'); if(!th) return;
             const key = th.dataset.sort;
@@ -294,12 +284,12 @@
                 q:'', hospitalId:'', testId:'',
                 startDate:'', endDate:'',
                 minCount:'', maxCount:'',
-                sortKey:'month', sortDir:'desc', page:1, pageSize:10
+                sortKey:'month', sortDir:'desc', page:1, pageSize: parseInt(els.pageSize.value,10) || 20
             });
             els.hospitalId.value=''; els.testId.value='';
             els.startDate.value=''; els.endDate.value='';
             els.minCount.value=''; els.maxCount.value='';
-            els.q.value=''; els.pageSize.value=state.pageSize;
+            els.q.value='';
             render();
         }
 
@@ -311,7 +301,7 @@
             state.endDate = els.endDate.value || '';
             state.minCount = els.minCount.value || '';
             state.maxCount = els.maxCount.value || '';
-            state.pageSize = parseInt(els.pageSize.value,10) || 10;
+            state.pageSize = parseInt(els.pageSize.value,10) || 20;
             state.page = 1; render();
         }
 
@@ -378,7 +368,6 @@
             els.pageInfo.textContent=`Sayfa ${state.page} / ${totalPages} (${total ? (start+1) : 0} - ${end} / ${total})`;
             renderSortIndicators();
 
-            // TBody
             const fr=document.createDocumentFragment();
             if(items.length===0){
                 const tr=document.createElement('tr');
@@ -435,7 +424,6 @@
 
         function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-        // init
         render();
     })();
 </script>

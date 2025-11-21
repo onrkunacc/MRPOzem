@@ -11,6 +11,7 @@
     </div>
     <div class="card-body">
         <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
             <div class="col-md-6">
                 <label class="form-label">Hastane</label>
                 <select asp-for="HospitalID" class="form-select" asp-items="ViewBag.Hospitals"></select>
@@ -28,7 +29,7 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Kullanılan Test Sayısı</label>
-                <input asp-for="TestCount" type="number" class="form-control" />
+                <input asp-for="TestCount" type="number" min="0" class="form-control" />
                 <span asp-validation-for="TestCount" class="text-danger"></span>
             </div>
             <div class="col-12 text-end">
