@@ -1,0 +1,28 @@
+﻿@model CRMOzem.Web.Vm.AssetCreateVm
+@{
+    var postUrl = Url.Action("AssetCreate", "Modals", new { area = "IT" });
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Cihaz Ekle</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+</div>
+
+<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="row g-2">
+            <div class="col-12 col-md-6"><input class="form-control" name="Category" placeholder="Kategori" required /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="Brand" placeholder="Marka" required /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="Model" placeholder="Model" required /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="SerialNumber" placeholder="Seri No" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="InventoryTag" placeholder="Demirbaş Tag" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="ImeiNo" placeholder="IMEI (telefon)" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="BarcodeNo" placeholder="Barkod No" /></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+</form>

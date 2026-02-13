@@ -37,8 +37,25 @@
                         <span class="ml-1 item-text">Eğitimlerim</span>
                     </a>
                 </li>
+
             </ul>
         </li>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#izin-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">İzin</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="ik-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="" asp-controller="LeaveRequest" asp-action="MyLeaves">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Eğitimlerim</span>
+                    </a>
+                </li>
+
+            </ul>
+        </li>
+
     }
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
@@ -171,21 +188,6 @@
                 <span class="ml-3 item-text">Evrak Listesi</span>
             </a>
         </li>
-       @*  <!--İnsan Kaynakları-->
-        <li class="nav-item dropdown">
-            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#izin-menu">
-                <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">İnsan Kaynakları</span>
-            </a>
-            <ul class="collapse list-unstyled pl-4 w-100" id="izin-menu">
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">İzin Listesi</span>
-                    </a>
-                </li>
-            </ul>
-        </li> *@
        
     }
 
@@ -314,7 +316,7 @@
     @if (Model.Contains("İnsan Kaynakları"))
     {
         <li class="nav-item">
-            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Tre" asp-action="Index">
+            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
                 <i class="fe fe-user-check fe-16"></i>
                 <span class="ml-3 item-text">İzin İşlemleri</span>
             </a>
@@ -334,6 +336,19 @@
     }
     @if (Model.Contains("İstatistik"))
     {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Dashboard" asp-action="Index">
+                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <span class="ml-3 item-text">İstatistik Dashboard</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="IstatistikTakip" asp-action="Index">
+                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <span class="ml-3 item-text">Kurum Takip</span>
+            </a>
+        </li>
+        <!-- ÖZEM Depo -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#depo-menu">
                 <i class="fe fe-truck fe-16"></i>
@@ -350,7 +365,7 @@
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Shipment" asp-action="Create">
                         <i class="fe fe-send fe-14"></i>
                         <span class="ml-1 item-text">Hastane Test Gönder</span>
-                    </a> 
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="ShipmentUpload" asp-action="Index">
@@ -358,14 +373,14 @@
                         <span class="ml-1 item-text">Hastane Toplu Test Gönder</span>
                     </a>
                 </li>
-
             </ul>
         </li>
 
+        <!-- İstatistik (Kullanım) -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#istatistik-menu">
                 <i class="fe fe-bar-chart-2 fe-16"></i>
-                <span class="ml-3 item-text">İstatistik</span>
+                <span class="ml-3 item-text">İstatistik İşlemleri</span>
             </a>
             <ul class="collapse list-unstyled pl-4 w-100" id="istatistik-menu">
                 <li class="nav-item">
@@ -386,10 +401,10 @@
                         <span class="ml-1 item-text">Toplu İstatistik Giriş</span>
                     </a>
                 </li>
-
             </ul>
         </li>
 
+        <!-- Testler -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#test-menu">
                 <i class="fe fe-activity fe-16"></i>
@@ -411,6 +426,7 @@
             </ul>
         </li>
 
+        <!-- Hastaneler -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#hastane-menu">
                 <i class="fe fe-home fe-16"></i>
@@ -432,15 +448,13 @@
             </ul>
         </li>
 
+        <!-- Raporlama -->
         <li class="nav-item">
             <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="Index">
                 <i class="fe fe-pie-chart fe-16"></i>
                 <span class="ml-3 item-text">Raporlama</span>
             </a>
         </li>
-
-
-
     }
     @if (Model.Contains("İhale"))
     {
@@ -460,6 +474,21 @@
             <a class="nav-link" asp-area="Ihale" asp-controller="Tender" asp-action="Index">
                 <i class="fe fe-list fe-16"></i>
                 <span class="ml-3 item-text">İhale Maliyet Hesaplama</span>
+            </a>
+        </li>
+    }
+    @if (Model.Contains("IT"))
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="IT" asp-controller="Inventory" asp-action="Index">
+                <i class="fe fe-file-plus fe-16"></i>
+                <span class="ml-3 item-text">Zimmetler</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="IT" asp-controller="Modals" asp-action="_AssetCreate">
+                <i class="fe fe-file-plus fe-16"></i>
+                <span class="ml-3 item-text">Modal ekleme</span>
             </a>
         </li>
     }

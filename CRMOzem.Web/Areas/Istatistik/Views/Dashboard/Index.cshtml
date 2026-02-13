@@ -1,4 +1,5 @@
-﻿@{
+﻿
+@{
     ViewData["Title"] = "Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var hospitals = (IEnumerable<dynamic>)(ViewBag.Hospitals ?? new List<object>());
@@ -61,10 +62,61 @@
         <div class="d-flex align-items-center gap-2">
             <h5 class="mb-0"><i class="fa fa-chart-line me-2"></i> İstatistik Özet</h5>
         </div>
-        <div class="d-flex gap-2">
-            <button id="btnRefresh" class="btn btn-sm btn-outline-primary"><i class="fa fa-rotate"></i> Yenile</button>
+
+        <div class="d-flex gap-2 flex-wrap">
+
+            
+            <a asp-area="Istatistik"
+               asp-controller="Upload"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-table"></i> Toplu İstatistik Yükle
+            </a>
+            &nbsp;
+            &nbsp;
+            <a asp-area="Istatistik"
+               asp-controller="ShipmentUpload"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-truck"></i> Toplu Gönderim Yükle
+            </a>
+            &nbsp;
+            &nbsp;
+            
+            <div class="btn-group">
+                <button type="button"
+                        class="btn btn-sm btn-outline-success dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    <i class="fa fa-file-excel"></i> Şablon Excel
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item"
+                           asp-area="Istatistik"
+                           asp-controller="Dashboard"
+                           asp-action="DownloadUsageTemplate">
+                            İstatistik Şablonu
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item"
+                           asp-area="Istatistik"
+                           asp-controller="Dashboard"
+                           asp-action="DownloadShipmentTemplate">
+                            Gönderim Şablonu
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            &nbsp;
+            &nbsp;
+            <button id="btnRefresh" class="btn btn-sm btn-outline-primary">
+                <i class="fa fa-rotate"></i> Yenile
+            </button>
         </div>
     </div>
+
     <div class="card-body">
         <div class="dashboard-toolbar mb-3">
             <div class="row g-2 align-items-end">

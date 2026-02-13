@@ -1,0 +1,27 @@
+﻿@model CRMOzem.Web.Vm.AssigneeExternalVm
+@{
+    var postUrl = Url.Action("AssigneeExternalCreate", "Modals", new { area = "IT" });
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Kayıtsız Kişi Ekle</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+</div>
+
+<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <div class="row g-2">
+            <div class="col-12"><input class="form-control" name="FullName" placeholder="Ad Soyad" required /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="Title" placeholder="Görev/Unvan" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="Department" placeholder="Departman" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="TcNo" placeholder="TC No" /></div>
+            <div class="col-12 col-md-6"><input class="form-control" name="Phone" placeholder="Telefon" /></div>
+            <div class="col-12"><input class="form-control" name="Email" placeholder="Email" /></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+</form>

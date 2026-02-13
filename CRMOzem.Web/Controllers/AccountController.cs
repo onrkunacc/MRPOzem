@@ -74,9 +74,11 @@ namespace CRMOzem.Web.Controllers
                 return RedirectToAction("Index", "FileTransferWeb", new { area = "" });
             else if (roles.Contains("Evrak"))
                 return RedirectToAction("Index", "Document", new { area = "Evrak" });
-         
+            else if (roles.Contains("IT"))
+                return RedirectToAction("Index", "Inventory", new { area = "IT" });
 
-            return RedirectToAction("Index", "Home");
+
+                return RedirectToAction("Index", "Home");
             
         }
 

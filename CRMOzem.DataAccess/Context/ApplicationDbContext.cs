@@ -1,4 +1,5 @@
-﻿using CRMOzem.Core.Models;
+﻿using CRMOzem.Core.Inventory;
+using CRMOzem.Core.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
@@ -35,6 +36,13 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<TenderTest> TenderTests { get; set; }
         public DbSet<TenderExtraCost> TenderExtraCosts { get; set; }
         public DbSet<TenderPersonnel> TenderPersonnels { get; set; }
+        public DbSet<Asset> Assets { get; set; }
+        public DbSet<Assignee> Assignees { get; set; }
+        public DbSet<Assignment> Assignments { get; set; }
+        public DbSet<AssignmentItem> AssignmentItems { get; set; }
+        public DbSet<Document> Documents { get; set; }
+        public DbSet<Kurum> Kurumlar => Set<Kurum>();
+        public DbSet<KurumIstatistikAylik> KurumIstatistikAyliklar => Set<KurumIstatistikAylik>();
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -95,6 +103,72 @@ namespace CRMOzem.DataAccess.Context
 
             builder.Entity<TrainingParticipation>()
             .HasIndex(p => new { p.TrainingId, p.UserId }).IsUnique();
+
+            builder.Entity<Asset>(e =>
+            {
+                e.Property(x => x.Status).HasConversion<string>();
+                e.HasIndex(x => x.SerialNumber);
+                e.HasIndex(x => x.InventoryTag);
+                e.HasIndex(x => x.ImeiNo);
+            });
+
+            builder.Entity<Assignee>(e =>
+            {
+                e.HasIndex(x => x.UserId);
+                e.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AssignmentItem>(e =>
+            {
+                e.HasOne(x => x.Asset).WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(x => new { x.AssetId, x.ReturnedAtUtc });
+            });
+
+            builder.Entity<Document>(e => e.HasIndex(x => x.AssignmentId));
+
+            builder.Entity<Kurum>(entity =>
+            {
+                entity.ToTable("Kurumlar");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Ad)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(x => x.IhaleNumarasi)
+                      .HasMaxLength(100);
+
+                entity.Property(x => x.AktifMi)
+                      .HasDefaultValue(true);
+
+                entity.HasMany(x => x.IstatistikAyliklar)
+                      .WithOne(x => x.Kurum)
+                      .HasForeignKey(x => x.KurumId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<KurumIstatistikAylik>(entity =>
+            {
+                entity.ToTable("KurumIstatistikAylik");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Yil).IsRequired();
+                entity.Property(x => x.Ay).IsRequired();
+                entity.Property(x => x.GeldiMi).IsRequired();
+
+                entity.Property(x => x.Not)
+                      .HasMaxLength(2000);
+
+                entity.Property(x => x.UpdatedAt)
+                      .IsRequired();
+
+                // Aynı kurum + yıl + ay için tek kayıt
+                entity.HasIndex(x => new { x.KurumId, x.Yil, x.Ay })
+                      .IsUnique();
+            });
         }
     }
 }

@@ -1,0 +1,28 @@
+﻿@using CRMOzem.Web.Areas.IT.Controllers
+@model List<CRMOzem.Web.Areas.IT.Controllers.InventoryController.BrandSummaryRow>
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Kategori</th>
+                <th>Marka</th>
+                <th>Model</th>
+                <th>Durum</th>
+                <th class="text-end">Adet</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model)
+            {
+                <tr>
+                    <td class="fw-semibold">@r.Category</td>
+                    <td>@r.Brand</td>
+                    <td>@r.Model</td>
+                    <td><span class="badge bg-secondary">@r.Status</span></td>
+                    <td class="text-end fw-semibold">@r.Count</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

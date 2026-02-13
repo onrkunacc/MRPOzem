@@ -9,11 +9,42 @@
 }
 
 <div class="card shadow-sm mt-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fa fa-chart-bar me-2"></i> Rapor Sonuçları</h5>
-        <a asp-action="Index" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Filtreye Geri Dön</a>
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0"><i class="fa fa-chart-bar me-2"></i> Rapor Sonuçları</h5>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a asp-action="Index" class="btn btn-secondary btn-sm">
+                <i class="fa fa-arrow-left"></i> Filtreye Geri Dön
+            </a>
+            &nbsp;
+            &nbsp;
+            <a asp-action="ExportExcel"
+               asp-route-hospitalId="@ViewBag.HospitalID"
+               asp-route-startDate="@ViewBag.StartDate"
+               asp-route-endDate="@ViewBag.EndDate"
+               class="btn btn-success btn-sm">
+                <i class="fa fa-file-excel"></i> Excel
+            </a>
+            &nbsp;
+            &nbsp;
+            <a asp-action="ExportPdf"
+               asp-route-hospitalId="@ViewBag.HospitalID"
+               asp-route-startDate="@ViewBag.StartDate"
+               asp-route-endDate="@ViewBag.EndDate"
+               class="btn btn-danger btn-sm">
+                <i class="fa fa-file-pdf"></i> PDF
+            </a>
+        </div>
     </div>
     <div class="card-body">
+        <div class="mb-2 text-muted small">
+            <span class="me-3">
+                <strong>Tarih:</strong> @(ViewBag.StartDate ?? "-")
+            </span>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead class="table-light">
@@ -27,25 +58,36 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @if (!Model.Any())
                     {
                         <tr>
-                            <td>@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))</td>
-                            <td>@item.TestName</td>
-                            <td>@item.TotalSent</td>
-                            <td>@item.TotalUsed</td>
-                            <td class="fw-bold @(item.Remaining < 0 ? "text-danger" : "text-success")">@item.Remaining</td>
-                            <td>
-                                <button type="button" class="btn btn-outline-info btn-sm btnChart"
-                                        data-test="@item.TestName"
-                                        data-month="@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))"
-                                        data-sent="@item.TotalSent"
-                                        data-used="@item.TotalUsed"
-                                        data-remaining="@item.Remaining">
-                                    <i class="fa fa-chart-line"></i>
-                                </button>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                Kayıt bulunamadı.
                             </td>
                         </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))</td>
+                                <td>@item.TestName</td>
+                                <td>@item.TotalSent</td>
+                                <td>@item.TotalUsed</td>
+                                <td class="fw-bold @(item.Remaining < 0 ? "text-danger" : "text-success")">@item.Remaining</td>
+                                <td>
+                                    <button type="button" class="btn btn-outline-info btn-sm btnChart"
+                                            data-test="@item.TestName"
+                                            data-month="@item.Month.ToString("MMMM yyyy", new CultureInfo("tr-TR"))"
+                                            data-sent="@item.TotalSent"
+                                            data-used="@item.TotalUsed"
+                                            data-remaining="@item.Remaining">
+                                        <i class="fa fa-chart-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>

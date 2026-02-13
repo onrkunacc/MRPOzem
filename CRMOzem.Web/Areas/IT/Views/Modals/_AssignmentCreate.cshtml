@@ -1,0 +1,52 @@
+﻿@model CRMOzem.Web.Vm.AssignmentCreateVm
+@{
+    var postUrl = Url.Action("AssignmentCreate", "Modals", new { area = "IT" });
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Yeni Zimmet</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+</div>
+
+<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+
+        <label class="form-label">Kişi (son eklenenler)</label>
+        <select class="form-select" name="AssigneeId" required>
+            <option value="">Kişi seç...</option>
+            @foreach (var p in Model.RecentAssignees)
+            {
+                <option value="@p.Id">@p.FullName</option>
+            }
+        </select>
+
+        <div class="mt-3">
+            <input class="form-control" name="ConditionOut" placeholder="Teslim durumu (opsiyonel)" />
+        </div>
+
+        <div class="mt-2">
+            <input class="form-control" name="Notes" placeholder="Not (opsiyonel)" />
+        </div>
+
+        <hr />
+        <label class="form-label">Müsait Cihazlar</label>
+        <div class="border rounded p-2" style="max-height: 280px; overflow:auto;">
+            @foreach (var a in Model.AvailableAssets)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="AssetIds" value="@a.Id" id="asset_@a.Id" />
+                    <label class="form-check-label" for="asset_@a.Id">
+                        @a.Category - @a.Brand @a.Model | SN: @a.SerialNumber | Tag: @a.InventoryTag
+                    </label>
+                </div>
+            }
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-success">Zimmetle</button>
+    </div>
+</form>

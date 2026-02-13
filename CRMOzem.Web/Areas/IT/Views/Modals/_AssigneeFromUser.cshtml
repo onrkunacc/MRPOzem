@@ -1,0 +1,26 @@
+﻿@model CRMOzem.Web.Vm.AssigneeFromUserVm
+@{
+    var postUrl = Url.Action("AssigneeFromUser", "Modals", new { area = "IT" });
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">Kayıtlı Kullanıcıdan Kişi Oluştur</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+</div>
+
+<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        <select class="form-select" name="UserId" required>
+            <option value="">Kullanıcı seç...</option>
+            @foreach (var u in Model.Users)
+            {
+                <option value="@u.Id">@u.FullName (@u.Email)</option>
+            }
+        </select>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-primary">Oluştur</button>
+    </div>
+</form>

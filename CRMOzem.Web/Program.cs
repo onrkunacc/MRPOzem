@@ -1,9 +1,14 @@
 ﻿using CRMOzem.Business.Extensions;
 using CRMOzem.Business.Interfaces;
 using CRMOzem.Business.Services;
+using CRMOzem.Business.Services.Inventory;
+using CRMOzem.Business.Services.Storage;
+using CRMOzem.Core.Interfaces.Inventory;
+using CRMOzem.Core.Interfaces.Storage;
 using CRMOzem.Core.Models;
 using CRMOzem.DataAccess.Context;
 using CRMOzem.DataAccess.Seeders;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,7 +41,11 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITenderService, TenderService>();
 builder.Services.AddScoped<ITenderCalculatorService, TenderCalculatorService>();
 
-
+builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
+builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+builder.Services.AddScoped<IAssignmentPdfService, AssignmentPdfService>();
+builder.Services.AddScoped<IIstatistikService, IstatistikService>();
+builder.Services.AddScoped<IKurumService, KurumService>();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
@@ -91,22 +100,34 @@ app.UseAuthorization();
 
 app.Use(async (context, next) =>
 {
-    var path = context.Request.Path.Value.ToLower();
+    var path = (context.Request.Path.Value ?? "").ToLowerInvariant();
 
-    
-    if (path == "/account/logout")
+    // Auth sayfalarını ve statikleri yönlendirme dışında bırakın
+    if (path.StartsWith("/account") || path.StartsWith("/identity") || path.StartsWith("/css") ||
+        path.StartsWith("/js") || path.StartsWith("/lib") || path.StartsWith("/favicon"))
     {
         await next();
         return;
     }
 
-    if (context.User.Identity.IsAuthenticated)
+    if (context.User?.Identity?.IsAuthenticated == true)
     {
         var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
         var user = await userManager.GetUserAsync(context.User);
+
+        
+        if (user == null)
+        {
+            // en temiz yaklaşım: cookie’yi temizle ve login’e gönder
+            await context.SignOutAsync();
+            context.Response.Redirect("/Account/Login");
+            return;
+        }
+
         var roles = await userManager.GetRolesAsync(user);
 
-        if (roles.Contains("Admin") && !path.StartsWith("/admin"))
+        // Rol isimleri DB’de ne ise birebir onu kullanın (Admin/Yönetici vs)
+        if (roles.Contains("Yönetici") && !path.StartsWith("/admin"))
         {
             context.Response.Redirect("/Admin/Admin/Index");
             return;
@@ -116,10 +137,15 @@ app.Use(async (context, next) =>
             context.Response.Redirect("/Muhasebe/Cari/Index");
             return;
         }
+        else if (roles.Contains("IT") && !path.StartsWith("/it"))
+        {
+            context.Response.Redirect("/IT/Inventory/Index");
+            return;
+        }
     }
+
     await next();
 });
-
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllerRoute(

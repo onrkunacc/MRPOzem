@@ -1,0 +1,33 @@
+﻿@model List<Asset>
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Kategori</th>
+                <th>Marka</th>
+                <th>Model</th>
+                <th>SN</th>
+                <th>Tag</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model)
+            {
+                <tr>
+                    <td class="text-muted">@a.Id</td>
+                    <td class="fw-semibold">@a.Category</td>
+                    <td>@a.Brand</td>
+                    <td>@a.Model</td>
+                    <td class="text-muted">@a.SerialNumber</td>
+                    <td class="text-muted">@a.InventoryTag</td>
+                    <td>
+                        <span class="badge bg-secondary">@a.Status</span>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

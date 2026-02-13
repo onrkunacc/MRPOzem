@@ -19,7 +19,7 @@
     <link rel="shortcut icon" href="~/favicon/ozemLogo.ico" />
     <style>
         .form-container {
-            max-width: 800px; /* 📌 Daha geniş yapı */
+            max-width: 800px; /* Daha geniş yapı */
             padding: 40px;
             background: #fff;
             border-radius: 10px;
@@ -34,6 +34,77 @@
         .alert-danger ul {
             margin-bottom: 0;
         }
+
+        /* ✅ Fatura modal tasarımı */
+        .invoice-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .invoice-badge {
+            font-size: .75rem;
+            padding: .35rem .55rem;
+            border-radius: 999px;
+            background: rgba(0,123,255,.1);
+            color: #0b5ed7;
+            border: 1px solid rgba(0,123,255,.25);
+            white-space: nowrap;
+        }
+
+        .invoice-card {
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 12px;
+            padding: 16px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+        }
+
+        .invoice-row {
+            display: flex;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px dashed rgba(0,0,0,.08);
+        }
+
+            .invoice-row:last-child {
+                border-bottom: 0;
+                padding-bottom: 0;
+            }
+
+        .invoice-label {
+            width: 150px;
+            min-width: 150px;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .invoice-value {
+            flex: 1;
+            color: #212529;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .invoice-note {
+            font-size: .85rem;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .invoice-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Mobilde label genişliğini düşür */
+        @@media (max-width: 576px) {
+            .invoice-label {
+                width: 120px;
+                min-width: 120px;
+            }
+        }
     </style>
 </head>
 <body class="light">
@@ -45,13 +116,14 @@
                 </a>
                 <h2 class="h5 mt-2 font-weight-bold text-primary">Giriş Yap</h2>
             </div>
+
             @if (TempData["Message"] != null)
             {
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle"></i> @TempData["Message"]
                 </div>
             }
-            <!-- 📌 Türkçe Hata Mesajları -->
+
             @if (!ViewData.ModelState.IsValid)
             {
                 <div class="alert alert-danger text-left">
@@ -94,14 +166,136 @@
                     <a asp-action="ForgotPassword" class="text-primary">Şifremi Unuttum</a>
                 </div>
 
+                <!-- ✅ Fatura Bilgileri Modal Linki -->
+                <div class="text-center mt-3">
+                    <a href="javascript:void(0)" class="text-primary" data-toggle="modal" data-target="#invoiceInfoModal">
+                        Fatura Bilgileri
+                    </a>
+                </div>
+
                 <p class="mt-4 text-muted text-center">&copy; 2025 - Özem MRP</p>
             </form>
+        </div>
+    </div>
+
+    <!-- ✅ Fatura Bilgileri Modal (statik, veri girişi yok) -->
+    <div class="modal fade" id="invoiceInfoModal" tabindex="-1" role="dialog" aria-labelledby="invoiceInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                <div class="modal-header" style="background: rgba(0,123,255,.06); border-bottom: 1px solid rgba(0,0,0,.06);">
+                    <div class="invoice-modal-title">
+                        <h5 class="modal-title mb-0" id="invoiceInfoModalLabel">Fatura Bilgileri</h5>
+                        <span class="invoice-badge">Özem</span>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="invoice-card">
+                        <div class="invoice-row">
+                            <div class="invoice-label">Şirket Adı</div>
+                            <div class="invoice-value" id="invCompanyNameText">
+                                Özem Tıbbi Cihazlar Gıda Turizm San. Tic. AŞ
+                            </div>
+                        </div>
+
+                        <div class="invoice-row">
+                            <div class="invoice-label">Adres</div>
+                            <div class="invoice-value" id="invAddressText">
+                                Yunusemre, 6452. Sk. NO:5, 20070 Pamukkale/Denizli
+                            </div>
+                        </div>
+
+                        <div class="invoice-row">
+                            <div class="invoice-label">Vergi Dairesi</div>
+                            <div class="invoice-value" id="invTaxOfficeText">
+                               PAMUKKALE VERGİ DAİRESİ
+                            </div>
+                        </div>
+
+                        <div class="invoice-row">
+                            <div class="invoice-label">Vergi No</div>
+                            <div class="invoice-value" id="invTaxNoText">
+                                6860755545
+                            </div>
+                        </div>
+
+                        <div class="invoice-row">
+                            <div class="invoice-label">E-Fatura</div>
+                            <div class="invoice-value" id="invEFaturaText">
+                                E-Fatura Mükellefiyeti
+                            </div>
+                        </div>
+
+                        <div class="invoice-note">
+                            Bu bilgiler fatura kesimi için referans amaçlı gösterilmektedir.
+                        </div>
+
+                        <div class="invoice-actions mt-3">
+                            <button type="button" class="btn btn-primary" id="btnCopyInvoiceText">Bilgileri Kopyala</button>
+                            <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Kapat</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="border-top: 0; padding-top: 0;">
+                    <!-- footer boş bırakıldı; aksiyonlar kart içinde -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- JS -->
     <script src="~/tinydash-master/light/js/jquery.min.js"></script>
     <script src="~/tinydash-master/light/js/bootstrap.min.js"></script>
+
+    <script>
+        (function () {
+            function getInvoiceText() {
+                const company = document.getElementById("invCompanyNameText").innerText.trim();
+                const address = document.getElementById("invAddressText").innerText.trim();
+                const taxOffice = document.getElementById("invTaxOfficeText").innerText.trim();
+                const taxNo = document.getElementById("invTaxNoText").innerText.trim();
+                const efatura = document.getElementById("invEFaturaText").innerText.trim();
+
+                return [
+                    `Şirket Adı: ${company}`,
+                    `Adres: ${address}`,
+                    `Vergi Dairesi: ${taxOffice}`,
+                    `Vergi No: ${taxNo}`,
+                    `E-Fatura: ${efatura}`
+                ].join("\n");
+            }
+
+            document.getElementById("btnCopyInvoiceText").addEventListener("click", async function () {
+                const btn = this;
+                const old = btn.innerText;
+                const text = getInvoiceText();
+
+                try {
+                    await navigator.clipboard.writeText(text);
+                    btn.innerText = "Kopyalandı";
+                } catch (e) {
+                    // Fallback
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(ta);
+                    btn.innerText = "Kopyalandı";
+                }
+
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.innerText = old;
+                    btn.disabled = false;
+                }, 1200);
+            });
+        })();
+    </script>
 
     @section Scripts {
         <partial name="_ValidationScriptsPartial" />

@@ -1,0 +1,33 @@
+﻿@model List<AssignmentItem>
+@Html.AntiForgeryToken()
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Kişi</th>
+                <th>Cihaz</th>
+                <th>SN</th>
+                <th>Tag</th>
+                <th>Tarih</th>
+                <th class="text-end" style="width: 190px;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var x in Model)
+            {
+                <tr>
+                    <td class="fw-semibold">@x.Assignment?.Assignee?.FullName</td>
+                    <td>@x.Asset?.Category - @x.Asset?.Brand @x.Asset?.Model</td>
+                    <td class="text-muted">@x.Asset?.SerialNumber</td>
+                    <td class="text-muted">@x.Asset?.InventoryTag</td>
+                    <td>@x.Assignment?.AssignedAtUtc.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-danger btn-sm" onclick="returnItem(@x.Id)">İade</button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="generatePdf(@x.AssignmentId)">PDF</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -24,7 +24,6 @@
     <link rel="stylesheet" href="~/tinydash-master/light/css/app-light.css" id="lightTheme">
     <link rel="stylesheet" href="~/tinydash-master/dark/css/app-dark.css" id="darkTheme" disabled>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-
 </head>
 <body class="vertical light">
     <div class="wrapper">
@@ -54,11 +53,54 @@
         <!-- Sidebar -->
         <aside class="sidebar-left border-right bg-white shadow" id="leftSidebar" data-simplebar>
             <nav class="vertnav navbar navbar-light">
+
+                @{
+                    // Logo tıklanınca hangi dashboard?
+                    // Öncelik: İstatistik → Istatistik/Dashboard/Index
+                    // Yönetici/Admin → Admin/Index
+                    // Muhasebe → Muhasebe/Cari/Index
+                    // Aksi halde Home/Index
+                    var logoArea = "";
+                    var logoController = "Home";
+                    var logoAction = "Index";
+
+                    if (User.IsInRole("İstatistik"))
+                    {
+                        logoArea = "Istatistik";
+                        logoController = "Dashboard";
+                        logoAction = "Index";
+                    }
+                    else if (User.IsInRole("Yönetici") || User.IsInRole("Admin"))
+                    {
+                        logoArea = "Admin";
+                        logoController = "Admin";
+                        logoAction = "Index";
+                    }
+                    else if (User.IsInRole("Muhasebe"))
+                    {
+                        logoArea = "Muhasebe";
+                        logoController = "Cari";
+                        logoAction = "Index";
+                    }
+                    else if(User.IsInRole("İnsan Kaynakları"))
+                    {
+                        logoArea = "InsanKaynaklari";
+                        logoController = "Leave";
+                        logoAction = "Index";
+                    }
+                }
+
                 <div class="w-100 mb-4 d-flex justify-content-center">
-                    <a class="navbar-brand mt-2 flex-fill text-center" href="/">
-                        <img src="~/tinydash-master/light/assets/images/ozemLogo2.png" alt="CRMozem" class="sidebar-logo">
+                    <a class="navbar-brand mt-2 flex-fill text-center"
+                       asp-area="@logoArea"
+                       asp-controller="@logoController"
+                       asp-action="@logoAction">
+                        <img src="~/tinydash-master/light/assets/images/ozemLogo2.png"
+                             alt="CRMozem"
+                             class="sidebar-logo" />
                     </a>
                 </div>
+
                 @await Component.InvokeAsync("Sidebar")
             </nav>
         </aside>
@@ -94,7 +136,6 @@
         </div>
     </div>
 
-  
     <!-- Scripts -->
     <script src="~/tinydash-master/light/js/jquery.min.js"></script>
     <script src="~/tinydash-master/light/js/popper.min.js"></script>
@@ -117,39 +158,34 @@
             const timeString = `${hours}:${minutes}:${seconds}`;
             document.getElementById("currentTime").innerText = timeString;
         }
-
-        // Saati her saniye güncelle
         setInterval(updateClock, 1000);
-
-        // İlk saati hemen göster
         updateClock();
     </script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-        const msgs = {
-        success: @Html.Raw(JsonSerializer.Serialize(TempData["SuccessMessage"])),
-        error: @Html.Raw(JsonSerializer.Serialize(TempData["Error"])),
-        warning: @Html.Raw(JsonSerializer.Serialize(TempData["Warning"]))
-        };
+            const msgs = {
+                success: @Html.Raw(JsonSerializer.Serialize(TempData["SuccessMessage"])),
+                error: @Html.Raw(JsonSerializer.Serialize(TempData["Error"])),
+                warning: @Html.Raw(JsonSerializer.Serialize(TempData["Warning"]))
+            };
 
+            const showToast = (icon, title, text, timer) => {
+                if (!text) return;
+                Swal.fire({
+                    icon,
+                    title,
+                    text,
+                    timer,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            };
 
-        const showToast = (icon, title, text, timer) => {
-        if (!text) return;
-        Swal.fire({
-        icon,
-        title,
-        text,
-        timer,
-        showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
-        });
-        };
-
-
-        showToast('success', 'Başarılı', msgs.success, 3000);
-        showToast('error', 'Hata', msgs.error, 4000);
-        showToast('warning', 'Uyarı', msgs.warning, 3500);
+            showToast('success', 'Başarılı', msgs.success, 3000);
+            showToast('error', 'Hata', msgs.error, 4000);
+            showToast('warning', 'Uyarı', msgs.warning, 3500);
         });
     </script>
 
@@ -160,7 +196,7 @@
                 .catch(error => console.log("Service Worker Hatası:", error));
         }
     </script>
-    @RenderSection("Scripts", required: false)
 
+    @RenderSection("Scripts", required: false)
 </body>
 </html>
