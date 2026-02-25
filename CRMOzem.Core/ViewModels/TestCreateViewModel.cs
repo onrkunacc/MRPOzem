@@ -12,5 +12,8 @@ namespace CRMOzem.Core.ViewModels
         [Required(ErrorMessage = "Test adı zorunludur.")]
         [StringLength(100)]
         public string TestName { get; set; }
+
+        [StringLength(30)]
+        public string? SutCode { get; set; }   // ✅ eklendi
     }
 }

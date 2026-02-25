@@ -5,21 +5,33 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="card shadow-sm">
-    <div class="card-header">
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white">
         <h5 class="mb-0"><i class="fa fa-plus-circle me-2"></i> Yeni Test Ekle</h5>
     </div>
     <div class="card-body">
         <form asp-action="Create" method="post" class="row g-3">
             @Html.AntiForgeryToken()
-            <div class="col-md-12">
+
+            <div class="col-md-8">
                 <label class="form-label">Test Adı</label>
                 <input asp-for="TestName" class="form-control" />
                 <span asp-validation-for="TestName" class="text-danger"></span>
             </div>
+
+            <div class="col-md-4">
+                <label class="form-label">SUT Kodu</label>
+                <input asp-for="SutCode" class="form-control" placeholder="Örn: L102890" />
+                <span asp-validation-for="SutCode" class="text-danger"></span>
+            </div>
+
             <div class="col-12 text-end">
-                <a asp-action="Index" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Geri</a>
-                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Kaydet</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left"></i> Geri
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="fa fa-save"></i> Kaydet
+                </button>
             </div>
         </form>
     </div>

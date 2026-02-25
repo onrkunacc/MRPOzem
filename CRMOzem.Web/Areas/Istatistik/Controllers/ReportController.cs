@@ -20,11 +20,13 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
     {
         private readonly IStatisticsService _statisticsService;
         private readonly ApplicationDbContext _context;
+        private readonly ISutComparisonService _sutService;
 
-        public ReportController(IStatisticsService statisticsService, ApplicationDbContext context)
+        public ReportController(IStatisticsService statisticsService, ApplicationDbContext context, ISutComparisonService sutService)
         {
             _statisticsService = statisticsService;
             _context = context;
+            _sutService = sutService;
         }
 
         [HttpGet]
@@ -306,7 +308,57 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     .BorderColor(Colors.Grey.Lighten1)
                     .DefaultTextStyle(x => x.SemiBold());
         }
+        private async Task LoadHospitalsAsync(int? selectedHospitalId)
+        {
+            ViewBag.Hospitals = await _context.Hospitals.AsNoTracking()
+                .OrderBy(x => x.HospitalName)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.HospitalID.ToString(),
+                    Text = x.HospitalName,
+                    Selected = selectedHospitalId.HasValue && x.HospitalID == selectedHospitalId.Value
+                })
+                .ToListAsync();
+        }
 
+        // /Istatistik/Report/SutKarsilastirma
+        [HttpGet]
+        public async Task<IActionResult> SutKarsilastirma(int? hospitalId, int? year, int? month, int? ihaleYear, int? currentYear)
+        {
+            // 1) Parametre yoksa seçim ekranı göster
+            if (!hospitalId.HasValue || hospitalId.Value <= 0)
+            {
+                await LoadHospitalsAsync(null);
+                ViewBag.DefaultYear = DateTime.Now.Year;
+                ViewBag.DefaultMonth = DateTime.Now.Month;
+                ViewBag.DefaultIhaleYear = DateTime.Now.Year - 1;
+                ViewBag.DefaultCurrentYear = DateTime.Now.Year;
+                return View("SutKarsilastirmaSelect");
+            }
+
+            // 2) Parametreleri defaultla
+            int y = year ?? DateTime.Now.Year;
+            int m = month ?? DateTime.Now.Month;
+            int ihY = ihaleYear ?? (DateTime.Now.Year - 1);
+            int curY = currentYear ?? DateTime.Now.Year;
+
+            // 3) Hastane gerçekten var mı? (daha iyi hata mesajı)
+            var exists = await _context.Hospitals.AsNoTracking().AnyAsync(x => x.HospitalID == hospitalId.Value);
+            if (!exists)
+            {
+                await LoadHospitalsAsync(null);
+                ViewBag.Error = "Seçilen hastane bulunamadı. Lütfen tekrar seçiniz.";
+                ViewBag.DefaultYear = y;
+                ViewBag.DefaultMonth = m;
+                ViewBag.DefaultIhaleYear = ihY;
+                ViewBag.DefaultCurrentYear = curY;
+                return View("SutKarsilastirmaSelect");
+            }
+
+            // 4) Raporu üret
+            var vm = await _sutService.BuildMonthlyAsync(hospitalId.Value, y, m, ihY, curY);
+            return View("SutKarsilastirma", vm);
+        }
         // Ortak veri üretici
         private async Task<List<HospitalTestBalanceViewModel>> GetReportDataAsync(
             int hospitalId,

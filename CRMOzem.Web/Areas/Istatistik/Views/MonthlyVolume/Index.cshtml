@@ -1,0 +1,103 @@
+﻿@model MonthlyVolumeEntryVm
+
+@{
+    var hospitals = ViewBag.Hospitals as List<SelectListItem>;
+    int? selectedHospitalId = ViewBag.SelectedHospitalId as int?;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3>Aylık Tetkik Girişi</h3>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <label class="form-label">Hastane</label>
+        <select name="hospitalId" class="form-select">
+            <option value="">Seçiniz...</option>
+            @foreach (var h in hospitals)
+            {
+                <option value="@h.Value" selected="@(selectedHospitalId?.ToString() == h.Value)">
+                    @h.Text
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label">Yıl</label>
+        <input type="number" name="year" class="form-control" value="@(Model?.Year ?? DateTime.Now.Year)" />
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label">Ay</label>
+        <input type="number" name="month" class="form-control" min="1" max="12" value="@(Model?.Month ?? DateTime.Now.Month)" />
+    </div>
+
+    <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">Getir</button>
+    </div>
+</form>
+
+@if (Model == null)
+{
+    <div class="alert alert-info">Devam etmek için hastane seçin.</div>
+    return;
+}
+
+<div class="d-flex gap-2 mb-3">
+    <form method="post" asp-action="CopyPrev">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+        <input type="hidden" name="year" value="@Model.Year" />
+        <input type="hidden" name="month" value="@Model.Month" />
+        <input type="hidden" name="overwriteExisting" value="false" />
+        <button class="btn btn-outline-secondary" type="submit">Geçen Ayı Kopyala (Boşları Doldur)</button>
+    </form>
+
+    <form method="post" asp-action="CopyPrev">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+        <input type="hidden" name="year" value="@Model.Year" />
+        <input type="hidden" name="month" value="@Model.Month" />
+        <input type="hidden" name="overwriteExisting" value="true" />
+        <button class="btn btn-outline-warning" type="submit">Geçen Ayı Kopyala (Üzerine Yaz)</button>
+    </form>
+</div>
+
+<form method="post" asp-action="Save">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+    <input type="hidden" name="year" value="@Model.Year" />
+    <input type="hidden" name="month" value="@Model.Month" />
+
+    <div class="alert alert-light">
+        <b>@Model.HospitalName</b> - @Model.Year/@Model.Month için aktif testler listeleniyor.
+    </div>
+
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr>
+                <th style="width:60px">#</th>
+                <th>Test</th>
+                <th style="width:140px">SUT Kodu</th>
+                <th style="width:180px">Tetkik Sayısı</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Rows.Count; i++)
+            {
+                var r = Model.Rows[i];
+                <tr>
+                    <td>@r.Sira</td>
+                    <td>@r.TestName</td>
+                    <td>@(r.SutCode ?? "-")</td>
+                    <td>
+                        <input type="hidden" name="testId" value="@r.TestID" />
+                        <input type="number" name="count" class="form-control" min="0" value="@r.Count" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-dark" type="submit">Kaydet</button>
+</form>

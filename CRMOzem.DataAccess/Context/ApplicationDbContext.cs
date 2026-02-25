@@ -43,6 +43,8 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<Document> Documents { get; set; }
         public DbSet<Kurum> Kurumlar => Set<Kurum>();
         public DbSet<KurumIstatistikAylik> KurumIstatistikAyliklar => Set<KurumIstatistikAylik>();
+        public DbSet<TestSutPoint> TestSutPoints { get; set; }
+        public DbSet<HospitalTestMonthlyVolume> HospitalTestMonthlyVolumes { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -169,6 +171,38 @@ namespace CRMOzem.DataAccess.Context
                 entity.HasIndex(x => new { x.KurumId, x.Yil, x.Ay })
                       .IsUnique();
             });
+
+            builder.Entity<TestSutPoint>()
+                .HasIndex(x => new { x.TestID, x.Year })
+                .IsUnique();
+
+            builder.Entity<HospitalTestMonthlyVolume>()
+                .HasIndex(x => new { x.HospitalID, x.TestID, x.Year, x.Month })
+                .IsUnique();
+
+            builder.Entity<TestSutPoint>()
+                .HasOne(x => x.Test)
+                .WithMany(t => t.SutPoints)
+                .HasForeignKey(x => x.TestID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<HospitalTestMonthlyVolume>()
+                .HasOne(x => x.Hospital)
+                .WithMany(h => h.MonthlyVolumes)
+                .HasForeignKey(x => x.HospitalID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<HospitalTestMonthlyVolume>()
+                .HasOne(x => x.Test)
+                .WithMany(t => t.MonthlyVolumes)
+                .HasForeignKey(x => x.TestID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TestTemplate>()
+                .HasIndex(x => new { x.HospitalID, x.TestID })
+                .IsUnique();
+
+          
         }
     }
 }

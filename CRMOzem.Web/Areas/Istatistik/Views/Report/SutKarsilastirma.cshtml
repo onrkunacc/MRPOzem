@@ -1,0 +1,112 @@
+﻿@model SutComparisonVm
+
+@{
+    ViewData["Title"] = "SUT Karşılaştırma";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .table-sticky thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #fff;
+    }
+
+    .num {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+</style>
+
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 mb-3">
+    <div>
+        <h4 class="mb-1">@Model.HospitalName</h4>
+        <div class="text-muted small">
+            Dönem: <b>@Model.Year/@Model.Month</b> — İhale: <b>@Model.IhaleYear</b>, Güncel: <b>@Model.CurrentYear</b>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary"
+           asp-area="Istatistik" asp-controller="Report" asp-action="SutKarsilastirma">
+            <i class="fe fe-sliders mr-2"></i> Parametre Değiştir
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Toplam İhale Puan</div>
+                <div class="h5 mb-0">@Model.TotalIhalePuan.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Toplam Fark Puan</div>
+                <div class="h5 mb-0">@Model.TotalFarkPuan.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Kalem Sayısı</div>
+                <div class="h5 mb-0">@Model.Rows.Count</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm mb-0 table-sticky">
+                <thead class="border-bottom">
+                    <tr>
+                        <th style="width:60px">#</th>
+                        <th>Malzemenin Adı</th>
+                        <th style="width:140px">SUT Kodu</th>
+                        <th style="width:130px" class="num">Tetkik</th>
+                        <th style="width:140px" class="num">SUT (İhale)</th>
+                        <th style="width:140px" class="num">SUT (Güncel)</th>
+                        <th style="width:120px" class="num">Fark</th>
+                        <th style="width:160px" class="num">İhale Puan</th>
+                        <th style="width:160px" class="num">Fark Puan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td>@r.Sira</td>
+                            <td>@r.MalzemeninAdi</td>
+                            <td class="code">@r.SutKodu</td>
+                            <td class="num">@r.TetkikSayisi.ToString("N0")</td>
+                            <td class="num">@r.SutPuaniIhale.ToString("N2")</td>
+                            <td class="num">@r.GuncelSut.ToString("N2")</td>
+                            <td class="num">@r.SutFark.ToString("N2")</td>
+                            <td class="num">@r.IhalePuan.ToString("N2")</td>
+                            <td class="num">@r.FarkPuan.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="border-top">
+                    <tr>
+                        <th colspan="7" class="num">TOPLAM</th>
+                        <th class="num">@Model.TotalIhalePuan.ToString("N2")</th>
+                        <th class="num">@Model.TotalFarkPuan.ToString("N2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

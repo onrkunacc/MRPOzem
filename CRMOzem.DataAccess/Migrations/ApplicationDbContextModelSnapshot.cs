@@ -548,6 +548,39 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("Hospitals");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>
+                {
+                    b.Property<int>("HospitalTestMonthlyVolumeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HospitalTestMonthlyVolumeID"));
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TestID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("HospitalTestMonthlyVolumeID");
+
+                    b.HasIndex("TestID");
+
+                    b.HasIndex("HospitalID", "TestID", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("HospitalTestMonthlyVolumes");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
                 {
                     b.Property<int>("Id")
@@ -968,6 +1001,10 @@ namespace CRMOzem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TestID"));
 
+                    b.Property<string>("SutCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("TestName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -976,6 +1013,31 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasKey("TestID");
 
                     b.ToTable("Tests");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TestSutPoint", b =>
+                {
+                    b.Property<int>("TestSutPointID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TestSutPointID"));
+
+                    b.Property<decimal>("Point")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TestID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("TestSutPointID");
+
+                    b.HasIndex("TestID", "Year")
+                        .IsUnique();
+
+                    b.ToTable("TestSutPoints");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
@@ -1475,6 +1537,25 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("MonthlyVolumes")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Test", "Test")
+                        .WithMany("MonthlyVolumes")
+                        .HasForeignKey("TestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hospital");
+
+                    b.Navigation("Test");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.Cariler", "Cari")
@@ -1593,6 +1674,17 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsRequired();
 
                     b.Navigation("Tender");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.TestSutPoint", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Test", "Test")
+                        .WithMany("SutPoints")
+                        .HasForeignKey("TestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Test");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
@@ -1758,6 +1850,8 @@ namespace CRMOzem.DataAccess.Migrations
 
             modelBuilder.Entity("CRMOzem.Core.Models.Hospital", b =>
                 {
+                    b.Navigation("MonthlyVolumes");
+
                     b.Navigation("Shipments");
 
                     b.Navigation("Statistics");
@@ -1791,9 +1885,13 @@ namespace CRMOzem.DataAccess.Migrations
 
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
                 {
+                    b.Navigation("MonthlyVolumes");
+
                     b.Navigation("Shipments");
 
                     b.Navigation("Statistics");
+
+                    b.Navigation("SutPoints");
 
                     b.Navigation("Templates");
                 });

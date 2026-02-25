@@ -21,11 +21,15 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
-            var tests = await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct);
+            var tests = await _context.Tests.AsNoTracking()
+                .OrderBy(x => x.TestName)
+                .ToListAsync(ct);
+
             var viewModel = tests.Select(t => new TestViewModel
             {
                 TestID = t.TestID,
-                TestName = t.TestName
+                TestName = t.TestName,
+                SutCode = t.SutCode
             }).ToList();
 
             return View(viewModel);
@@ -42,14 +46,21 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
             try
             {
-                var exists = await _context.Tests.AsNoTracking().AnyAsync(t => t.TestName.ToLower() == model.TestName.ToLower(), ct);
+                var exists = await _context.Tests.AsNoTracking()
+                    .AnyAsync(t => t.TestName.ToLower() == model.TestName.ToLower(), ct);
+
                 if (exists)
                 {
                     ModelState.AddModelError("TestName", "Bu test adı zaten kayıtlı.");
                     return View(model);
                 }
 
-                _context.Tests.Add(new Test { TestName = model.TestName });
+                _context.Tests.Add(new Test
+                {
+                    TestName = model.TestName.Trim(),
+                    SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim()
+                });
+
                 await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Test başarıyla eklendi.";
@@ -75,7 +86,8 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             return View(new TestEditViewModel
             {
                 TestID = test.TestID,
-                TestName = test.TestName
+                TestName = test.TestName,
+                SutCode = test.SutCode
             });
         }
 
@@ -94,7 +106,10 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                test.TestName = model.TestName;
+                // İstersen burada isim duplicate kontrolü de ekleyebiliriz.
+                test.TestName = model.TestName.Trim();
+                test.SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim();
+
                 await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Test başarıyla güncellendi.";
@@ -133,19 +148,27 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
         }
 
+        // Upload tarafı için (opsiyonel sutCode destekli)
         [HttpPost]
-        public async Task<IActionResult> CreateFromUpload(string testName, CancellationToken ct)
+        public async Task<IActionResult> CreateFromUpload(string testName, string? sutCode, CancellationToken ct)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(testName))
                     return Json(new { success = false, message = "Test adı boş olamaz." });
 
-                var exists = await _context.Tests.AsNoTracking().AnyAsync(t => t.TestName == testName, ct);
+                var exists = await _context.Tests.AsNoTracking()
+                    .AnyAsync(t => t.TestName == testName, ct);
+
                 if (exists)
                     return Json(new { success = false, message = "Bu test zaten kayıtlı." });
 
-                var test = new Test { TestName = testName };
+                var test = new Test
+                {
+                    TestName = testName.Trim(),
+                    SutCode = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim()
+                };
+
                 _context.Tests.Add(test);
                 await _context.SaveChangesAsync(ct);
 
@@ -157,5 +180,28 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateSutCode(int id, string? sutCode, CancellationToken ct)
+        {
+            try
+            {
+                var test = await _context.Tests.FindAsync(new object?[] { id }, ct);
+                if (test == null)
+                    return Json(new { success = false, message = "Test bulunamadı." });
+
+                // normalize
+                var normalized = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim();
+
+                test.SutCode = normalized;
+                await _context.SaveChangesAsync(ct);
+
+                return Json(new { success = true, sutCode = test.SutCode });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

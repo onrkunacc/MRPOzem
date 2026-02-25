@@ -26,5 +26,7 @@ namespace CRMOzem.Core.Models
         public ICollection<TestTemplate> TestTemplates { get; set; }
         public ICollection<MonthlyStatistics> Statistics { get; set; }
         public ICollection<MonthlyShipment> Shipments { get; set; }
+        public ICollection<HospitalTestMonthlyVolume> MonthlyVolumes { get; set; } = new List<HospitalTestMonthlyVolume>();
+
     }
 }

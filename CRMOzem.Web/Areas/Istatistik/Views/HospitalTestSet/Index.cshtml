@@ -1,0 +1,111 @@
+﻿@model HospitalTestSetVm
+
+@{
+    var hospitals = ViewBag.Hospitals as List<SelectListItem>;
+    int? selectedHospitalId = ViewBag.SelectedHospitalId as int?;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3>Hastane Test Seti</h3>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-6">
+        <label class="form-label">Hastane</label>
+        <select name="hospitalId" class="form-select" onchange="this.form.submit()">
+            <option value="">Seçiniz...</option>
+            @foreach (var h in hospitals)
+            {
+                <option value="@h.Value" selected="@(selectedHospitalId?.ToString() == h.Value)">
+                    @h.Text
+                </option>
+            }
+        </select>
+    </div>
+</form>
+
+@if (Model == null)
+{
+    <div class="alert alert-info">Devam etmek için hastane seçin.</div>
+    return;
+}
+
+<div class="d-flex gap-2 mb-3">
+    <form method="post" asp-action="ApplyStandardSet">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+        <button class="btn btn-primary" type="submit">Standart Seti Uygula (Eksikleri Ekle)</button>
+    </form>
+
+    <form method="post" asp-action="SetAll">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+        <input type="hidden" name="isActive" value="true" />
+        <button class="btn btn-success" type="submit">Tümünü Aktif Et</button>
+    </form>
+
+    <form method="post" asp-action="SetAll">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+        <input type="hidden" name="isActive" value="false" />
+        <button class="btn btn-outline-danger" type="submit">Tümünü Pasif Et</button>
+    </form>
+</div>
+
+<form method="post" asp-action="Save">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="hospitalId" value="@Model.HospitalID" />
+
+    <div class="mb-2">
+        <input id="searchBox" class="form-control" placeholder="Test ara..." onkeyup="filterRows()" />
+    </div>
+
+    <table class="table table-bordered table-sm" id="tbl">
+        <thead>
+            <tr>
+                <th style="width:60px">Aktif</th>
+                <th>Test</th>
+                <th style="width:140px">SUT Kodu</th>
+                <th style="width:140px">Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Rows.Count; i++)
+            {
+                var r = Model.Rows[i];
+                <tr>
+                    <td class="text-center">
+                        <input type="hidden" name="testId" value="@r.TestID" />
+                        <!-- Checkbox name'ini isActive yapıyoruz, ancak bool array olarak gelmesi için hidden + checkbox tekniği -->
+                        <input type="hidden" name="isActive" value="false" />
+                        <input type="checkbox" name="isActive" value="true" @(r.IsActive ? "checked" : "") />
+                    </td>
+                    <td class="test-name">@r.TestName</td>
+                    <td>@(r.SutCode ?? "-")</td>
+                    <td>
+                        @if (r.IsLinked)
+                        {
+                            <span class="badge bg-secondary">Bağlı</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark">Bağlı değil</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-dark" type="submit">Kaydet</button>
+</form>
+
+<script>
+    function filterRows() {
+        const q = document.getElementById('searchBox').value.toLowerCase();
+        const rows = document.querySelectorAll('#tbl tbody tr');
+        rows.forEach(r => {
+            const name = r.querySelector('.test-name').innerText.toLowerCase();
+            r.style.display = name.includes(q) ? '' : 'none';
+        });
+    }
+</script>

@@ -1,0 +1,81 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "SUT Karşılaştırma";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
+
+    int defYear = ViewBag.DefaultYear ?? DateTime.Now.Year;
+    int defMonth = ViewBag.DefaultMonth ?? DateTime.Now.Month;
+    int defIhaleYear = ViewBag.DefaultIhaleYear ?? (DateTime.Now.Year - 1);
+    int defCurrentYear = ViewBag.DefaultCurrentYear ?? DateTime.Now.Year;
+
+    string error = ViewBag.Error as string;
+}
+
+<div class="row">
+    <div class="col-12 col-lg-10 col-xl-8">
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">SUT Karşılaştırma</h4>
+                        <div class="text-muted small">Hastane ve dönem seçerek raporu oluşturun.</div>
+                    </div>
+                    <span class="badge bg-light text-dark border">Rapor</span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <div class="alert alert-danger mb-3">@error</div>
+                }
+
+                <form method="get" asp-area="Istatistik" asp-controller="Report" asp-action="SutKarsilastirma" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Hastane</label>
+                        <select class="form-select" name="hospitalId" required>
+                            <option value="">Seçiniz...</option>
+                            @foreach (var h in hospitals)
+                            {
+                                <option value="@h.Value" selected="@(h.Selected ? "selected" : null)">@h.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Yıl</label>
+                        <input class="form-control" type="number" name="year" value="@defYear" required />
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Ay</label>
+                        <input class="form-control" type="number" name="month" min="1" max="12" value="@defMonth" required />
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">İhale Yılı</label>
+                        <input class="form-control" type="number" name="ihaleYear" value="@defIhaleYear" required />
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Güncel Yıl</label>
+                        <input class="form-control" type="number" name="currentYear" value="@defCurrentYear" required />
+                    </div>
+
+                    <div class="col-12 d-flex gap-2 mt-2">
+                        <button class="btn btn-primary px-4" type="submit">
+                            <i class="fe fe-search mr-2"></i> Raporu Getir
+                        </button>
+
+                        <a class="btn btn-outline-secondary" asp-area="Istatistik" asp-controller="Dashboard" asp-action="Index">
+                            <i class="fe fe-arrow-left mr-2"></i> Dashboard
+                        </a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>

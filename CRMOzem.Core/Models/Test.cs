@@ -16,9 +16,14 @@ namespace CRMOzem.Core.Models
         [StringLength(100)]
         public string TestName { get; set; }
 
+        [StringLength(30)]
+        public string? SutCode { get; set; } 
+
         // İlişkiler
         public ICollection<TestTemplate> Templates { get; set; }
         public ICollection<MonthlyStatistics> Statistics { get; set; }
         public ICollection<MonthlyShipment> Shipments { get; set; }
+        public ICollection<TestSutPoint> SutPoints { get; set; } = new List<TestSutPoint>();
+        public ICollection<HospitalTestMonthlyVolume> MonthlyVolumes { get; set; } = new List<HospitalTestMonthlyVolume>();
     }
 }

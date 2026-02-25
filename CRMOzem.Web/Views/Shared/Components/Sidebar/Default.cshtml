@@ -338,16 +338,25 @@
     {
         <li class="nav-item">
             <a class="nav-link" asp-area="Istatistik" asp-controller="Dashboard" asp-action="Index">
-                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <i class="fe fe-home fe-16"></i>
                 <span class="ml-3 item-text">İstatistik Dashboard</span>
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="SutKarsilastirma">
+                <i class="fe fe-trending-up fe-16"></i>
+                <span class="ml-3 item-text">SUT Karşılaştırma</span>
+            </a>
+        </li>
+
         <li class="nav-item">
             <a class="nav-link" asp-area="Istatistik" asp-controller="IstatistikTakip" asp-action="Index">
-                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <i class="fe fe-check-square fe-16"></i>
                 <span class="ml-3 item-text">Kurum Takip</span>
             </a>
         </li>
+
         <!-- ÖZEM Depo -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#depo-menu">
@@ -369,14 +378,14 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="ShipmentUpload" asp-action="Index">
-                        <i class="fe fe-send fe-14"></i>
-                        <span class="ml-1 item-text">Hastane Toplu Test Gönder</span>
+                        <i class="fe fe-upload fe-14"></i>
+                        <span class="ml-1 item-text">Toplu Test Gönder</span>
                     </a>
                 </li>
             </ul>
         </li>
 
-        <!-- İstatistik (Kullanım) -->
+        <!-- İstatistik İşlemleri -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#istatistik-menu">
                 <i class="fe fe-bar-chart-2 fe-16"></i>
@@ -385,20 +394,40 @@
             <ul class="collapse list-unstyled pl-4 w-100" id="istatistik-menu">
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Usage" asp-action="Index">
-                        <i class="fe fe-list fe-14"></i>
+                        <i class="fe fe-clipboard fe-14"></i>
                         <span class="ml-1 item-text">İstatistik Listesi</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Usage" asp-action="Create">
-                        <i class="fe fe-plus-circle fe-14"></i>
+                        <i class="fe fe-edit-2 fe-14"></i>
                         <span class="ml-1 item-text">İstatistik Giriş</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Upload" asp-action="Index">
-                        <i class="fe fe-plus-circle fe-14"></i>
+                        <i class="fe fe-upload fe-14"></i>
                         <span class="ml-1 item-text">Toplu İstatistik Giriş</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="HospitalTestSet" asp-action="Index">
+                        <i class="fe fe-sliders fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Test Seti</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="MonthlyVolume" asp-action="Index">
+                        <i class="fe fe-hash fe-14"></i>
+                        <span class="ml-1 item-text">Aylık Tetkik Girişi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="SutPoint" asp-action="Index">
+                        <i class="fe fe-percent fe-14"></i>
+                        <span class="ml-1 item-text">SUT Puanları</span>
                     </a>
                 </li>
             </ul>
@@ -429,7 +458,7 @@
         <!-- Hastaneler -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#hastane-menu">
-                <i class="fe fe-home fe-16"></i>
+                <i class="fe fe-map-pin fe-16"></i>
                 <span class="ml-3 item-text">Hastaneler</span>
             </a>
             <ul class="collapse list-unstyled pl-4 w-100" id="hastane-menu">

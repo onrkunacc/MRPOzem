@@ -46,6 +46,10 @@ builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 builder.Services.AddScoped<IAssignmentPdfService, AssignmentPdfService>();
 builder.Services.AddScoped<IIstatistikService, IstatistikService>();
 builder.Services.AddScoped<IKurumService, KurumService>();
+builder.Services.AddScoped<ISutComparisonService, SutComparisonService>();
+builder.Services.AddScoped<IHospitalTestSetService, HospitalTestSetService>();
+builder.Services.AddScoped<IMonthlyVolumeService, MonthlyVolumeService>();
+builder.Services.AddScoped<ISutPointService, SutPointService>();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
