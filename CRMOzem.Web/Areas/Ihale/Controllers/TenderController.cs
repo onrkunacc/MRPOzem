@@ -12,11 +12,16 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
     {
         private readonly ITenderService _tenderService;
         private readonly ITenderCalculatorService _calculator;
+        private readonly ITenderExportService _export;
 
-        public TenderController(ITenderService tenderService, ITenderCalculatorService calculator)
+        public TenderController(
+            ITenderService tenderService,
+            ITenderCalculatorService calculator,
+            ITenderExportService export)
         {
             _tenderService = tenderService;
             _calculator = calculator;
+            _export = export;
         }
 
         public async Task<IActionResult> Index()
@@ -24,7 +29,7 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
             try
             {
                 var tenders = await _tenderService.GetAllAsync();
-                foreach (var t in tenders) _calculator.Calculate(t); // liste görünümü güncel
+                foreach (var t in tenders) _calculator.Calculate(t);
                 return View(tenders);
             }
             catch
@@ -50,21 +55,21 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenderViewModel model)
         {
             try
             {
-                // Nav doğrulamalarını yine de temizle (savunmacı programlama)
+                // nav doğrulama temizliği (savunmacı)
                 ModelState.Remove("Tender.Tests[].Tender");
                 ModelState.Remove("Tender.ExtraCosts[].Tender");
                 ModelState.Remove("Tender.Personnels[].Tender");
 
                 if (!ModelState.IsValid)
-                {
-                    var errs = ModelState.Where(kv => kv.Value?.Errors.Count > 0)
-                                         .ToDictionary(kv => kv.Key, kv => kv.Value!.Errors.Select(e => e.ErrorMessage));
-                    return BadRequest(new { success = false, message = "Doğrulama hatası", errors = errs });
-                }
+                    return BadRequest(new { success = false, message = "Doğrulama hatası", errors = ModelStateToDict() });
+
+                // Create sırasında Id = 0 olmalı
+                model.Tender.Id = 0;
 
                 await _tenderService.CreateAsync(model.Tender);
                 return Json(new { success = true });
@@ -91,6 +96,7 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
                     ExtraCosts = tender.ExtraCosts?.ToList() ?? new(),
                     Personnels = tender.Personnels?.ToList() ?? new()
                 };
+
                 return PartialView("_TenderCreateEditModal", vm);
             }
             catch
@@ -100,6 +106,7 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(TenderViewModel model)
         {
             try
@@ -109,11 +116,11 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
                 ModelState.Remove("Tender.Personnels[].Tender");
 
                 if (!ModelState.IsValid)
-                {
-                    var errs = ModelState.Where(kv => kv.Value?.Errors.Count > 0)
-                                         .ToDictionary(kv => kv.Key, kv => kv.Value!.Errors.Select(e => e.ErrorMessage));
-                    return BadRequest(new { success = false, message = "Doğrulama hatası", errors = errs });
-                }
+                    return BadRequest(new { success = false, message = "Doğrulama hatası", errors = ModelStateToDict() });
+
+                // kritik: Id 0 geldiyse yanlış post var
+                if (model.Tender.Id <= 0)
+                    return BadRequest(new { success = false, message = "Geçersiz ihale id. Formda hidden Id alanını kontrol edin." });
 
                 await _tenderService.UpdateAsync(model.Tender);
                 return Json(new { success = true });
@@ -166,6 +173,26 @@ namespace CRM0zem.Web.Areas.Ihale.Controllers
                 return Json(new { success = false });
             }
         }
+
+        // --- EXPORTS ---
+        [HttpGet]
+        public async Task<IActionResult> ExportExcel(DateTime date)
+        {
+            var bytes = await _export.ExportExcelDailyAsync(date.Date);
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"IhaleRapor_{date:yyyyMMdd}.xlsx");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf(DateTime date)
+        {
+            var bytes = await _export.ExportPdfDailyAsync(date.Date);
+            return File(bytes, "application/pdf", $"IhaleRapor_{date:yyyyMMdd}.pdf");
+        }
+
+        private Dictionary<string, string[]> ModelStateToDict()
+            => ModelState.Where(kv => kv.Value?.Errors.Count > 0)
+                         .ToDictionary(kv => kv.Key, kv => kv.Value!.Errors.Select(e => e.ErrorMessage).ToArray());
     }
 }
-

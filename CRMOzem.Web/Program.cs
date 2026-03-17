@@ -10,7 +10,9 @@ using CRMOzem.DataAccess.Context;
 using CRMOzem.DataAccess.Seeders;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +52,7 @@ builder.Services.AddScoped<ISutComparisonService, SutComparisonService>();
 builder.Services.AddScoped<IHospitalTestSetService, HospitalTestSetService>();
 builder.Services.AddScoped<IMonthlyVolumeService, MonthlyVolumeService>();
 builder.Services.AddScoped<ISutPointService, SutPointService>();
-
+builder.Services.AddScoped<ITenderExportService, TenderExportService>();
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -74,6 +76,14 @@ builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+var supportedCultures = new[] { new CultureInfo("tr-TR") };
+
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("tr-TR"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+});
 //  ROLLERİN OLUŞTURULMASI (SEED)
 using (var scope = app.Services.CreateScope())
 {

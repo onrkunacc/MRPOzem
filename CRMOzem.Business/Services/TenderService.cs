@@ -42,12 +42,39 @@ namespace CRMOzem.Business.Services
         {
             try
             {
-                _calculator.Calculate(tender);
+                var existing = await _context.Tenders
+                    .Include(t => t.Tests)
+                    .Include(t => t.ExtraCosts)
+                    .Include(t => t.Personnels)
+                    .FirstOrDefaultAsync(t => t.Id == tender.Id);
 
-                _context.Tenders.Update(tender);
+                if (existing == null)
+                    throw new Exception("İhale bulunamadı.");
+
+                // scalar alanlar
+                existing.Name = tender.Name;
+                existing.Type = tender.Type;
+                existing.RegistrationNumber = tender.RegistrationNumber;
+                existing.TenderDate = tender.TenderDate;
+                existing.DurationMonths = tender.DurationMonths;
+
+                // koleksiyonlar: basit ve deterministik yaklaşım (replace)
+                existing.Tests.Clear();
+                foreach (var x in tender.Tests ?? new List<TenderTest>())
+                    existing.Tests.Add(x);
+
+                existing.ExtraCosts.Clear();
+                foreach (var x in tender.ExtraCosts ?? new List<TenderExtraCost>())
+                    existing.ExtraCosts.Add(x);
+
+                existing.Personnels.Clear();
+                foreach (var x in tender.Personnels ?? new List<TenderPersonnel>())
+                    existing.Personnels.Add(x);
+
+                _calculator.Calculate(existing);
+
                 await _context.SaveChangesAsync();
-
-                return tender;
+                return existing;
             }
             catch (Exception ex)
             {

@@ -1,36 +1,70 @@
 ﻿@model CRMOzem.Core.ViewModels.TenderViewModel
+@using System.Globalization
+
+@{
+    var isEdit = Model?.Tender?.Id > 0;
+}
 
 <div class="modal-header">
-    <h5 class="modal-title">@(Model.Tender?.Id > 0 ? "İhale Düzenle" : "Yeni İhale")</h5>
+    <div>
+        <h5 class="modal-title mb-0">
+            <i class="fa-solid fa-file-signature me-2 text-primary"></i>
+            @(isEdit ? "İhale Düzenle" : "Yeni İhale")
+        </h5>
+        <div class="text-muted small">
+            Genel bilgiler ve maliyet kalemlerini girin. Kaydettiğinizde toplamlar otomatik hesaplanır.
+        </div>
+    </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
-<form id="tenderForm">
+<form id="tenderForm" data-action="@Url.Action(isEdit ? "Edit" : "Create")" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Tender.Id" value="@Model.Tender?.Id" />
+
     <div class="modal-body">
-        <ul class="nav nav-tabs mb-3" role="tablist">
-            <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#generalTab">Genel Bilgiler</button></li>
-            <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#testsTab">Testler</button></li>
-            <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#extrasTab">Ek Giderler</button></li>
-            <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#personnelTab">Personel</button></li>
+
+        <ul class="nav nav-pills gap-2 mb-3" role="tablist">
+            <li class="nav-item">
+                <button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#generalTab">
+                    <i class="fa-solid fa-circle-info me-1"></i> Genel
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#testsTab">
+                    <i class="fa-solid fa-vial me-1"></i> Testler
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#extrasTab">
+                    <i class="fa-solid fa-receipt me-1"></i> Ek Giderler
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#personnelTab">
+                    <i class="fa-solid fa-users me-1"></i> Personel
+                </button>
+            </li>
         </ul>
 
         <div class="tab-content">
+
             <!-- GENEL -->
             <div class="tab-pane fade show active" id="generalTab">
-                <div class="row">
-                    <div class="col-md-6 mb-2">
+                <div class="row g-3">
+                    <div class="col-lg-6">
                         <label class="form-label">İhale Adı</label>
-                        <input name="Tender.Name" value="@Model.Tender?.Name" class="form-control" />
+                        <input name="Tender.Name" value="@Model.Tender?.Name" class="form-control" placeholder="Örn: Merkez Lab İhalesi" />
                     </div>
-                    <div class="col-md-6 mb-2">
+                    <div class="col-lg-6">
                         <label class="form-label">İhale Şekli</label>
-                        <input name="Tender.Type" value="@Model.Tender?.Type" class="form-control" />
+                        <input name="Tender.Type" value="@Model.Tender?.Type" class="form-control" placeholder="Örn: Açık İhale" />
                     </div>
-                    <div class="col-md-6 mb-2">
+                    <div class="col-lg-6">
                         <label class="form-label">Kayıt No</label>
-                        <input name="Tender.RegistrationNumber" value="@Model.Tender?.RegistrationNumber" class="form-control" />
+                        <input name="Tender.RegistrationNumber" value="@Model.Tender?.RegistrationNumber" class="form-control" placeholder="Örn: 2026-001" />
                     </div>
-                    <div class="col-md-6 mb-2">
+                    <div class="col-lg-6">
                         <label class="form-label">İhale Tarihi</label>
                         @{
                             var dt = Model?.Tender?.TenderDate == default ? (DateTime?)null : Model.Tender.TenderDate;
@@ -38,125 +72,201 @@
                         }
                         <input name="Tender.TenderDate" type="datetime-local" class="form-control" step="60" value="@iso" />
                     </div>
-                    <div class="col-md-6 mb-2">
+                    <div class="col-lg-6">
                         <label class="form-label">Süre (Ay)</label>
-                        <input name="Tender.DurationMonths" value="@Model.Tender?.DurationMonths" class="form-control" />
+                        <input name="Tender.DurationMonths" type="number" min="0" step="1" value="@Model.Tender?.DurationMonths" class="form-control" />
+                        <div class="form-text">Personel maliyeti süreye göre hesaplanır.</div>
                     </div>
                 </div>
             </div>
 
             <!-- TESTLER -->
             <div class="tab-pane fade" id="testsTab">
-                <div class="d-flex justify-content-between mb-2">
-                    <h6>Test Listesi</h6>
-                    <button type="button" class="btn btn-success btn-sm" id="addTestRow">+ Ekle</button>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-0">Test Listesi</h6>
+                        <div class="text-muted small">SUT puanı, miktar ve çarpan üzerinden hesaplanır.</div>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" id="addTestRow">
+                        <i class="fa fa-plus me-1"></i> Ekle
+                    </button>
                 </div>
-                <table class="table table-bordered" id="testTable">
-                    <thead>
-                        <tr>
-                            <th>S.NO</th>
-                            <th>SUT KODU</th>
-                            <th>Tetkik Adı</th>
-                            <th>SUT Puanı</th>
-                            <th>Miktar</th>
-                            <th>Çarpan</th>
-                            <th>Sil</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < Model.Tests.Count; i++)
-                        {
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="testTable">
+                        <thead class="table-light">
                             <tr>
-                                <td><input name="Tender.Tests[@i].OrderNo" class="form-control" value="@Model.Tests[i].OrderNo" /></td>
-                                <td><input name="Tender.Tests[@i].SutCode" class="form-control" value="@Model.Tests[i].SutCode" /></td>
-                                <td><input name="Tender.Tests[@i].Name" class="form-control" value="@Model.Tests[i].Name" /></td>
-                                <td><input name="Tender.Tests[@i].SutPoint" class="form-control" value="@Model.Tests[i].SutPoint" /></td>
-                                <td><input name="Tender.Tests[@i].Quantity" class="form-control" value="@Model.Tests[i].Quantity" /></td>
-                                <td><input name="Tender.Tests[@i].Multiplier" class="form-control" value="@Model.Tests[i].Multiplier" /></td>
-                                <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+                                <th style="width:90px;">S.NO</th>
+                                <th style="width:140px;">SUT KODU</th>
+                                <th>Tetkik Adı</th>
+                                <th style="width:140px;">SUT Puanı</th>
+                                <th style="width:120px;">Miktar</th>
+                                <th style="width:120px;">Çarpan</th>
+                                <th style="width:70px;" class="text-center">Sil</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Tests.Count; i++)
+                            {
+                                <tr>
+                                    <td><input name="Tender.Tests[@i].OrderNo" class="form-control" value="@Model.Tests[i].OrderNo" /></td>
+                                    <td><input name="Tender.Tests[@i].SutCode" class="form-control" value="@Model.Tests[i].SutCode" /></td>
+                                    <td><input name="Tender.Tests[@i].Name" class="form-control" value="@Model.Tests[i].Name" /></td>
+                                    <td>
+                                        <input name="Tender.Tests[@i].SutPoint"
+                                               type="number" step="0.01" class="form-control"
+                                               value="@Model.Tests[i].SutPoint.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td>
+                                        <input name="Tender.Tests[@i].Quantity"
+                                               type="number" step="1" class="form-control"
+                                               value="@Model.Tests[i].Quantity.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td>
+                                        <input name="Tender.Tests[@i].Multiplier"
+                                               type="number" step="0.0001" class="form-control"
+                                               value="@Model.Tests[i].Multiplier.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                                            <i class="fa fa-xmark"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- EK GİDERLER -->
             <div class="tab-pane fade" id="extrasTab">
-                <div class="d-flex justify-content-between mb-2">
-                    <h6>Ek Giderler</h6>
-                    <button type="button" class="btn btn-success btn-sm" id="addExtraRow">+ Ekle</button>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-0">Ek Giderler</h6>
+                        <div class="text-muted small">Döviz ve kur ile toplam hesaplanır.</div>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" id="addExtraRow">
+                        <i class="fa fa-plus me-1"></i> Ekle
+                    </button>
                 </div>
-                <table class="table table-bordered" id="extraTable">
-                    <thead>
-                        <tr>
-                            <th>Ad</th>
-                            <th>Adet</th>
-                            <th>Birim Fiyat</th>
-                            <th>Döviz</th>
-                            <th>Kur</th>
-                            <th>Sil</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < Model.ExtraCosts.Count; i++)
-                        {
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="extraTable">
+                        <thead class="table-light">
                             <tr>
-                                <td><input name="Tender.ExtraCosts[@i].Name" class="form-control" value="@Model.ExtraCosts[i].Name" /></td>
-                                <td><input name="Tender.ExtraCosts[@i].Quantity" class="form-control" value="@Model.ExtraCosts[i].Quantity" /></td>
-                                <td><input name="Tender.ExtraCosts[@i].UnitPrice" class="form-control" value="@Model.ExtraCosts[i].UnitPrice" /></td>
-                                <td><input name="Tender.ExtraCosts[@i].Currency" class="form-control" value="@Model.ExtraCosts[i].Currency" /></td>
-                                <td><input name="Tender.ExtraCosts[@i].ExchangeRate" class="form-control" value="@Model.ExtraCosts[i].ExchangeRate" /></td>
-                                <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+                                <th>Ad</th>
+                                <th style="width:120px;">Adet</th>
+                                <th style="width:150px;">Birim Fiyat</th>
+                                <th style="width:120px;">Döviz</th>
+                                <th style="width:140px;">Kur</th>
+                                <th style="width:70px;" class="text-center">Sil</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.ExtraCosts.Count; i++)
+                            {
+                                <tr>
+                                    <td><input name="Tender.ExtraCosts[@i].Name" class="form-control" value="@Model.ExtraCosts[i].Name" /></td>
+                                    <td>
+                                        <input name="Tender.ExtraCosts[@i].Quantity" type="number" step="1" class="form-control"
+                                               value="@Model.ExtraCosts[i].Quantity.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td>
+                                        <input name="Tender.ExtraCosts[@i].UnitPrice" type="number" step="0.01" class="form-control"
+                                               value="@Model.ExtraCosts[i].UnitPrice.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td><input name="Tender.ExtraCosts[@i].Currency" class="form-control" value="@Model.ExtraCosts[i].Currency" /></td>
+                                    <td>
+                                        <input name="Tender.ExtraCosts[@i].ExchangeRate" type="number" step="0.0001" class="form-control"
+                                               value="@Model.ExtraCosts[i].ExchangeRate.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                                            <i class="fa fa-xmark"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- PERSONEL -->
             <div class="tab-pane fade" id="personnelTab">
-                <div class="d-flex justify-content-between mb-2">
-                    <h6>Personel Giderleri</h6>
-                    <button type="button" class="btn btn-success btn-sm" id="addPersonnelRow">+ Ekle</button>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-0">Personel Giderleri</h6>
+                        <div class="text-muted small">Birim ücret × kişi sayısı × süre (ay).</div>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" id="addPersonnelRow">
+                        <i class="fa fa-plus me-1"></i> Ekle
+                    </button>
                 </div>
-                <table class="table table-bordered" id="personnelTable">
-                    <thead>
-                        <tr>
-                            <th>Görev</th>
-                            <th>Sayısı</th>
-                            <th>Öğrenim</th>
-                            <th>Ücret Açıklaması</th>
-                            <th>Birim Ücret</th>
-                            <th>Sil</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < Model.Personnels.Count; i++)
-                        {
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="personnelTable">
+                        <thead class="table-light">
                             <tr>
-                                <td><input name="Tender.Personnels[@i].Role" class="form-control" value="@Model.Personnels[i].Role" /></td>
-                                <td><input name="Tender.Personnels[@i].Count" class="form-control" value="@Model.Personnels[i].Count" /></td>
-                                <td><input name="Tender.Personnels[@i].Education" class="form-control" value="@Model.Personnels[i].Education" /></td>
-                                <td><input name="Tender.Personnels[@i].FeeDescription" class="form-control" value="@Model.Personnels[i].FeeDescription" /></td>
-                                <td><input name="Tender.Personnels[@i].UnitFee" class="form-control" value="@Model.Personnels[i].UnitFee" /></td>
-                                <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+                                <th>Görev</th>
+                                <th style="width:120px;">Sayısı</th>
+                                <th style="width:160px;">Öğrenim</th>
+                                <th>Ücret Açıklaması</th>
+                                <th style="width:160px;">Birim Ücret</th>
+                                <th style="width:70px;" class="text-center">Sil</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Personnels.Count; i++)
+                            {
+                                <tr>
+                                    <td><input name="Tender.Personnels[@i].Role" class="form-control" value="@Model.Personnels[i].Role" /></td>
+                                    <td>
+                                        <input name="Tender.Personnels[@i].Count" type="number" step="1" class="form-control"
+                                               value="@Model.Personnels[i].Count.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td><input name="Tender.Personnels[@i].Education" class="form-control" value="@Model.Personnels[i].Education" /></td>
+                                    <td><input name="Tender.Personnels[@i].FeeDescription" class="form-control" value="@Model.Personnels[i].FeeDescription" /></td>
+                                    <td>
+                                        <input name="Tender.Personnels[@i].UnitFee" type="number" step="0.01" class="form-control"
+                                               value="@Model.Personnels[i].UnitFee.ToString(CultureInfo.InvariantCulture)" />
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                                            <i class="fa fa-xmark"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-light border mt-2 mb-0">
+                    <i class="fa-solid fa-circle-info me-1"></i>
+                    Personel toplamı, süre (ay) alanına göre hesaplanır.
+                </div>
             </div>
+
         </div>
     </div>
 
     <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Kaydet</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Kapat</button>
+        <button type="submit" class="btn btn-primary" formnovalidate>
+            <i class="fa-solid fa-floppy-disk me-1"></i> Kaydet
+        </button>
     </div>
 </form>
 
 <script>
     (function(){
-      $(document).on("click", ".remove-row", function(){ $(this).closest("tr").remove(); });
+
+      // satır silme: tek handler, birikme yok
+      $(document).off("click", ".remove-row").on("click", ".remove-row", function(){
+        $(this).closest("tr").remove();
+      });
 
       function nextIndex(tableSelector, inputPrefix){
         const rows = document.querySelectorAll(`${tableSelector} tbody tr`);
@@ -171,70 +281,57 @@
         return max + 1;
       }
 
-      $("#addTestRow").on("click", function(){
+      $("#addTestRow").off("click").on("click", function(){
         const i = nextIndex("#testTable","Tender.Tests[");
         $("#testTable tbody").append(`
           <tr>
-            <td><input name="Tender.Tests[${i}].OrderNo"    class="form-control" value="${i+1}" /></td>
-            <td><input name="Tender.Tests[${i}].SutCode"    class="form-control" /></td>
-            <td><input name="Tender.Tests[${i}].Name"       class="form-control" /></td>
-            <td><input name="Tender.Tests[${i}].SutPoint"   class="form-control" value="0" /></td>
-            <td><input name="Tender.Tests[${i}].Quantity"   class="form-control" value="1" /></td>
-            <td><input name="Tender.Tests[${i}].Multiplier" class="form-control" value="1" /></td>
-            <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
-          </tr>`); 
-
+            <td><input name="Tender.Tests[${i}].OrderNo" class="form-control" value="${i+1}" /></td>
+            <td><input name="Tender.Tests[${i}].SutCode" class="form-control" /></td>
+            <td><input name="Tender.Tests[${i}].Name" class="form-control" /></td>
+            <td><input name="Tender.Tests[${i}].SutPoint" type="number" step="0.01" class="form-control" value="0" /></td>
+            <td><input name="Tender.Tests[${i}].Quantity" type="number" step="1" class="form-control" value="1" /></td>
+            <td><input name="Tender.Tests[${i}].Multiplier" type="number" step="0.0001" class="form-control" value="1" /></td>
+            <td class="text-center">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                <i class="fa fa-xmark"></i>
+              </button>
+            </td>
+          </tr>`);
       });
 
-      $("#addExtraRow").on("click", function(){
+      $("#addExtraRow").off("click").on("click", function(){
         const i = nextIndex("#extraTable","Tender.ExtraCosts[");
         $("#extraTable tbody").append(`
           <tr>
-            <td><input name="Tender.ExtraCosts[${i}].Name"         class="form-control" /></td>
-            <td><input name="Tender.ExtraCosts[${i}].Quantity"     class="form-control" value="1" /></td>
-            <td><input name="Tender.ExtraCosts[${i}].UnitPrice"    class="form-control" value="0" /></td>
-            <td><input name="Tender.ExtraCosts[${i}].Currency"     class="form-control" value="TRY" /></td>
-            <td><input name="Tender.ExtraCosts[${i}].ExchangeRate" class="form-control" value="1" /></td>
-            <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+            <td><input name="Tender.ExtraCosts[${i}].Name" class="form-control" /></td>
+            <td><input name="Tender.ExtraCosts[${i}].Quantity" type="number" step="1" class="form-control" value="1" /></td>
+            <td><input name="Tender.ExtraCosts[${i}].UnitPrice" type="number" step="0.01" class="form-control" value="0" /></td>
+            <td><input name="Tender.ExtraCosts[${i}].Currency" class="form-control" value="TRY" /></td>
+            <td><input name="Tender.ExtraCosts[${i}].ExchangeRate" type="number" step="0.0001" class="form-control" value="1" /></td>
+            <td class="text-center">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                <i class="fa fa-xmark"></i>
+              </button>
+            </td>
           </tr>`);
       });
 
-      $("#addPersonnelRow").on("click", function(){
+      $("#addPersonnelRow").off("click").on("click", function(){
         const i = nextIndex("#personnelTable","Tender.Personnels[");
         $("#personnelTable tbody").append(`
           <tr>
-            <td><input name="Tender.Personnels[${i}].Role"           class="form-control" /></td>
-            <td><input name="Tender.Personnels[${i}].Count"          class="form-control" value="1" /></td>
-            <td><input name="Tender.Personnels[${i}].Education"      class="form-control" /></td>
+            <td><input name="Tender.Personnels[${i}].Role" class="form-control" /></td>
+            <td><input name="Tender.Personnels[${i}].Count" type="number" step="1" class="form-control" value="1" /></td>
+            <td><input name="Tender.Personnels[${i}].Education" class="form-control" /></td>
             <td><input name="Tender.Personnels[${i}].FeeDescription" class="form-control" /></td>
-            <td><input name="Tender.Personnels[${i}].UnitFee"        class="form-control" value="0" /></td>
-            <td><button type="button" class="btn btn-danger btn-sm remove-row">X</button></td>
+            <td><input name="Tender.Personnels[${i}].UnitFee" type="number" step="0.01" class="form-control" value="0" /></td>
+            <td class="text-center">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Sil">
+                <i class="fa fa-xmark"></i>
+              </button>
+            </td>
           </tr>`);
       });
 
-      $("#tenderForm").on("submit", function(e){
-        e.preventDefault();
-        $.ajax({
-          url: "@Url.Action(Model.Tender?.Id > 0 ? "Edit" : "Create")",
-          type: "POST",
-          data: $(this).serialize(),
-          success: function(res){
-            if (res?.success) location.reload();
-            else alert(res?.message || "İşlem sırasında hata oluştu.");
-          },
-          error: function(xhr){
-            try {
-              const res = JSON.parse(xhr.responseText);
-              if (res?.errors) {
-                const firstKey = Object.keys(res.errors)[0] || "";
-                const firstMsg = firstKey ? res.errors[firstKey].join(", ") : "";
-                alert((res.message || "Doğrulama hatası") + (firstKey ? `\n${firstKey}: ${firstMsg}` : ""));
-              } else {
-                alert(res?.message || "İşlem sırasında hata oluştu.");
-              }
-            } catch { alert("İşlem sırasında hata oluştu."); }
-          }
-        });
-      });
     })();
 </script>
