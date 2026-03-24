@@ -1,0 +1,78 @@
+﻿@model List<Ihale>
+@{
+    ViewData["Title"] = "İhaleler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link rel="stylesheet" href="~/css/tendercss.css" />
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">İhaleler</h1>
+        <p class="page-sub">Tüm ihale maliyet hesaplamalarınız</p>
+    </div>
+    <a asp-area="Ihale" asp-controller="Ihale" asp-action="Create" class="btn btn-primary">+ Yeni İhale</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>Henüz ihale yok</h3>
+        <p>İlk ihalenizi oluşturun, maliyet hesaplamaya başlayın.</p>
+        <a asp-area="Ihale" asp-controller="Ihale" asp-action="Create" class="btn btn-primary">İhale Oluştur</a>
+    </div>
+}
+else
+{
+    <div class="ihale-grid">
+        @foreach (var ihale in Model)
+        {
+            <div class="ihale-card">
+                <div class="card-header">
+                    <span class="card-badge">@(ihale.IhaleSekli ?? "HİZMET")</span>
+                    <span class="card-date">@ihale.OlusturmaTarihi.ToString("dd.MM.yyyy")</span>
+                </div>
+                <h3 class="card-title">@ihale.IhaleAdi</h3>
+                <div class="card-meta">
+                    @if (!string.IsNullOrEmpty(ihale.IhaleKayitNo))
+                    {
+                        <span class="meta-item">🔖 @ihale.IhaleKayitNo</span>
+                    }
+                    @if (ihale.IhaleTarihi.HasValue)
+                    {
+                        <span class="meta-item">📅 @ihale.IhaleTarihi.Value.ToString("dd.MM.yyyy")</span>
+                    }
+                    <span class="meta-item">⏱ @ihale.IhaleSuresiGun gün</span>
+                </div>
+                <div class="card-params">
+                    <div class="param">
+                        <span class="param-label">KDV</span>
+                        <span class="param-value">%@((ihale.KDVOran * 100).ToString("0"))</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">Kar</span>
+                        <span class="param-value">%@((ihale.KarOran * 100).ToString("0"))</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">USD</span>
+                        <span class="param-value">@ihale.KurUSD ₺</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">EUR</span>
+                        <span class="param-value">@ihale.KurEUR ₺</span>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a asp-area="Ihale" asp-controller="Ihale" asp-action="Detail" asp-route-id="@ihale.Id" class="btn btn-outline btn-sm">Detay</a>
+                    <a asp-area="Ihale" asp-controller="Ihale" asp-action="Ozet" asp-route-id="@ihale.Id" class="btn btn-ghost btn-sm">Özet</a>
+                    <a asp-area="Ihale" asp-controller="Ihale" asp-action="Edit" asp-route-id="@ihale.Id" class="btn btn-ghost btn-sm">Düzenle</a>
+                    <form asp-area="Ihale" asp-controller="Ihale" asp-action="Delete" asp-route-id="@ihale.Id" method="post" style="display:inline"
+                          onsubmit="return confirm('Bu ihaleyi silmek istiyor musunuz?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger btn-sm">Sil</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}

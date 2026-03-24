@@ -40,9 +40,6 @@ builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<IFileParserService, FileParserService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-builder.Services.AddScoped<ITenderService, TenderService>();
-builder.Services.AddScoped<ITenderCalculatorService, TenderCalculatorService>();
-
 builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 builder.Services.AddScoped<IAssignmentPdfService, AssignmentPdfService>();
@@ -52,7 +49,8 @@ builder.Services.AddScoped<ISutComparisonService, SutComparisonService>();
 builder.Services.AddScoped<IHospitalTestSetService, HospitalTestSetService>();
 builder.Services.AddScoped<IMonthlyVolumeService, MonthlyVolumeService>();
 builder.Services.AddScoped<ISutPointService, SutPointService>();
-builder.Services.AddScoped<ITenderExportService, TenderExportService>();
+builder.Services.AddScoped<IIhaleService, IhaleService>();
+
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
 {

@@ -285,6 +285,83 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Birim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BirimAdi")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BirimKodu")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Birimler");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Aktif = true,
+                            BirimAdi = "Biyokimya",
+                            BirimKodu = "BIO"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Aktif = true,
+                            BirimAdi = "Makro/Mikro ELISA",
+                            BirimKodu = "ELISA"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Aktif = true,
+                            BirimAdi = "Hemogram",
+                            BirimKodu = "HEM"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Aktif = true,
+                            BirimAdi = "Hormon",
+                            BirimKodu = "HOR"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Aktif = true,
+                            BirimAdi = "Kan Sayım",
+                            BirimKodu = "KAN"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Aktif = true,
+                            BirimAdi = "Sedimentasyon",
+                            BirimKodu = "SEDIM"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Aktif = true,
+                            BirimAdi = "Hepatit",
+                            BirimKodu = "HEP"
+                        });
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.CariGruplari", b =>
                 {
                     b.Property<int>("Id")
@@ -370,6 +447,60 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DocumentCategories");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.EkGider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("BirimAciklama")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("BirimFiyat")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int?>("BirimId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GiderAdi")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("IhaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kategori")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Kur")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("Miktar")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ParaBirimi")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BirimId");
+
+                    b.HasIndex("IhaleId");
+
+                    b.ToTable("EkGiderler");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.ExpenseDetail", b =>
@@ -579,6 +710,109 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsUnique();
 
                     b.ToTable("HospitalTestMonthlyVolumes");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.Ihale", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("GenelGiderOran")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime?>("GuncellenmeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IhaleAdi")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("IhaleKayitNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<TimeSpan?>("IhaleSaati")
+                        .HasColumnType("time");
+
+                    b.Property<string>("IhaleSekli")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("IhaleSuresiGun")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("IhaleTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("KDVOran")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("KarOran")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("KurEUR")
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("KurUSD")
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Ihaleler");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.IhaleKalem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BirimId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IhaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SiraNo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SutCarpan")
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("SutFiyat")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("SutKodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("TestMiktari")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TetkikAdi")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BirimId");
+
+                    b.HasIndex("IhaleId");
+
+                    b.ToTable("IhaleKalemler");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
@@ -841,7 +1075,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("MonthlyStatistics");
                 });
 
-            modelBuilder.Entity("CRMOzem.Core.Models.Tender", b =>
+            modelBuilder.Entity("CRMOzem.Core.Models.PersonelGider", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -849,148 +1083,43 @@ namespace CRMOzem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DurationMonths")
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal>("BirimFiyatAylik")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BirimId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("EgitimDurumu")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GorevUnvan")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    b.Property<decimal>("OverallCost")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("IhaleId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("RegistrationNumber")
+                    b.Property<int>("Sayi")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UcretTipi")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("TenderDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("TotalExtraCost")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalPersonnelCost")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalTestCost")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tenders");
-                });
+                    b.HasIndex("BirimId");
 
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderExtraCost", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.HasIndex("IhaleId");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("ExchangeRate")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TenderId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenderId");
-
-                    b.ToTable("TenderExtraCosts");
-                });
-
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderPersonnel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Count")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Education")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FeeDescription")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TenderId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("UnitFee")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenderId");
-
-                    b.ToTable("TenderPersonnels");
-                });
-
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderTest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Multiplier")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("OrderNo")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("SutCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("SutPoint")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TenderId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenderId");
-
-                    b.ToTable("TenderTests");
+                    b.ToTable("PersonelGiderler");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
@@ -1059,9 +1188,10 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HospitalID");
-
                     b.HasIndex("TestID");
+
+                    b.HasIndex("HospitalID", "TestID")
+                        .IsUnique();
 
                     b.ToTable("TestTemplates");
                 });
@@ -1504,6 +1634,24 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("CariGrubu");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.EkGider", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Birim", "Birim")
+                        .WithMany("EkGiderler")
+                        .HasForeignKey("BirimId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CRMOzem.Core.Models.Ihale", "Ihale")
+                        .WithMany("EkGiderler")
+                        .HasForeignKey("IhaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Birim");
+
+                    b.Navigation("Ihale");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.ExpenseDetail", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.ExpenseReport", "Report")
@@ -1554,6 +1702,24 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Hospital");
 
                     b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.IhaleKalem", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Birim", "Birim")
+                        .WithMany("IhaleKalemler")
+                        .HasForeignKey("BirimId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CRMOzem.Core.Models.Ihale", "Ihale")
+                        .WithMany("IhaleKalemler")
+                        .HasForeignKey("IhaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Birim");
+
+                    b.Navigation("Ihale");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
@@ -1643,37 +1809,23 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Test");
                 });
 
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderExtraCost", b =>
+            modelBuilder.Entity("CRMOzem.Core.Models.PersonelGider", b =>
                 {
-                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
-                        .WithMany("ExtraCosts")
-                        .HasForeignKey("TenderId")
+                    b.HasOne("CRMOzem.Core.Models.Birim", "Birim")
+                        .WithMany("PersonelGiderler")
+                        .HasForeignKey("BirimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Ihale", "Ihale")
+                        .WithMany("PersonelGiderler")
+                        .HasForeignKey("IhaleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Tender");
-                });
+                    b.Navigation("Birim");
 
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderPersonnel", b =>
-                {
-                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
-                        .WithMany("Personnels")
-                        .HasForeignKey("TenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tender");
-                });
-
-            modelBuilder.Entity("CRMOzem.Core.Models.TenderTest", b =>
-                {
-                    b.HasOne("CRMOzem.Core.Models.Tender", "Tender")
-                        .WithMany("Tests")
-                        .HasForeignKey("TenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tender");
+                    b.Navigation("Ihale");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TestSutPoint", b =>
@@ -1833,6 +1985,15 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Birim", b =>
+                {
+                    b.Navigation("EkGiderler");
+
+                    b.Navigation("IhaleKalemler");
+
+                    b.Navigation("PersonelGiderler");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.CariGruplari", b =>
                 {
                     b.Navigation("Cariler");
@@ -1859,6 +2020,15 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("TestTemplates");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.Ihale", b =>
+                {
+                    b.Navigation("EkGiderler");
+
+                    b.Navigation("IhaleKalemler");
+
+                    b.Navigation("PersonelGiderler");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.Kurum", b =>
                 {
                     b.Navigation("IstatistikAyliklar");
@@ -1872,15 +2042,6 @@ namespace CRMOzem.DataAccess.Migrations
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveType", b =>
                 {
                     b.Navigation("LeaveRequests");
-                });
-
-            modelBuilder.Entity("CRMOzem.Core.Models.Tender", b =>
-                {
-                    b.Navigation("ExtraCosts");
-
-                    b.Navigation("Personnels");
-
-                    b.Navigation("Tests");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>

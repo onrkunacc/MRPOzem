@@ -1,4 +1,10 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿// Para birimi seçildiğinde kuru otomatik doldur (EK GİDER modali)
+const kurDefaults = { TRY: 1, USD: 50, EUR: 60 };
 
-// Write your JavaScript code.
+const paraBirimiSel = document.getElementById('e_paraBirimi');
+if (paraBirimiSel) {
+    paraBirimiSel.addEventListener('change', () => {
+        const k = document.getElementById('e_kur');
+        if (k) k.value = kurDefaults[paraBirimiSel.value] ?? 1;
+    });
+}

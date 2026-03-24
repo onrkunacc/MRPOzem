@@ -32,10 +32,6 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<TrainingQuestion> TrainingQuestions { get; set; }
         public DbSet<TrainingAnswer> TrainingAnswers { get; set; }
         public DbSet<TrainingResult> TrainingResults { get; set; }
-        public DbSet<Tender> Tenders { get; set; }
-        public DbSet<TenderTest> TenderTests { get; set; }
-        public DbSet<TenderExtraCost> TenderExtraCosts { get; set; }
-        public DbSet<TenderPersonnel> TenderPersonnels { get; set; }
         public DbSet<Asset> Assets { get; set; }
         public DbSet<Assignee> Assignees { get; set; }
         public DbSet<Assignment> Assignments { get; set; }
@@ -45,6 +41,11 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<KurumIstatistikAylik> KurumIstatistikAyliklar => Set<KurumIstatistikAylik>();
         public DbSet<TestSutPoint> TestSutPoints { get; set; }
         public DbSet<HospitalTestMonthlyVolume> HospitalTestMonthlyVolumes { get; set; }
+        public DbSet<Ihale> Ihaleler { get; set; }
+        public DbSet<Birim> Birimler { get; set; }
+        public DbSet<PersonelGider> PersonelGiderler { get; set; }
+        public DbSet<EkGider> EkGiderler { get; set; }
+        public DbSet<IhaleKalem> IhaleKalemler { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -202,7 +203,57 @@ namespace CRMOzem.DataAccess.Context
                 .HasIndex(x => new { x.HospitalID, x.TestID })
                 .IsUnique();
 
-          
+            // Birim seed data
+            builder.Entity<Birim>().HasData(
+                new Birim { Id = 1, BirimKodu = "BIO", BirimAdi = "Biyokimya" },
+                new Birim { Id = 2, BirimKodu = "ELISA", BirimAdi = "Makro/Mikro ELISA" },
+                new Birim { Id = 3, BirimKodu = "HEM", BirimAdi = "Hemogram" },
+                new Birim { Id = 4, BirimKodu = "HOR", BirimAdi = "Hormon" },
+                new Birim { Id = 5, BirimKodu = "KAN", BirimAdi = "Kan Sayım" },
+                new Birim { Id = 6, BirimKodu = "SEDIM", BirimAdi = "Sedimentasyon" },
+                new Birim { Id = 7, BirimKodu = "HEP", BirimAdi = "Hepatit" }
+            );
+
+            // Personel → Ihale ilişkisi (cascade delete)
+            builder.Entity<PersonelGider>()
+                .HasOne(p => p.Ihale)
+                .WithMany(i => i.PersonelGiderler)
+                .HasForeignKey(p => p.IhaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PersonelGider>()
+                .HasOne(p => p.Birim)
+                .WithMany(b => b.PersonelGiderler)
+                .HasForeignKey(p => p.BirimId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // EkGider → Ihale ilişkisi
+            builder.Entity<EkGider>()
+                .HasOne(e => e.Ihale)
+                .WithMany(i => i.EkGiderler)
+                .HasForeignKey(e => e.IhaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<EkGider>()
+                .HasOne(e => e.Birim)
+                .WithMany(b => b.EkGiderler)
+                .HasForeignKey(e => e.BirimId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // IhaleKalem → Ihale ilişkisi
+            builder.Entity<IhaleKalem>()
+                .HasOne(k => k.Ihale)
+                .WithMany(i => i.IhaleKalemler)
+                .HasForeignKey(k => k.IhaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<IhaleKalem>()
+                .HasOne(k => k.Birim)
+                .WithMany(b => b.IhaleKalemler)
+                .HasForeignKey(k => k.BirimId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
         }
     }
 }

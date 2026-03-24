@@ -180,6 +180,7 @@
                 <i class="fe fe-clipboard fe-16"></i>
                 <span class="ml-3 item-text">İhale Dosyaları</span>
             </a>
+
         </li>
         <!--Evrak Listesi-->
         <li class="nav-item">
@@ -489,20 +490,26 @@
     {
         <li class="nav-item">
             <a class="nav-link" asp-area="" asp-controller="FileTransferWeb" asp-action="Index">
-                <i class="fe fe-file-plus fe-16"></i>
+                <i class="fe fe-upload fe-16"></i>
                 <span class="ml-3 item-text">İhale Dosya Yükle</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" asp-area="" asp-controller="FileBrowser" asp-action="Index">
-                <i class="fe fe-list fe-16"></i>
+                <i class="fe fe-folder fe-16"></i>
                 <span class="ml-3 item-text">İhale Dosyaları Listele</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" asp-area="Ihale" asp-controller="Tender" asp-action="Index">
-                <i class="fe fe-list fe-16"></i>
-                <span class="ml-3 item-text">İhale Maliyet Hesaplama</span>
+            <a class="nav-link" asp-area="Ihale" asp-controller="Ihale" asp-action="Index">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İhaleler</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Ihale" asp-controller="Ihale" asp-action="Create">
+                <i class="fe fe-plus-circle fe-16"></i>
+                <span class="ml-3 item-text">Yeni İhale</span>
             </a>
         </li>
     }

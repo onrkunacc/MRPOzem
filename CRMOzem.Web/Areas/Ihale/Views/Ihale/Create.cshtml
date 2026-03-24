@@ -1,0 +1,111 @@
+﻿@model Ihale
+@{
+    var isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? "İhaleyi Düzenle" : "Yeni İhale";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link rel="stylesheet" href="~/css/tendercss.css" />
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">@ViewData["Title"]</h1>
+        <p class="page-sub">@(isEdit? Model.IhaleAdi: "Yeni ihale maliyet hesabı başlatın")</p>
+    </div>
+    <a asp-area="Ihale" asp-controller="Ihale" asp-action="Index" class="btn btn-outline">← Geri</a>
+</div>
+
+<div class="form-card">
+    <form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+        @Html.AntiForgeryToken()
+
+        @if (isEdit)
+        {
+            <input type="hidden" asp-for="Id" />
+        }
+
+        <div class="form-section">
+            <h3 class="section-title">🏷 İhale Bilgileri</h3>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="IhaleAdi">İhale Adı *</label>
+                    <input asp-for="IhaleAdi" class="form-control" placeholder="İhale adını girin" required />
+                    <span asp-validation-for="IhaleAdi" class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="IhaleKayitNo">İhale Kayıt No</label>
+                    <input asp-for="IhaleKayitNo" class="form-control" placeholder="2026/149644" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="IhaleTarihi">İhale Tarihi</label>
+                    <input asp-for="IhaleTarihi" type="date" class="form-control"
+                           value="@Model.IhaleTarihi?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="IhaleSaati">İhale Saati</label>
+                    <input asp-for="IhaleSaati" type="time" class="form-control"
+                           value="@Model.IhaleSaati?.ToString(@"hh\:mm")" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="IhaleSekli">İhale Şekli</label>
+                    <select asp-for="IhaleSekli" class="form-control">
+                        <option value="HİZMET">HİZMET</option>
+                        <option value="MAL ALIMI">MAL ALIMI</option>
+                        <option value="YAPIM">YAPIM</option>
+                        <option value="DANIŞMANLIK">DANIŞMANLIK</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label asp-for="IhaleSuresiGun">İhale Süresi (Gün)</label>
+                    <input asp-for="IhaleSuresiGun" type="number" class="form-control" min="1" />
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="section-title">📊 Finansal Parametreler</h3>
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label asp-for="GenelGiderOran">Genel Gider Oranı</label>
+                    <div class="input-group">
+                        <input asp-for="GenelGiderOran" type="number" class="form-control"
+                               step="0.01" min="0" max="1" placeholder="0.10" />
+                        <span class="input-addon">%</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="KarOran">Kar Oranı</label>
+                    <div class="input-group">
+                        <input asp-for="KarOran" type="number" class="form-control"
+                               step="0.01" min="0" max="1" placeholder="0.15" />
+                        <span class="input-addon">%</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="KDVOran">KDV Oranı</label>
+                    <div class="input-group">
+                        <input asp-for="KDVOran" type="number" class="form-control"
+                               step="0.01" min="0" max="1" placeholder="0.20" />
+                        <span class="input-addon">%</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="KurUSD">USD Kuru (₺)</label>
+                    <input asp-for="KurUSD" type="number" class="form-control"
+                           step="0.01" min="0" placeholder="50.00" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="KurEUR">EUR Kuru (₺)</label>
+                    <input asp-for="KurEUR" type="number" class="form-control"
+                           step="0.01" min="0" placeholder="60.00" />
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a asp-area="Ihale" asp-controller="Ihale" asp-action="Index" class="btn btn-outline">İptal</a>
+            <button type="submit" class="btn btn-primary">
+                @(isEdit ? "💾 Kaydet" : "İhale Oluştur")
+            </button>
+        </div>
+    </form>
+</div>

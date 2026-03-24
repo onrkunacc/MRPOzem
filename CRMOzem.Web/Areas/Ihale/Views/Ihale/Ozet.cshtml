@@ -1,0 +1,406 @@
+﻿@model OzetViewModel
+@{
+    ViewData["Title"] = "Maliyet Özeti";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link rel="stylesheet" href="~/css/tendercss.css" />
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Maliyet Özeti</h1>
+        <p class="page-sub">@Model.Ihale.IhaleAdi</p>
+    </div>
+    <div class="header-actions">
+        <button onclick="window.print()" class="btn btn-outline">🖨 Yazdır</button>
+        <a asp-area="Ihale" asp-controller="Ihale" asp-action="Detail" asp-route-id="@Model.Ihale.Id" class="btn btn-ghost">← Detay</a>
+    </div>
+</div>
+
+<div class="ozet-info-grid">
+    <div class="info-card">
+        <span class="info-label">İhale</span>
+        <span class="info-value">@Model.Ihale.IhaleAdi</span>
+    </div>
+    <div class="info-card">
+        <span class="info-label">Kayıt No</span>
+        <span class="info-value">@(Model.Ihale.IhaleKayitNo ?? "—")</span>
+    </div>
+    <div class="info-card">
+        <span class="info-label">İhale Tarihi</span>
+        <span class="info-value">@(Model.Ihale.IhaleTarihi?.ToString("dd.MM.yyyy") ?? "—")</span>
+    </div>
+    <div class="info-card">
+        <span class="info-label">Süre</span>
+        <span class="info-value">@Model.Ihale.IhaleSuresiGun gün (@(Model.Ihale.IhaleSuresiGun / 30) ay)</span>
+    </div>
+    <div class="info-card">
+        <span class="info-label">İhale Şekli</span>
+        <span class="info-value">@(Model.Ihale.IhaleSekli ?? "HİZMET")</span>
+    </div>
+    <div class="info-card">
+        <span class="info-label">Genel Gider Oranı</span>
+        <span class="info-value">%@((Model.Ihale.GenelGiderOran * 100).ToString("0.##"))</span>
+    </div>
+</div>
+
+<div class="ozet-main-grid">
+
+    <!-- Maliyet Dökümü -->
+    <div class="ozet-totals-card">
+        <h3 class="card-section-title">📊 Maliyet Dökümü</h3>
+        <div class="maliyet-rows">
+
+            <div class="maliyet-row">
+                <span class="maliyet-label">
+                    <span class="maliyet-dot" style="background:#3b82f6;"></span>
+                    Personel Toplam
+                </span>
+                <span class="amount">@Model.PersonelToplam.ToString("N2") ₺</span>
+            </div>
+
+            <div class="maliyet-row">
+                <span class="maliyet-label">
+                    <span class="maliyet-dot" style="background:#10b981;"></span>
+                    Ek Gider Toplam
+                </span>
+                <span class="amount">@Model.EkGiderToplam.ToString("N2") ₺</span>
+            </div>
+
+            <div class="maliyet-row subtotal">
+                <span class="maliyet-label">Ara Toplam</span>
+                <span class="amount">@((Model.PersonelToplam + Model.EkGiderToplam).ToString("N2")) ₺</span>
+            </div>
+
+            <div class="maliyet-row">
+                <span class="maliyet-label">
+                    <span class="maliyet-dot" style="background:#f59e0b;"></span>
+                    Genel Gider <span class="maliyet-badge">%@((Model.Ihale.GenelGiderOran * 100).ToString("0"))</span>
+                </span>
+                <span class="amount">@Model.GenelGider.ToString("N2") ₺</span>
+            </div>
+
+            <div class="maliyet-row">
+                <span class="maliyet-label">
+                    <span class="maliyet-dot" style="background:#8b5cf6;"></span>
+                    Toplam SUT Fiyat <span class="maliyet-badge">Çarpanlı</span>
+                </span>
+                <span class="amount">@Model.ToplamSutFiyat.ToString("N2") ₺</span>
+            </div>
+
+            <div class="maliyet-row grand-total">
+                <span class="maliyet-label">GENEL TOPLAM</span>
+                <span class="amount">@Model.GenelToplam.ToString("N2") ₺</span>
+            </div>
+
+            <div class="maliyet-divider"></div>
+
+            <div class="maliyet-row ratio">
+                <span class="maliyet-label">Toplam SUT Puanı</span>
+                <span class="amount">@Model.ToplamSutPuani.ToString("N2")</span>
+            </div>
+
+            <div class="maliyet-row ratio ratio-highlight">
+                <span class="maliyet-label">Maliyet / SUT Puanı</span>
+                <span class="amount">@Model.ToplamMaliyetSutPuani.ToString("N4")</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Grafik -->
+    <div class="ozet-bar-card">
+        <h3 class="card-section-title">📈 Genel Dağılım</h3>
+        @{
+            var toplamMaliyet = Model.PersonelToplam + Model.EkGiderToplam + Model.GenelGider + Model.ToplamSutFiyat;
+            var pPct = toplamMaliyet > 0 ? (double)(Model.PersonelToplam / toplamMaliyet * 100) : 0;
+            var ePct = toplamMaliyet > 0 ? (double)(Model.EkGiderToplam / toplamMaliyet * 100) : 0;
+            var gPct = toplamMaliyet > 0 ? (double)(Model.GenelGider / toplamMaliyet * 100) : 0;
+            var sPct = toplamMaliyet > 0 ? (double)(Model.ToplamSutFiyat / toplamMaliyet * 100) : 0;
+
+            var chartData = new[]
+            {
+                new { label = "Personel",    value = (double)Model.PersonelToplam,  pct = pPct, color = "#3b82f6" },
+                new { label = "Ek Gider",    value = (double)Model.EkGiderToplam,   pct = ePct, color = "#10b981" },
+                new { label = "Genel Gider", value = (double)Model.GenelGider,      pct = gPct, color = "#f59e0b" },
+                new { label = "SUT Fiyat",   value = (double)Model.ToplamSutFiyat,  pct = sPct, color = "#8b5cf6" },
+                };
+        }
+
+        <!-- Donut grafik -->
+        <div class="donut-wrap">
+            <canvas id="ozetChart" width="200" height="200"></canvas>
+            <div class="donut-center">
+                <span class="donut-total-label">Toplam</span>
+                <span class="donut-total-value">@toplamMaliyet.ToString("N0") ₺</span>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="chart-legend">
+            @foreach (var item in chartData)
+            {
+                <div class="chart-legend-item">
+                    <span class="chart-legend-dot" style="background:@item.color;"></span>
+                    <div class="chart-legend-info">
+                        <span class="chart-legend-label">@item.label</span>
+                        <span class="chart-legend-pct">%@item.pct.ToString("0.0")</span>
+                    </div>
+                    <span class="chart-legend-amount">@item.value.ToString("N0") ₺</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Birim Bazlı Özet -->
+<div class="section-card">
+    <h3 class="card-section-title">🔬 Birim Bazlı Özet</h3>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Birim Kodu</th>
+                    <th>Birim Adı</th>
+                    <th class="text-right">Personel (₺)</th>
+                    <th class="text-right">Ek Gider (₺)</th>
+                    <th class="text-right">SUT Fiyat (₺)</th>
+                    <th class="text-right">Toplam Maliyet (₺)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Model.BirimOzetler)
+                {
+                    <tr>
+                        <td><span class="badge-birim">@b.BirimKodu</span></td>
+                        <td>@b.BirimAdi</td>
+                        <td class="text-right font-mono">@b.PersonelTRY.ToString("N2")</td>
+                        <td class="text-right font-mono">@b.EkGiderTRY.ToString("N2")</td>
+                        <td class="text-right font-mono">@b.ToplamSUT.ToString("N2")</td>
+                        <td class="text-right font-mono">@b.ToplamMaliyet.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>GENEL TOPLAM</strong></td>
+                    <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.PersonelTRY).ToString("N2")</strong></td>
+                    <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.EkGiderTRY).ToString("N2")</strong></td>
+                    <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.ToplamSUT).ToString("N2")</strong></td>
+                    <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.ToplamMaliyet).ToString("N2")</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<style>
+    /* Donut grafik wrapper */
+    .donut-wrap {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 20px;
+    }
+
+    .donut-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    .donut-total-label {
+        font-size: 11px;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .donut-total-value {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1a202c;
+        font-family: 'Courier New', monospace;
+        text-align: center;
+        line-height: 1.3;
+        max-width: 100px;
+        word-break: break-all;
+    }
+
+    /* Legend */
+    .chart-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .chart-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #f8f9fc;
+        border: 1px solid #e3e8f0;
+    }
+
+    .chart-legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .chart-legend-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .chart-legend-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1a202c;
+    }
+
+    .chart-legend-pct {
+        font-size: 11px;
+        color: #a0aec0;
+    }
+
+    .chart-legend-amount {
+        font-size: 12px;
+        font-weight: 600;
+        color: #4a5568;
+        font-family: 'Courier New', monospace;
+        white-space: nowrap;
+    }
+
+    .maliyet-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .maliyet-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .maliyet-badge {
+        display: inline-block;
+        background: #eef2f7;
+        color: #4a5568;
+        border: 1px solid #d0d7e3;
+        border-radius: 4px;
+        padding: 0px 5px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: .03em;
+        line-height: 1.6;
+    }
+
+    .maliyet-divider {
+        height: 1px;
+        background: #e3e8f0;
+        margin: 4px 0;
+    }
+
+    .ratio-highlight {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0 !important;
+        border-radius: 8px;
+        padding: 8px 10px !important;
+        margin-top: 2px;
+    }
+
+        .ratio-highlight .amount {
+            color: #065f46 !important;
+            font-weight: 700;
+        }
+</style>
+
+<script>
+    (function () {
+        const canvas = document.getElementById('ozetChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const data = [
+            { label: 'Personel',    value: @Model.PersonelToplam.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),  color: '#3b82f6' },
+            { label: 'Ek Gider',    value: @Model.EkGiderToplam.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),   color: '#10b981' },
+            { label: 'Genel Gider', value: @Model.GenelGider.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),      color: '#f59e0b' },
+            { label: 'SUT Fiyat',   value: @Model.ToplamSutFiyat.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),  color: '#8b5cf6' },
+        ];
+
+        const total = data.reduce((s, d) => s + d.value, 0);
+        if (total <= 0) {
+            ctx.fillStyle = '#e3e8f0';
+            ctx.beginPath();
+            ctx.arc(100, 100, 80, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+
+        const cx = 100, cy = 100, r = 85, inner = 55;
+        let angle = -Math.PI / 2;
+
+        data.forEach(d => {
+            if (d.value <= 0) return;
+            const slice = (d.value / total) * Math.PI * 2;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, angle, angle + slice);
+            ctx.closePath();
+            ctx.fillStyle = d.color;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            angle += slice;
+        });
+
+        // İç boşluk (donut deliği)
+        ctx.beginPath();
+        ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+
+        // Hover efekti için tooltip
+        canvas.addEventListener('mousemove', function (e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const dx = mx - cx, dy = my - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < inner || dist > r) {
+                canvas.title = '';
+                return;
+            }
+
+            let a = Math.atan2(dy, dx) - (-Math.PI / 2);
+            if (a < 0) a += Math.PI * 2;
+
+            let cumulative = 0;
+            for (const d of data) {
+                if (d.value <= 0) continue;
+                const slice = (d.value / total) * Math.PI * 2;
+                cumulative += slice;
+                if (a <= cumulative) {
+                    const pct = (d.value / total * 100).toFixed(1);
+                    canvas.title = `${d.label}: ${d.value.toLocaleString('tr-TR', {minimumFractionDigits:2})} ₺ (%${pct})`;
+                    break;
+                }
+            }
+        });
+    })();
+</script>
