@@ -113,5 +113,25 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
             await _svc.DeleteKalemAsync(id);
             return Json(new { success = true });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ExcelIndir(int id)
+        {
+            var ozet = await _svc.GetOzetAsync(id);
+            var export = new IhaleExportService();
+            var bytes = export.ExcelOlustur(ozet);
+            var dosyaAdi = $"IhaleMaliyet_{ozet.Ihale.IhaleAdi.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", dosyaAdi);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PdfIndir(int id)
+        {
+            var ozet = await _svc.GetOzetAsync(id);
+            var export = new IhaleExportService();
+            var bytes = export.PdfOlustur(ozet);
+            var dosyaAdi = $"IhaleMaliyet_{ozet.Ihale.IhaleAdi.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf";
+            return File(bytes, "application/pdf", dosyaAdi);
+        }
     }
 }

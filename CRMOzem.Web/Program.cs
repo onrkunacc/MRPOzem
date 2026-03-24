@@ -50,6 +50,7 @@ builder.Services.AddScoped<IHospitalTestSetService, HospitalTestSetService>();
 builder.Services.AddScoped<IMonthlyVolumeService, MonthlyVolumeService>();
 builder.Services.AddScoped<ISutPointService, SutPointService>();
 builder.Services.AddScoped<IIhaleService, IhaleService>();
+builder.Services.AddScoped<IIhaleExportService, IhaleExportService>();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
