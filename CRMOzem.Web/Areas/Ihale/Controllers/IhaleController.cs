@@ -92,6 +92,13 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
             var saved = await _svc.SaveEkGiderAsync(model);
             return Json(new { success = true, id = saved.Id, tutarTRY = saved.TutarTRY });
         }
+        
+        [HttpPost]
+        public async Task<IActionResult> EkGiderGuncelle([FromBody] EkGider model)
+        {
+            var saved = await _svc.SaveEkGiderAsync(model);
+            return Json(new { success = true, tutarTRY = saved.TutarTRY });
+        }
 
         [HttpPost]
         public async Task<IActionResult> EkGiderSil(int id)
@@ -113,7 +120,19 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
             await _svc.DeleteKalemAsync(id);
             return Json(new { success = true });
         }
+        [HttpPost]
+        public async Task<IActionResult> PersonelGuncelle([FromBody] PersonelGider model)
+        {
+            var saved = await _svc.SavePersonelAsync(model);
+            return Json(new { success = true, toplamTRY = saved.ToplamTRY });
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> KalemGuncelle([FromBody] IhaleKalem model)
+        {
+            var saved = await _svc.SaveKalemAsync(model);
+            return Json(new { success = true, toplamSUT = saved.ToplamSUT, toplamSutFiyat = saved.ToplamSutFiyat });
+        }
         [HttpGet]
         public async Task<IActionResult> ExcelIndir(int id)
         {

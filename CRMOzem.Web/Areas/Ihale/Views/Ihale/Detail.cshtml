@@ -20,7 +20,6 @@
 }
 
 <link rel="stylesheet" href="~/css/tendercss.css" />
-
 <div class="page-header">
     <div>
         <h1 class="page-title">@Model.IhaleAdi</h1>
@@ -47,8 +46,8 @@
     <div class="pbar-item"><span>Genel Gider</span><strong>%@((Model.GenelGiderOran * 100).ToString("0"))</strong></div>
     <div class="pbar-item"><span>Kar</span><strong>%@((Model.KarOran * 100).ToString("0"))</strong></div>
     <div class="pbar-item"><span>KDV</span><strong>%@((Model.KDVOran * 100).ToString("0"))</strong></div>
-    <div class="pbar-item"><span>USD</span><strong>@Model.KurUSD.ToString("N4") ₺</strong></div>
-    <div class="pbar-item"><span>EUR</span><strong>@Model.KurEUR.ToString("N4") ₺</strong></div>
+    <div class="pbar-item"><span>USD</span><strong>@Model.KurUSD.ToString("N2") ₺</strong></div>
+    <div class="pbar-item"><span>EUR</span><strong>@Model.KurEUR.ToString("N2") ₺</strong></div>
     <div class="pbar-item"><span>Süre</span><strong>@Model.IhaleSuresiGun gün</strong></div>
 </div>
 
@@ -59,7 +58,7 @@
         <button type="button" class="tab-btn" data-tab="kalemler">🔬 İhale Kalemleri</button>
     </nav>
 
-    <!-- ── PERSONEL ───────────────────────────────────────────────── -->
+    <!-- ══ PERSONEL ══════════════════════════════════════════════════ -->
     <div class="tab-panel active" id="tab-personel">
         <div class="panel-toolbar">
             <span class="panel-count">@Model.PersonelGiderler.Count kayıt</span>
@@ -73,24 +72,81 @@
                         <th>Görev/Unvan</th>
                         <th>Sayı</th>
                         <th>Ücret Tipi</th>
-                        <th>Aylık Brüt (₺)</th>
-                        <th>Süre (gün)</th>
+                        <th class="text-right">Aylık Brüt (₺)</th>
+                        <th class="text-right">Süre (gün)</th>
                         <th class="text-right">Toplam (₺)</th>
-                        <th></th>
+                        <th style="width:80px"></th>
                     </tr>
                 </thead>
                 <tbody id="personelTableBody">
                     @foreach (var p in Model.PersonelGiderler)
                     {
-                        <tr data-id="@p.Id">
+                        <!-- Görünüm -->
+                        <tr data-id="@p.Id" class="pr-row-view">
                             <td><span class="badge-birim">@(p.Birim?.BirimKodu ?? "-")</span></td>
-                            <td>@p.GorevUnvan</td>
-                            <td>@p.Sayi</td>
-                            <td><span class="tag">@p.UcretTipi</span></td>
-                            <td>@p.BirimFiyatAylik.ToString("N2")</td>
-                            <td>@Model.IhaleSuresiGun</td>
-                            <td class="text-right font-mono">@p.ToplamTRY.ToString("N2")</td>
-                            <td><button type="button" class="btn btn-danger btn-xs" onclick="personelSil(@p.Id, this)">✕</button></td>
+                            <td class="pr-gorev">@p.GorevUnvan</td>
+                            <td class="pr-sayi">@p.Sayi</td>
+                            <td><span class="tag pr-ucret">@p.UcretTipi</span></td>
+                            <td class="text-right font-mono pr-fiyat">@p.BirimFiyatAylik.ToString("N2")</td>
+                            <td class="text-right pr-sure">@Model.IhaleSuresiGun</td>
+                            <td class="text-right font-mono pr-toplam">@p.ToplamTRY.ToString("N2")</td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-outline btn-xs" onclick="prDuzenle(@p.Id)" title="Düzenle">✏️</button>
+                                    <button type="button" class="btn btn-danger btn-xs" onclick="personelSil(@p.Id, this)" title="Sil">✕</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Düzenleme -->
+                        <tr data-id="@p.Id" class="pr-row-edit" style="display:none;">
+                            <td>
+                                <select class="kcell-select pr-edit-birimId">
+                                    <option value="">-</option>
+                                    @foreach (var b in birimler)
+                                    {
+                                        if (p.BirimId == b.Id)
+                                        {
+                                            <option value="@b.Id" selected>@b.BirimKodu</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@b.Id">@b.BirimKodu</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input class="kcell pr-edit-gorevUnvan" value="@p.GorevUnvan" /></td>
+                            <td><input class="kcell pr-edit-sayi" type="number" value="@p.Sayi" min="1" style="width:50px;" /></td>
+                            <td>
+                                <select class="kcell-select pr-edit-ucretTipi">
+                                    @foreach (var ut in new[] { "Brut (Aylik)", "Net (Aylik)", "Günlük" })
+                                    {
+                                        if (p.UcretTipi == ut)
+                                        {
+                                            <option value="@ut" selected>@ut</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@ut">@ut</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input class="kcell pr-edit-birimFiyat numeric-input"
+                                       value="@p.BirimFiyatAylik.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="pr-edit-birimFiyat-raw"
+                                       value="@p.BirimFiyatAylik.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td class="text-right" style="color:#a0aec0;font-size:.8rem;">@Model.IhaleSuresiGun</td>
+                            <td class="text-right font-mono pr-edit-preview" style="color:#f59e0b;font-size:.8rem;white-space:nowrap;"></td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-primary btn-xs" onclick="prKaydet(@p.Id, this)" title="Kaydet">💾</button>
+                                    <button type="button" class="btn btn-ghost btn-xs" onclick="prIptal(@p.Id)" title="İptal">✕</button>
+                                </div>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -105,7 +161,7 @@
         </div>
     </div>
 
-    <!-- ── EK GİDER ──────────────────────────────────────────────── -->
+    <!-- ══ EK GİDER ═════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-ekgider">
         <div class="panel-toolbar">
             <span class="panel-count">@Model.EkGiderler.Count kayıt</span>
@@ -118,27 +174,97 @@
                         <th>Birim</th>
                         <th>Gider Adı</th>
                         <th>Kategori</th>
-                        <th>Miktar</th>
-                        <th>Birim Fiyat</th>
+                        <th class="text-right">Miktar</th>
+                        <th class="text-right">Birim Fiyat</th>
                         <th>Para Birimi</th>
-                        <th>Kur</th>
+                        <th class="text-right">Kur</th>
                         <th class="text-right">Tutar (₺)</th>
-                        <th></th>
+                        <th style="width:80px"></th>
                     </tr>
                 </thead>
                 <tbody id="ekGiderTableBody">
                     @foreach (var e in Model.EkGiderler)
                     {
-                        <tr data-id="@e.Id">
+                        <!-- Görünüm -->
+                        <tr data-id="@e.Id" class="eg-row-view">
                             <td><span class="badge-birim">@(e.Birim?.BirimKodu ?? "-")</span></td>
                             <td>@e.GiderAdi</td>
-                            <td>@e.Kategori</td>
-                            <td>@e.Miktar</td>
-                            <td>@e.BirimFiyat.ToString("N4")</td>
-                            <td><span class="tag">@e.ParaBirimi</span></td>
-                            <td>@e.Kur.ToString("N4")</td>
-                            <td class="text-right font-mono">@e.TutarTRY.ToString("N2")</td>
-                            <td><button type="button" class="btn btn-danger btn-xs" onclick="ekGiderSil(@e.Id, this)">✕</button></td>
+                            <td>@(e.Kategori ?? "-")</td>
+                            <td class="text-right font-mono eg-miktar">@e.Miktar.ToString("N0")</td>
+                            <td class="text-right font-mono eg-birimfiyat">@e.BirimFiyat.ToString("N2")</td>
+                            <td><span class="tag eg-parabir">@e.ParaBirimi</span></td>
+                            <td class="text-right font-mono eg-kur">@e.Kur.ToString("N2")</td>
+                            <td class="text-right font-mono eg-tutar"><strong>@e.TutarTRY.ToString("N2")</strong></td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-outline btn-xs" onclick="egDuzenle(@e.Id)" title="Düzenle">✏️</button>
+                                    <button type="button" class="btn btn-danger btn-xs" onclick="ekGiderSil(@e.Id, this)" title="Sil">✕</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Düzenleme -->
+                        <tr data-id="@e.Id" class="eg-row-edit" style="display:none;">
+                            <td>
+                                <select class="kcell-select eg-edit-birimId">
+                                    <option value="">-</option>
+                                    @foreach (var b in birimler)
+                                    {
+                                        if (e.BirimId == b.Id)
+                                        {
+                                            <option value="@b.Id" selected>@b.BirimKodu</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@b.Id">@b.BirimKodu</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input class="kcell eg-edit-giderAdi" value="@e.GiderAdi" /></td>
+                            <td><input class="kcell eg-edit-kategori" value="@(e.Kategori ?? "")" /></td>
+                            <td>
+                                <input class="kcell eg-edit-miktar numeric-input"
+                                       value="@e.Miktar.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="eg-edit-miktar-raw"
+                                       value="@e.Miktar.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td>
+                                <input class="kcell eg-edit-birimFiyat numeric-input"
+                                       value="@e.BirimFiyat.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="eg-edit-birimFiyat-raw"
+                                       value="@e.BirimFiyat.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td>
+                                <select class="kcell-select eg-edit-paraBirimi">
+                                    @foreach (var pb in new[] { "TRY", "USD", "EUR" })
+                                    {
+                                        if (e.ParaBirimi == pb)
+                                        {
+                                            <option value="@pb" selected>@pb</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@pb">@pb</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input class="kcell eg-edit-kur numeric-input"
+                                       value="@e.Kur.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="eg-edit-kur-raw"
+                                       value="@e.Kur.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td class="text-right font-mono eg-edit-preview" style="color:#f59e0b;font-size:.8rem;white-space:nowrap;"></td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-primary btn-xs" onclick="egKaydet(@e.Id, this)" title="Kaydet">💾</button>
+                                    <button type="button" class="btn btn-ghost btn-xs" onclick="egIptal(@e.Id)" title="İptal">✕</button>
+                                </div>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -153,7 +279,7 @@
         </div>
     </div>
 
-    <!-- ── KALEMLER ───────────────────────────────────────────────── -->
+    <!-- ══ KALEMLER ═════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-kalemler">
         <div class="panel-toolbar">
             <span class="panel-count">@Model.IhaleKalemler.Count kalem</span>
@@ -167,34 +293,132 @@
                         <th>Birim</th>
                         <th>SUT Kodu</th>
                         <th>Tetkik Adı</th>
-                        <th>Test Miktarı</th>
-                        <th>SUT Fiyat</th>
-                        <th>SUT Çarpan</th>
+                        <th class="text-right">Test Miktarı</th>
+                        <th class="text-right">SUT Fiyat</th>
+                        <th class="text-right">SUT Çarpan</th>
                         <th class="text-right">Toplam SUT</th>
                         <th class="text-right">Toplam SUT Fiyat</th>
-                        <th></th>
+                        <th style="width:80px"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var k in Model.IhaleKalemler.OrderBy(x => x.SiraNo))
                     {
-                        <tr data-id="@k.Id">
+                        <!-- Görünüm -->
+                        <tr data-id="@k.Id" class="kl-row-view">
                             <td>@k.SiraNo</td>
                             <td><span class="badge-birim">@(k.Birim?.BirimKodu ?? "-")</span></td>
-                            <td>@k.SutKodu</td>
-                            <td>@k.TetkikAdi</td>
-                            <td>@k.TestMiktari.ToString("N0")</td>
-                            <td>@k.SutFiyat.ToString("N4")</td>
-                            <td>@k.SutCarpan.ToString("N3")</td>
-                            <td class="text-right font-mono">@k.ToplamSUT.ToString("N2")</td>
-                            <td class="text-right font-mono">@k.ToplamSutFiyat.ToString("N2")</td>
-                            <td><button type="button" class="btn btn-danger btn-xs" onclick="kalemSil(@k.Id, this)">✕</button></td>
+                            <td class="kl-sutkodu">@k.SutKodu</td>
+                            <td class="kl-tetkik">@k.TetkikAdi</td>
+                            <td class="text-right font-mono kl-miktar">@k.TestMiktari.ToString("N0")</td>
+                            <td class="text-right font-mono kl-sutfiyat">@k.SutFiyat.ToString("N2")</td>
+                            <td class="text-right font-mono kl-carpan">@k.SutCarpan.ToString("N3")</td>
+                            <td class="text-right font-mono kl-toplamSut">@k.ToplamSUT.ToString("N2")</td>
+                            <td class="text-right font-mono kl-toplamSutFiyat">@k.ToplamSutFiyat.ToString("N2")</td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-outline btn-xs" onclick="klDuzenle(@k.Id)" title="Düzenle">✏️</button>
+                                    <button type="button" class="btn btn-danger btn-xs" onclick="kalemSil(@k.Id, this)" title="Sil">✕</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Düzenleme -->
+                        <tr data-id="@k.Id" class="kl-row-edit" style="display:none;">
+                            <td>
+                                <input class="kcell kl-edit-siraNo" type="number"
+                                       value="@k.SiraNo" min="1" style="width:45px;text-align:center;" />
+                            </td>
+                            <td>
+                                <select class="kcell-select kl-edit-birimId">
+                                    <option value="">-</option>
+                                    @foreach (var b in birimler)
+                                    {
+                                        if (k.BirimId == b.Id)
+                                        {
+                                            <option value="@b.Id" selected>@b.BirimKodu</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@b.Id">@b.BirimKodu</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input class="kcell kl-edit-sutKodu" value="@(k.SutKodu ?? "")" placeholder="P1234" /></td>
+                            <td><input class="kcell kl-edit-tetkikAdi" value="@k.TetkikAdi" /></td>
+                            <td>
+                                <input class="kcell kl-edit-testMiktari numeric-input"
+                                       value="@k.TestMiktari.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="kl-edit-testMiktari-raw"
+                                       value="@k.TestMiktari.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td>
+                                <input class="kcell kl-edit-sutFiyat numeric-input"
+                                       value="@k.SutFiyat.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="kl-edit-sutFiyat-raw"
+                                       value="@k.SutFiyat.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td>
+                                <input class="kcell kl-edit-sutCarpan numeric-input"
+                                       value="@k.SutCarpan.ToString("N3", CultureInfo.GetCultureInfo("tr-TR"))"
+                                       autocomplete="off" style="text-align:right;" />
+                                <input type="hidden" class="kl-edit-sutCarpan-raw"
+                                       value="@k.SutCarpan.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                            <td class="text-right font-mono kl-edit-toplamSut-preview" style="color:#a0aec0;font-size:.8rem;"></td>
+                            <td class="text-right font-mono kl-edit-preview" style="color:#f59e0b;font-size:.8rem;white-space:nowrap;"></td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button type="button" class="btn btn-primary btn-xs" onclick="klKaydet(@k.Id, this)" title="Kaydet">💾</button>
+                                    <button type="button" class="btn btn-ghost btn-xs" onclick="klIptal(@k.Id)" title="İptal">✕</button>
+                                </div>
+                            </td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
-                    <tr>
-                        <td colspan="7"><strong>TOPLAM</strong></td>
+                    <!-- Birim bazlı ara toplamlar -->
+                    @foreach (var birimGrup in Model.IhaleKalemler
+                                        .Where(k => k.BirimId != null)
+                                        .GroupBy(k => new { k.BirimId, k.Birim?.BirimKodu, k.Birim?.BirimAdi })
+                                        .OrderBy(g => g.Key.BirimKodu))
+                    {
+                        <tr class="tfoot-birim-row">
+                            <td colspan="7" style="text-align:right; color:#4a5568; font-size:.8rem; padding-right:8px;">
+                                <span class="badge-birim">@birimGrup.Key.BirimKodu</span>
+                                @birimGrup.Key.BirimAdi ara toplamı
+                            </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @birimGrup.Sum(k => k.ToplamSUT).ToString("N2")
+                            </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @birimGrup.Sum(k => k.ToplamSutFiyat).ToString("N2")
+                            </td>
+                            <td></td>
+                        </tr>
+                    }
+                    <!-- Birimi olmayan kalemlerin toplamı -->
+                    @if (Model.IhaleKalemler.Any(k => k.BirimId == null))
+                    {
+                        <tr class="tfoot-birim-row">
+                            <td colspan="7" style="text-align:right; color:#a0aec0; font-size:.8rem;">
+                                <span class="badge-birim" style="background:#f3f4f6;color:#6b7280;">-</span>
+                                Birimsiz ara toplamı
+                            </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @Model.IhaleKalemler.Where(k => k.BirimId == null).Sum(k => k.ToplamSUT).ToString("N2")
+                            </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @Model.IhaleKalemler.Where(k => k.BirimId == null).Sum(k => k.ToplamSutFiyat).ToString("N2")
+                            </td>
+                            <td></td>
+                        </tr>
+                    }
+                    <!-- Genel toplam -->
+                    <tr class="tfoot-total-row">
+                        <td colspan="7"><strong>GENEL TOPLAM</strong></td>
                         <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.ToplamSUT).ToString("N2")</strong></td>
                         <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.ToplamSutFiyat).ToString("N2") ₺</strong></td>
                         <td></td>
@@ -205,9 +429,7 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     MODAL: Personel
-════════════════════════════════════════════════════════════════════ -->
+<!-- ═══ MODAL: Personel ══════════════════════════════════════════════ -->
 <div class="th-modal-overlay" id="personelModal" aria-hidden="true">
     <div class="th-modal" role="dialog" aria-modal="true">
         <div class="th-modal-header">
@@ -215,7 +437,6 @@
             <button type="button" onclick="closeModal('personelModal')" class="th-modal-close">✕</button>
         </div>
         <div class="th-modal-body">
-            <!-- Bildirim alanı -->
             <div id="personelFeedback" class="modal-feedback" style="display:none;"></div>
             <div class="form-grid-2">
                 <div class="form-group">
@@ -267,9 +488,7 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     MODAL: Ek Gider
-════════════════════════════════════════════════════════════════════ -->
+<!-- ═══ MODAL: Ek Gider ══════════════════════════════════════════════ -->
 <div class="th-modal-overlay" id="ekGiderModal" aria-hidden="true">
     <div class="th-modal" role="dialog" aria-modal="true">
         <div class="th-modal-header">
@@ -277,7 +496,6 @@
             <button type="button" onclick="closeModal('ekGiderModal')" class="th-modal-close">✕</button>
         </div>
         <div class="th-modal-body">
-            <!-- Bildirim alanı -->
             <div id="ekGiderFeedback" class="modal-feedback" style="display:none;"></div>
             <div class="form-grid-2">
                 <div class="form-group">
@@ -300,7 +518,7 @@
                 </div>
                 <div class="form-group">
                     <label>Miktar</label>
-                    <input id="e_miktar" class="form-control numeric-input" placeholder="0,0000" autocomplete="off" />
+                    <input id="e_miktar" class="form-control numeric-input" placeholder="0" autocomplete="off" />
                     <input type="hidden" id="e_miktar_raw" />
                 </div>
                 <div class="form-group">
@@ -318,7 +536,7 @@
                 </div>
                 <div class="form-group">
                     <label>Kur</label>
-                    <input id="e_kur" class="form-control numeric-input" placeholder="1,00" autocomplete="off" />
+                    <input id="e_kur" class="form-control numeric-input" placeholder="1,0000" autocomplete="off" />
                     <input type="hidden" id="e_kur_raw" />
                 </div>
                 <div class="form-group" style="grid-column:span 2">
@@ -335,25 +553,19 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     MODAL: Toplu Kalem Girişi (3-in-1)
-════════════════════════════════════════════════════════════════════ -->
+<!-- ═══ MODAL: Toplu Kalem ═══════════════════════════════════════════ -->
 <div class="th-modal-overlay" id="kalemTopluModal" aria-hidden="true">
     <div class="th-modal th-modal--wide" role="dialog" aria-modal="true">
         <div class="th-modal-header">
             <h3>İhale Kalemleri Ekle</h3>
             <button type="button" onclick="closeModal('kalemTopluModal')" class="th-modal-close">✕</button>
         </div>
-
         <div class="th-modal-body" style="padding:0;">
-
             <div class="ktab-nav">
                 <button type="button" class="ktab-btn active" data-ktab="inline">📝 Satır Satır</button>
                 <button type="button" class="ktab-btn" data-ktab="paste">📋 Yapıştır</button>
                 <button type="button" class="ktab-btn" data-ktab="import">📂 Excel / CSV</button>
             </div>
-
-            <!-- ── SEKME 1: Inline ──────────────────────────────── -->
             <div class="ktab-panel active" id="ktab-inline">
                 <div style="padding:14px 20px 8px;">
                     <p class="ktab-hint">Satırları doldurun. <kbd>Enter</kbd> ile yeni satır ekleyin.</p>
@@ -379,8 +591,6 @@
                     <button type="button" class="btn btn-ghost btn-sm" onclick="inlineSatirEkle()">+ Satır Ekle</button>
                 </div>
             </div>
-
-            <!-- ── SEKME 2: Yapıştır ────────────────────────────── -->
             <div class="ktab-panel" id="ktab-paste">
                 <div style="padding:14px 20px 10px;">
                     <p class="ktab-hint">
@@ -395,23 +605,11 @@
                 <div id="pastePreview" style="display:none;overflow-x:auto;padding:0 20px 14px;">
                     <p class="ktab-hint" id="pastePreviewInfo"></p>
                     <table class="kinline-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th style="width:90px">Birim</th>
-                                <th>SUT Kodu</th>
-                                <th>Tetkik Adı</th>
-                                <th>Miktar</th>
-                                <th>SUT Fiyat</th>
-                                <th>Çarpan</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>#</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
                         <tbody id="pastePreviewBody"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- ── SEKME 3: Excel/CSV ───────────────────────────── -->
             <div class="ktab-panel" id="ktab-import">
                 <div style="padding:14px 20px 10px;">
                     <p class="ktab-hint">
@@ -429,24 +627,12 @@
                 <div id="importPreview" style="display:none;overflow-x:auto;padding:0 20px 14px;">
                     <p class="ktab-hint" id="importPreviewInfo"></p>
                     <table class="kinline-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th style="width:90px">Birim</th>
-                                <th>SUT Kodu</th>
-                                <th>Tetkik Adı</th>
-                                <th>Miktar</th>
-                                <th>SUT Fiyat</th>
-                                <th>Çarpan</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>#</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
                         <tbody id="importPreviewBody"></tbody>
                     </table>
                 </div>
             </div>
-
         </div>
-
         <div class="th-modal-footer" style="justify-content:space-between;align-items:center;">
             <span id="kalemSaveInfo" style="font-size:13px;color:#4a5568;"></span>
             <div style="display:flex;gap:8px;">
@@ -465,7 +651,6 @@
         max-width: 980px;
     }
 
-    /* Bildirim alanı */
     .modal-feedback {
         padding: 10px 14px;
         border-radius: 8px;
@@ -489,12 +674,25 @@
             color: #991b1b;
         }
 
-    /* Sayısal input gösterimi */
     .numeric-display {
         text-align: right;
         font-family: 'Courier New', monospace;
-        letter-spacing: -.01em;
     }
+
+    /* Inline edit satırları */
+    .pr-row-edit,
+    .eg-row-edit,
+    .kl-row-edit {
+        border-left: 3px solid #f59e0b;
+        background: #fffbeb !important;
+    }
+
+        .pr-row-edit td,
+        .eg-row-edit td,
+        .kl-row-edit td {
+            padding: 4px 4px !important;
+            vertical-align: middle;
+        }
 
     .ktab-nav {
         display: flex;
@@ -647,8 +845,7 @@
         transition: border-color .2s, background .2s;
     }
 
-        .import-drop-zone:hover,
-        .import-drop-zone.drag-over {
+        .import-drop-zone:hover, .import-drop-zone.drag-over {
             border-color: #3b82f6;
             background: #eff6ff;
             color: #2563eb;
@@ -667,86 +864,76 @@
     const IHALE_ID = pageData.ihaleId;
     const BASE     = '/Ihale/Ihale';
     const BIRIMLER = @Html.Raw(birimlerJsonStr);
+    const SURE_GUN = @Model.IhaleSuresiGun;
 
-    // ══════════════════════════════════════════════════════════════════════
-    // SAYISAL FORMAT YARDIMCILARI
-    // ══════════════════════════════════════════════════════════════════════
-
-    // Ham sayıyı al (hidden field veya parse)
+    // ── Format yardımcıları ──────────────────────────────────────────────
     function getRaw(hiddenId) {
-        const val = document.getElementById(hiddenId)?.value;
-        return val ? parseFloat(val) : 0;
+        const v = document.getElementById(hiddenId)?.value;
+        return v ? parseFloat(v) : 0;
     }
-
-    // Türkçe formatla göster: 1.234.567,89
-    function formatTR(val, decimals = 2) {
-        if (isNaN(val) || val === null || val === '') return '';
-        return Number(val).toLocaleString('tr-TR', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
+    function formatTR(val, dec = 2) {
+        if (isNaN(val) || val === null) return '';
+        return Number(val).toLocaleString('tr-TR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
     }
-
-    // Türkçe string'den ham sayıya çevir: "1.234,56" → 1234.56
     function parseTR(str) {
         if (!str) return NaN;
-        // Noktaları kaldır (binlik), virgülü noktaya çevir (ondalık)
-        const cleaned = str.replace(/\./g, '').replace(',', '.');
-        return parseFloat(cleaned);
+        return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+    }
+    function numericKeydown(e) {
+        const ok = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Home','End'];
+        if (ok.includes(e.key) || e.ctrlKey || e.metaKey || e.key === ',' || e.key === '.') return;
+        if (!/^\d$/.test(e.key)) e.preventDefault();
     }
 
-    // Numeric input başlat
-    function initNumericInput(inputId, hiddenId, decimals = 2) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-
-        input.classList.add('numeric-display');
-
-        input.addEventListener('focus', function () {
-            // Odaklanınca raw değeri göster (düzenleme için)
-            const raw = getRaw(hiddenId);
-            if (!isNaN(raw) && raw !== 0) {
-                this.value = String(raw).replace('.', ',');
-            } else {
-                this.value = '';
-            }
+    // Modal id-bazlı numeric input başlat
+    function initNumericInput(inputId, hiddenId, dec = 2) {
+        const inp = document.getElementById(inputId);
+        if (!inp) return;
+        inp.classList.add('numeric-display');
+        inp.addEventListener('focus', function () {
+            const r = getRaw(hiddenId);
+            this.value = (!isNaN(r) && r !== 0) ? String(r).replace('.', ',') : '';
             this.select();
         });
-
-        input.addEventListener('blur', function () {
-            const raw = parseTR(this.value);
-            if (!isNaN(raw)) {
-                document.getElementById(hiddenId).value = raw;
-                this.value = formatTR(raw, decimals);
-            } else {
-                document.getElementById(hiddenId).value = '';
-                this.value = '';
-            }
+        inp.addEventListener('blur', function () {
+            const r = parseTR(this.value);
+            if (!isNaN(r)) { document.getElementById(hiddenId).value = r; this.value = formatTR(r, dec); }
+            else { document.getElementById(hiddenId).value = ''; this.value = ''; }
         });
-
-        input.addEventListener('keydown', function (e) {
-            // Sadece rakam, virgül, nokta, backspace, delete, tab, ok tuşlarına izin ver
-            const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Home', 'End'];
-            if (allowed.includes(e.key)) return;
-            if (e.key === ',' || e.key === '.') return;
-            if (e.ctrlKey || e.metaKey) return; // Ctrl+C, Ctrl+V vb.
-            if (!/^\d$/.test(e.key)) e.preventDefault();
-        });
+        inp.addEventListener('keydown', numericKeydown);
     }
 
-    // ── Ana tab sistemi ──────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', function () {
-        // Numeric input'ları başlat
-        initNumericInput('p_birimFiyat', 'p_birimFiyat_raw', 2);
-        initNumericInput('e_miktar',     'e_miktar_raw',     4);
-        initNumericInput('e_birimFiyat', 'e_birimFiyat_raw', 4);
-        initNumericInput('e_kur',        'e_kur_raw',        4);
+    // Satır-içi numeric input başlat (class ile)
+    function initRowNumeric(inp, hid, dec = 4, onChangeFn) {
+        if (!inp || inp._numericInited) return;
+        inp._numericInited = true;
+        inp.classList.add('numeric-display');
+        inp.addEventListener('focus', function () {
+            const r = parseFloat(hid.value);
+            this.value = (!isNaN(r) && r !== 0) ? String(r).replace('.', ',') : '';
+            this.select();
+        });
+        inp.addEventListener('blur', function () {
+            const r = parseTR(this.value);
+            if (!isNaN(r)) { hid.value = r; this.value = formatTR(r, dec); }
+            else { hid.value = ''; this.value = ''; }
+            if (onChangeFn) onChangeFn();
+        });
+        inp.addEventListener('input', () => { if (onChangeFn) onChangeFn(); });
+        inp.addEventListener('keydown', numericKeydown);
+    }
 
-        // Varsayılan değerler
-        document.getElementById('e_miktar_raw').value     = '1';
-        document.getElementById('e_miktar').value         = formatTR(1, 4);
-        document.getElementById('e_kur_raw').value        = '1';
-        document.getElementById('e_kur').value            = formatTR(1, 4);
+    // ── DOMContentLoaded ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        initNumericInput('p_birimFiyat', 'p_birimFiyat_raw', 2);
+        initNumericInput('e_miktar',     'e_miktar_raw',     0);
+        initNumericInput('e_birimFiyat', 'e_birimFiyat_raw', 2);
+        initNumericInput('e_kur',        'e_kur_raw',        2);
+
+        document.getElementById('e_miktar_raw').value = '1';
+        document.getElementById('e_miktar').value     = formatTR(1, 0);
+        document.getElementById('e_kur_raw').value    = '1';
+        document.getElementById('e_kur').value        = formatTR(1, 2);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -756,139 +943,409 @@
                 document.getElementById('tab-' + btn.dataset.tab)?.classList.add('active');
             });
         });
-
-        document.querySelectorAll('.th-modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+        document.querySelectorAll('.ktab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.ktab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.ktab-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('ktab-' + btn.dataset.ktab)?.classList.add('active');
+            });
         });
-
+        document.querySelectorAll('.th-modal-overlay').forEach(o => {
+            o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); });
+        });
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape')
-                document.querySelectorAll('.th-modal-overlay.open').forEach(o => closeModal(o.id));
+            if (e.key === 'Escape') document.querySelectorAll('.th-modal-overlay.open').forEach(o => closeModal(o.id));
         });
-
         const dz = document.getElementById('dropZone');
         if (dz) {
             dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
             dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-            dz.addEventListener('drop', e => {
-                e.preventDefault();
-                dz.classList.remove('drag-over');
-                if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-            });
+            dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
         }
     });
 
-    // ── Ktab sekme sistemi ───────────────────────────────────────────────
-    document.querySelectorAll('.ktab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.ktab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.ktab-panel').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('ktab-' + btn.dataset.ktab)?.classList.add('active');
-        });
-    });
-
-    // ── Modal aç/kapat ───────────────────────────────────────────────────
+    // ── Modal ────────────────────────────────────────────────────────────
     window.showModal = function (id) {
         const el = document.getElementById(id);
         if (!el) return;
-        el.classList.add('open');
-        el.setAttribute('aria-hidden', 'false');
+        el.classList.add('open'); el.setAttribute('aria-hidden','false');
         document.body.style.overflow = 'hidden';
         if (id === 'kalemTopluModal') kalemModalAc();
     };
-
     window.closeModal = function (id) {
         const el = document.getElementById(id);
         if (!el) return;
-        el.classList.remove('open');
-        el.setAttribute('aria-hidden', 'true');
+        el.classList.remove('open'); el.setAttribute('aria-hidden','true');
         document.body.style.overflow = '';
     };
-
-    // Modal açılınca feedback gizle
-    function hideFeedback(feedbackId) {
-        const fb = document.getElementById(feedbackId);
-        if (fb) { fb.style.display = 'none'; fb.className = 'modal-feedback'; fb.innerHTML = ''; }
-    }
-
-    function showFeedback(feedbackId, message, type = 'success') {
-        const fb = document.getElementById(feedbackId);
+    function showFeedback(fbId, msg, type = 'success') {
+        const fb = document.getElementById(fbId);
         if (!fb) return;
         fb.className = `modal-feedback ${type}`;
-        fb.innerHTML = (type === 'success' ? '✓ ' : '✕ ') + message;
+        fb.innerHTML = (type === 'success' ? '✓ ' : '✕ ') + msg;
         fb.style.display = 'flex';
-        if (type === 'success') {
-            setTimeout(() => { fb.style.display = 'none'; }, 3000);
-        }
+        if (type === 'success') setTimeout(() => { fb.style.display = 'none'; }, 3000);
     }
-
-    function kalemModalAc() {
-        document.querySelectorAll('.ktab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.ktab-panel').forEach(p => p.classList.remove('active'));
-        document.querySelector('.ktab-btn[data-ktab="inline"]').classList.add('active');
-        document.getElementById('ktab-inline').classList.add('active');
-        inlineReset();
-        pasteReset();
-        importReset();
-        document.getElementById('kalemSaveInfo').innerHTML = '';
-        const btn = document.getElementById('btnKalemKaydet');
-        btn.disabled = false;
-        btn.textContent = '💾 Tümünü Kaydet';
+    function kurGuncelle(sel) {
+        const m = { TRY: 1, USD: Number(pageData.kurUSD), EUR: Number(pageData.kurEUR) };
+        const v = m[sel.value] ?? 1;
+        document.getElementById('e_kur_raw').value = v;
+        document.getElementById('e_kur').value     = formatTR(v, 2);
     }
-
-    // ── Personel formu sıfırla ───────────────────────────────────────────
-    function personelFormSifirla() {
-        document.getElementById('p_birimId').value    = '';
-        document.getElementById('p_gorevUnvan').value = '';
-        document.getElementById('p_sayi').value       = '1';
-        document.getElementById('p_egitim').value     = '';
-        document.getElementById('p_ucretTipi').value  = 'Brut (Aylik)';
-        document.getElementById('p_birimFiyat').value = '';
-        document.getElementById('p_birimFiyat_raw').value = '';
-        document.getElementById('p_aciklama').value   = '';
-        document.getElementById('p_gorevUnvan').focus();
-    }
-
-    // ── Ek gider formu sıfırla ───────────────────────────────────────────
-    function ekGiderFormSifirla() {
-        document.getElementById('e_birimId').value      = '';
-        document.getElementById('e_giderAdi').value     = '';
-        document.getElementById('e_kategori').value     = '';
-        document.getElementById('e_miktar').value       = formatTR(1, 4);
-        document.getElementById('e_miktar_raw').value   = '1';
-        document.getElementById('e_birimFiyat').value   = '';
-        document.getElementById('e_birimFiyat_raw').value = '';
-        document.getElementById('e_paraBirimi').value   = 'TRY';
-        document.getElementById('e_kur').value          = formatTR(1, 4);
-        document.getElementById('e_kur_raw').value      = '1';
-        document.getElementById('e_aciklama').value     = '';
-        document.getElementById('e_giderAdi').focus();
-    }
-
-    // ── Yardımcı ─────────────────────────────────────────────────────────
     function birimSelectHTML(inputId, currentVal) {
         const opts = BIRIMLER.map(b =>
-            `<option value="${b.id}" ${currentVal == b.id ? 'selected' : ''}>${b.kod} – ${b.ad}</option>`
+            `<option value="${b.id}"${currentVal == b.id ? ' selected' : ''}>${b.kod} – ${b.ad}</option>`
         ).join('');
         return `<select class="kcell-select" id="${inputId}"><option value="">-</option>${opts}</select>`;
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // SEKME 1: Inline
+    // PERSONEL INLINE DÜZENLEME
     // ══════════════════════════════════════════════════════════════════════
-    let inlineRowCount = 0;
-
-    function inlineReset() {
-        inlineRowCount = 0;
-        document.getElementById('inlineBody').innerHTML = '';
-        for (let i = 0; i < 5; i++) inlineSatirEkle();
+    function prDuzenle(id) {
+        document.querySelectorAll('.pr-row-edit').forEach(r => { if (r.style.display !== 'none') prIptal(parseInt(r.dataset.id)); });
+        const vr = document.querySelector(`.pr-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.pr-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        vr.style.display = 'none';
+        er.style.display = '';
+        const inp = er.querySelector('.pr-edit-birimFiyat');
+        const hid = er.querySelector('.pr-edit-birimFiyat-raw');
+        initRowNumeric(inp, hid, 2, () => prCanlıHesapla(er));
+        prCanlıHesapla(er);
+        er.querySelector('.pr-edit-gorevUnvan')?.focus();
+    }
+    function prIptal(id) {
+        const vr = document.querySelector(`.pr-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.pr-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        er.style.display = 'none'; vr.style.display = '';
+    }
+    function prCanlıHesapla(er) {
+        const fiyat  = parseFloat(er.querySelector('.pr-edit-birimFiyat-raw')?.value) || 0;
+        const sayi   = parseInt(er.querySelector('.pr-edit-sayi')?.value) || 1;
+        const toplam = sayi * fiyat * SURE_GUN / 30;
+        const prev   = er.querySelector('.pr-edit-preview');
+        if (prev) prev.textContent = formatTR(toplam, 2) + ' ₺';
+    }
+    async function prKaydet(id, btn) {
+        const er = document.querySelector(`.pr-row-edit[data-id="${id}"]`);
+        if (!er) return;
+        const gorevUnvan = er.querySelector('.pr-edit-gorevUnvan')?.value.trim();
+        const birimFiyat = parseFloat(er.querySelector('.pr-edit-birimFiyat-raw')?.value);
+        const sayi       = parseInt(er.querySelector('.pr-edit-sayi')?.value) || 1;
+        if (!gorevUnvan)                          { alert('Görev / Unvan zorunludur.'); return; }
+        if (isNaN(birimFiyat) || birimFiyat <= 0) { alert('Aylık Brüt Ücret geçerli giriniz.'); return; }
+        const data = {
+            id, ihaleId: IHALE_ID,
+            birimId:         parseInt(er.querySelector('.pr-edit-birimId')?.value) || null,
+            gorevUnvan, sayi,
+            ucretTipi:       er.querySelector('.pr-edit-ucretTipi')?.value,
+            birimFiyatAylik: birimFiyat,
+        };
+        const orig = btn.textContent; btn.disabled = true; btn.textContent = '⏳';
+        try {
+            const res = await fetch(`${BASE}/PersonelGuncelle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) {
+                const vr = document.querySelector(`.pr-row-view[data-id="${id}"]`);
+                const toplam = sayi * birimFiyat * SURE_GUN / 30;
+                vr.querySelector('.pr-gorev').textContent  = gorevUnvan;
+                vr.querySelector('.pr-sayi').textContent   = sayi;
+                vr.querySelector('.pr-ucret').textContent  = data.ucretTipi;
+                vr.querySelector('.pr-fiyat').textContent  = formatTR(birimFiyat, 2);
+                vr.querySelector('.pr-toplam').textContent = formatTR(toplam, 2);
+                prIptal(id);
+            } else { alert('Güncelleme başarısız.'); }
+        } catch { alert('Güncelleme sırasında hata oluştu.'); }
+        finally { btn.disabled = false; btn.textContent = orig; }
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // EK GİDER INLINE DÜZENLEME
+    // ══════════════════════════════════════════════════════════════════════
+    function egDuzenle(id) {
+        document.querySelectorAll('.eg-row-edit').forEach(r => { if (r.style.display !== 'none') egIptal(parseInt(r.dataset.id)); });
+        const vr = document.querySelector(`.eg-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.eg-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        vr.style.display = 'none'; er.style.display = '';
+        const fields = [
+            { inp: '.eg-edit-miktar',     hid: '.eg-edit-miktar-raw',     dec: 0 },
+            { inp: '.eg-edit-birimFiyat', hid: '.eg-edit-birimFiyat-raw', dec: 2 },
+            { inp: '.eg-edit-kur',        hid: '.eg-edit-kur-raw',        dec: 2 },
+        ];
+        fields.forEach(({ inp: s, hid: h, dec }) => {
+            const inp = er.querySelector(s); const hid = er.querySelector(h);
+            if (inp && hid) initRowNumeric(inp, hid, dec, () => egCanlıHesapla(er));
+        });
+        const pb = er.querySelector('.eg-edit-paraBirimi');
+        if (pb && !pb._pbInited) {
+            pb._pbInited = true;
+            pb.addEventListener('change', function () {
+                const m = { TRY: 1, USD: Number(pageData.kurUSD), EUR: Number(pageData.kurEUR) };
+                const v = m[this.value] ?? 1;
+                er.querySelector('.eg-edit-kur-raw').value = v;
+                er.querySelector('.eg-edit-kur').value     = formatTR(v, 4);
+                egCanlıHesapla(er);
+            });
+        }
+        egCanlıHesapla(er);
+        er.querySelector('.eg-edit-giderAdi')?.focus();
+    }
+    function egIptal(id) {
+        const vr = document.querySelector(`.eg-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.eg-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        er.style.display = 'none'; vr.style.display = '';
+    }
+    function egCanlıHesapla(er) {
+        const m = parseFloat(er.querySelector('.eg-edit-miktar-raw')?.value)     || 0;
+        const f = parseFloat(er.querySelector('.eg-edit-birimFiyat-raw')?.value) || 0;
+        const k = parseFloat(er.querySelector('.eg-edit-kur-raw')?.value)        || 1;
+        const p = er.querySelector('.eg-edit-preview');
+        if (p) p.textContent = formatTR(m * f * k, 2) + ' ₺';
+    }
+    async function egKaydet(id, btn) {
+        const er = document.querySelector(`.eg-row-edit[data-id="${id}"]`);
+        if (!er) return;
+        const giderAdi   = er.querySelector('.eg-edit-giderAdi')?.value.trim();
+        const miktar     = parseFloat(er.querySelector('.eg-edit-miktar-raw')?.value);
+        const birimFiyat = parseFloat(er.querySelector('.eg-edit-birimFiyat-raw')?.value);
+        const kur        = parseFloat(er.querySelector('.eg-edit-kur-raw')?.value);
+        if (!giderAdi)                            { alert('Gider Adı zorunludur.'); return; }
+        if (isNaN(birimFiyat) || birimFiyat <= 0) { alert('Birim Fiyat geçerli giriniz.'); return; }
+        if (isNaN(miktar)     || miktar <= 0)     { alert('Miktar geçerli giriniz.'); return; }
+        if (isNaN(kur)        || kur <= 0)        { alert('Kur geçerli giriniz.'); return; }
+        const data = {
+            id, ihaleId: IHALE_ID,
+            birimId:    parseInt(er.querySelector('.eg-edit-birimId')?.value) || null,
+            giderAdi,
+            kategori:   er.querySelector('.eg-edit-kategori')?.value.trim() || '',
+            miktar, birimFiyat,
+            paraBirimi: er.querySelector('.eg-edit-paraBirimi')?.value,
+            kur, aciklama: ''
+        };
+        const orig = btn.textContent; btn.disabled = true; btn.textContent = '⏳';
+        try {
+            const res = await fetch(`${BASE}/EkGiderGuncelle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) {
+                const vr = document.querySelector(`.eg-row-view[data-id="${id}"]`);
+                vr.querySelector('.eg-miktar').textContent     = formatTR(miktar, 4);
+                vr.querySelector('.eg-birimfiyat').textContent = formatTR(birimFiyat, 4);
+                vr.querySelector('.eg-kur').textContent        = formatTR(kur, 4);
+                vr.querySelector('.eg-tutar').innerHTML        = `<strong>${formatTR(miktar * birimFiyat * kur, 2)}</strong>`;
+                egIptal(id);
+            } else { alert('Güncelleme başarısız.'); }
+        } catch { alert('Güncelleme sırasında hata oluştu.'); }
+        finally { btn.disabled = false; btn.textContent = orig; }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // KALEM INLINE DÜZENLEME
+    // ══════════════════════════════════════════════════════════════════════
+    function klDuzenle(id) {
+        document.querySelectorAll('.kl-row-edit').forEach(r => { if (r.style.display !== 'none') klIptal(parseInt(r.dataset.id)); });
+        const vr = document.querySelector(`.kl-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.kl-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        vr.style.display = 'none'; er.style.display = '';
+        const fields = [
+            { inp: '.kl-edit-testMiktari', hid: '.kl-edit-testMiktari-raw', dec: 0 },
+            { inp: '.kl-edit-sutFiyat',    hid: '.kl-edit-sutFiyat-raw',    dec: 4 },
+            { inp: '.kl-edit-sutCarpan',   hid: '.kl-edit-sutCarpan-raw',   dec: 3 },
+        ];
+        fields.forEach(({ inp: s, hid: h, dec }) => {
+            const inp = er.querySelector(s); const hid = er.querySelector(h);
+            if (inp && hid) initRowNumeric(inp, hid, dec, () => klCanlıHesapla(er));
+        });
+        klCanlıHesapla(er);
+        er.querySelector('.kl-edit-tetkikAdi')?.focus();
+    }
+    function klIptal(id) {
+        const vr = document.querySelector(`.kl-row-view[data-id="${id}"]`);
+        const er = document.querySelector(`.kl-row-edit[data-id="${id}"]`);
+        if (!vr || !er) return;
+        er.style.display = 'none'; vr.style.display = '';
+    }
+    function klCanlıHesapla(er) {
+        const miktar  = parseFloat(er.querySelector('.kl-edit-testMiktari-raw')?.value) || 0;
+        const fiyat   = parseFloat(er.querySelector('.kl-edit-sutFiyat-raw')?.value)    || 0;
+        const carpan  = parseFloat(er.querySelector('.kl-edit-sutCarpan-raw')?.value)   || 0;
+        const topSut  = miktar * fiyat;
+        const topFiyat = topSut * carpan;
+        const p1 = er.querySelector('.kl-edit-toplamSut-preview');
+        const p2 = er.querySelector('.kl-edit-preview');
+        if (p1) p1.textContent = formatTR(topSut, 2);
+        if (p2) p2.textContent = formatTR(topFiyat, 2) + ' ₺';
+    }
+    async function klKaydet(id, btn) {
+        const er = document.querySelector(`.kl-row-edit[data-id="${id}"]`);
+        if (!er) return;
+        const tetkikAdi   = er.querySelector('.kl-edit-tetkikAdi')?.value.trim();
+        const testMiktari = parseFloat(er.querySelector('.kl-edit-testMiktari-raw')?.value);
+        const sutFiyat    = parseFloat(er.querySelector('.kl-edit-sutFiyat-raw')?.value);
+        const sutCarpan   = parseFloat(er.querySelector('.kl-edit-sutCarpan-raw')?.value);
+        if (!tetkikAdi) { alert('Tetkik Adı zorunludur.'); return; }
+        const data = {
+            id, ihaleId: IHALE_ID,
+            birimId:  parseInt(er.querySelector('.kl-edit-birimId')?.value) || null,
+            siraNo:   parseInt(er.querySelector('.kl-edit-siraNo')?.value)  || 1,
+            sutKodu:  er.querySelector('.kl-edit-sutKodu')?.value.trim()    || '',
+            tetkikAdi, testMiktari: isNaN(testMiktari) ? 0 : testMiktari,
+            sutFiyat:  isNaN(sutFiyat)  ? 0 : sutFiyat,
+            sutCarpan: isNaN(sutCarpan) ? 0 : sutCarpan,
+        };
+        const orig = btn.textContent; btn.disabled = true; btn.textContent = '⏳';
+        try {
+            const res = await fetch(`${BASE}/KalemGuncelle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) {
+                const vr = document.querySelector(`.kl-row-view[data-id="${id}"]`);
+                const topSut   = data.testMiktari * data.sutFiyat;
+                const topFiyat = topSut * data.sutCarpan;
+                vr.querySelector('.kl-sutkodu').textContent      = data.sutKodu || '-';
+                vr.querySelector('.kl-tetkik').textContent       = tetkikAdi;
+                vr.querySelector('.kl-miktar').textContent       = formatTR(data.testMiktari, 0);
+                vr.querySelector('.kl-sutfiyat').textContent     = formatTR(data.sutFiyat, 4);
+                vr.querySelector('.kl-carpan').textContent       = formatTR(data.sutCarpan, 3);
+                vr.querySelector('.kl-toplamSut').textContent    = formatTR(topSut, 2);
+                vr.querySelector('.kl-toplamSutFiyat').textContent = formatTR(topFiyat, 2);
+                klIptal(id);
+            } else { alert('Güncelleme başarısız.'); }
+        } catch { alert('Güncelleme sırasında hata oluştu.'); }
+        finally { btn.disabled = false; btn.textContent = orig; }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TEKLİ SİL / EKLE
+    // ══════════════════════════════════════════════════════════════════════
+    function personelFormSifirla() {
+        ['p_birimId','p_gorevUnvan','p_egitim','p_aciklama'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('p_sayi').value = '1';
+        document.getElementById('p_ucretTipi').value = 'Brut (Aylik)';
+        document.getElementById('p_birimFiyat').value = '';
+        document.getElementById('p_birimFiyat_raw').value = '';
+        document.getElementById('p_gorevUnvan').focus();
+    }
+    function ekGiderFormSifirla() {
+        ['e_birimId','e_giderAdi','e_kategori','e_aciklama'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('e_miktar').value = formatTR(1, 0);
+        document.getElementById('e_miktar_raw').value = '1';
+        document.getElementById('e_birimFiyat').value = '';
+        document.getElementById('e_birimFiyat_raw').value = '';
+        document.getElementById('e_paraBirimi').value = 'TRY';
+        document.getElementById('e_kur').value = formatTR(1, 2);
+        document.getElementById('e_kur_raw').value = '1';
+        document.getElementById('e_giderAdi').focus();
+    }
+
+    async function personelEkle(devamEt = false) {
+        const gorevUnvan = document.getElementById('p_gorevUnvan').value.trim();
+        const birimFiyat = getRaw('p_birimFiyat_raw');
+        if (!gorevUnvan)                          { showFeedback('personelFeedback','Görev / Unvan zorunludur.','error'); return; }
+        if (isNaN(birimFiyat) || birimFiyat <= 0) { showFeedback('personelFeedback','Aylık Brüt Ücret geçerli giriniz.','error'); return; }
+        const data = {
+            ihaleId: IHALE_ID, birimId: parseInt(document.getElementById('p_birimId').value) || null,
+            gorevUnvan, sayi: parseInt(document.getElementById('p_sayi').value) || 1,
+            egitimDurumu: document.getElementById('p_egitim').value.trim(),
+            ucretTipi:    document.getElementById('p_ucretTipi').value,
+            birimFiyatAylik: birimFiyat,
+            aciklama:     document.getElementById('p_aciklama').value.trim()
+        };
+        try {
+            const res = await fetch(`${BASE}/PersonelEkle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) {
+                if (devamEt) { showFeedback('personelFeedback',`"${gorevUnvan}" kaydedildi.`,'success'); personelFormSifirla(); }
+                else { closeModal('personelModal'); location.reload(); }
+            } else { showFeedback('personelFeedback','Kayıt başarısız.','error'); }
+        } catch { showFeedback('personelFeedback','Personel kaydı sırasında hata oluştu.','error'); }
+    }
+
+    async function personelSil(id, btn) {
+        if (!confirm('Silmek istiyor musunuz?')) return;
+        try {
+            const res = await fetch(`${BASE}/PersonelSil?id=${id}`, { method:'POST' });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) document.querySelectorAll(`tr[data-id="${id}"]`).forEach(row => row.remove());
+        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
+    }
+
+    async function ekGiderEkle(devamEt = false) {
+        const giderAdi   = document.getElementById('e_giderAdi').value.trim();
+        const miktar     = getRaw('e_miktar_raw');
+        const birimFiyat = getRaw('e_birimFiyat_raw');
+        const kur        = getRaw('e_kur_raw');
+        if (!giderAdi)                            { showFeedback('ekGiderFeedback','Gider Adı zorunludur.','error'); return; }
+        if (isNaN(birimFiyat) || birimFiyat <= 0) { showFeedback('ekGiderFeedback','Birim Fiyat geçerli giriniz.','error'); return; }
+        if (isNaN(miktar)     || miktar <= 0)     { showFeedback('ekGiderFeedback','Miktar geçerli giriniz.','error'); return; }
+        if (isNaN(kur)        || kur <= 0)        { showFeedback('ekGiderFeedback','Kur geçerli giriniz.','error'); return; }
+        const data = {
+            ihaleId: IHALE_ID, birimId: parseInt(document.getElementById('e_birimId').value) || null,
+            giderAdi, kategori: document.getElementById('e_kategori').value.trim(),
+            miktar, birimFiyat, paraBirimi: document.getElementById('e_paraBirimi').value,
+            kur, aciklama: document.getElementById('e_aciklama').value.trim()
+        };
+        try {
+            const res = await fetch(`${BASE}/EkGiderEkle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) {
+                if (devamEt) { showFeedback('ekGiderFeedback',`"${giderAdi}" kaydedildi.`,'success'); ekGiderFormSifirla(); }
+                else { closeModal('ekGiderModal'); location.reload(); }
+            } else { showFeedback('ekGiderFeedback','Kayıt başarısız.','error'); }
+        } catch { showFeedback('ekGiderFeedback','Ek gider kaydı sırasında hata oluştu.','error'); }
+    }
+
+    async function ekGiderSil(id, btn) {
+        if (!confirm('Silmek istiyor musunuz?')) return;
+        try {
+            const res = await fetch(`${BASE}/EkGiderSil?id=${id}`, { method:'POST' });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) document.querySelectorAll(`tr[data-id="${id}"]`).forEach(row => row.remove());
+        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
+    }
+
+    async function kalemSil(id, btn) {
+        if (!confirm('Silmek istiyor musunuz?')) return;
+        try {
+            const res = await fetch(`${BASE}/KalemSil?id=${id}`, { method:'POST' });
+            if (!res.ok) throw new Error();
+            const r = await res.json();
+            if (r.success) document.querySelectorAll(`tr[data-id="${id}"]`).forEach(row => row.remove());
+        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TOPLU KALEM
+    // ══════════════════════════════════════════════════════════════════════
+    function kalemModalAc() {
+        document.querySelectorAll('.ktab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.ktab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('.ktab-btn[data-ktab="inline"]').classList.add('active');
+        document.getElementById('ktab-inline').classList.add('active');
+        inlineReset(); pasteReset(); importReset();
+        document.getElementById('kalemSaveInfo').innerHTML = '';
+        const btn = document.getElementById('btnKalemKaydet');
+        btn.disabled = false; btn.textContent = '💾 Tümünü Kaydet';
+    }
+    let inlineRowCount = 0;
+    function inlineReset() {
+        inlineRowCount = 0; document.getElementById('inlineBody').innerHTML = '';
+        for (let i = 0; i < 5; i++) inlineSatirEkle();
+    }
     function inlineSatirEkle() {
         inlineRowCount++;
         const n = inlineRowCount;
-        const tbody = document.getElementById('inlineBody');
         const tr = document.createElement('tr');
         tr.id = `irow_${n}`;
         tr.innerHTML = `
@@ -901,28 +1358,22 @@
             <td><input class="kcell" id="kc_${n}" type="number" value="0.593" step="0.001" style="text-align:right;" /></td>
             <td><button type="button" class="krow-del" onclick="document.getElementById('irow_${n}').remove()">✕</button></td>
         `;
-        tbody.appendChild(tr);
-
+        document.getElementById('inlineBody').appendChild(tr);
         tr.querySelector(`#kt_${n}`).addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                inlineSatirEkle();
-                setTimeout(() => document.getElementById(`kt_${inlineRowCount}`)?.focus(), 50);
-            }
+            if (e.key === 'Enter') { inlineSatirEkle(); setTimeout(() => document.getElementById(`kt_${inlineRowCount}`)?.focus(), 50); }
         });
     }
-
     function inlineVeriTopla() {
-        const rows = [];
-        let sira = 1;
+        const rows = []; let sira = 1;
         document.querySelectorAll('#inlineBody tr').forEach(tr => {
             const n = tr.id.replace('irow_', '');
             const tetkik = document.getElementById(`kt_${n}`)?.value.trim();
             if (!tetkik) return;
             rows.push({
-                siraNo:      sira++,
-                birimId:     parseInt(document.getElementById(`kb_${n}`)?.value) || null,
-                sutKodu:     document.getElementById(`ks_${n}`)?.value.trim() || '',
-                tetkikAdi:   tetkik,
+                siraNo: sira++,
+                birimId: parseInt(document.getElementById(`kb_${n}`)?.value) || null,
+                sutKodu: document.getElementById(`ks_${n}`)?.value.trim() || '',
+                tetkikAdi: tetkik,
                 testMiktari: parseFloat(document.getElementById(`km_${n}`)?.value) || 0,
                 sutFiyat:    parseFloat(document.getElementById(`kf_${n}`)?.value) || 0,
                 sutCarpan:   parseFloat(document.getElementById(`kc_${n}`)?.value) || 0.593,
@@ -930,93 +1381,57 @@
         });
         return rows;
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // SEKME 2: Yapıştır
-    // ══════════════════════════════════════════════════════════════════════
     let pasteRows = [];
-
-    function pasteReset() {
-        document.getElementById('pasteArea').value = '';
-        document.getElementById('pastePreview').style.display = 'none';
-        pasteRows = [];
-    }
-
+    function pasteReset() { document.getElementById('pasteArea').value = ''; document.getElementById('pastePreview').style.display = 'none'; pasteRows = []; }
     function parsePaste() {
         const raw = document.getElementById('pasteArea').value.trim();
         if (!raw) { alert('Önce yapıştırma alanına veri girin.'); return; }
         pasteRows = parseTabular(raw);
-        renderPreview('pastePreviewBody', 'pastePreviewInfo', pasteRows);
+        renderPreview('pastePreviewBody','pastePreviewInfo',pasteRows);
         document.getElementById('pastePreview').style.display = 'block';
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // SEKME 3: Excel/CSV
-    // ══════════════════════════════════════════════════════════════════════
     let importRows = [];
-
-    function importReset() {
-        document.getElementById('importPreview').style.display = 'none';
-        document.getElementById('fileInput').value = '';
-        importRows = [];
-    }
-
-    function handleFile(input) {
-        if (input.files.length) processFile(input.files[0]);
-    }
-
+    function importReset() { document.getElementById('importPreview').style.display = 'none'; document.getElementById('fileInput').value = ''; importRows = []; }
+    function handleFile(input) { if (input.files.length) processFile(input.files[0]); }
     async function processFile(file) {
         const name = file.name.toLowerCase();
         if (name.endsWith('.csv')) {
-            const text  = await file.text();
-            const sep   = text.indexOf('\t') > -1 ? '\t' : ',';
-            const lines = text.split('\n').filter(l => l.trim());
-            const raw   = lines.map(l => l.split(sep).join('\t')).join('\n');
-            importRows  = parseTabular(raw);
+            const text = await file.text();
+            const sep  = text.indexOf('\t') > -1 ? '\t' : ',';
+            const raw  = text.split('\n').filter(l => l.trim()).map(l => l.split(sep).join('\t')).join('\n');
+            importRows = parseTabular(raw);
         } else if (name.endsWith('.xlsx')) {
-            if (typeof XLSX === 'undefined') {
-                alert('Excel okuma için sayfada SheetJS kütüphanesi gerekli.\nLütfen dosyayı CSV olarak kaydedin.');
-                return;
-            }
+            if (typeof XLSX === 'undefined') { alert('SheetJS kütüphanesi gerekli. CSV olarak kaydedin.'); return; }
             const buf = await file.arrayBuffer();
             const wb  = XLSX.read(buf);
             const ws  = wb.Sheets[wb.SheetNames[0]];
-            const arr = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            const raw = arr.map(r => r.join('\t')).join('\n');
+            const raw = XLSX.utils.sheet_to_json(ws, { header:1 }).map(r => r.join('\t')).join('\n');
             importRows = parseTabular(raw);
-        } else {
-            alert('Sadece .xlsx veya .csv dosyası yükleyebilirsiniz.');
-            return;
-        }
-        renderPreview('importPreviewBody', 'importPreviewInfo', importRows);
+        } else { alert('Sadece .xlsx veya .csv yükleyebilirsiniz.'); return; }
+        renderPreview('importPreviewBody','importPreviewInfo',importRows);
         document.getElementById('importPreview').style.display = 'block';
     }
-
-    // ── Ortak: parse + önizleme ──────────────────────────────────────────
     function parseTabular(raw) {
-        const lines = raw.split('\n').filter(l => l.trim());
-        const rows  = [];
-        lines.forEach((line, idx) => {
+        const rows = [];
+        raw.split('\n').filter(l => l.trim()).forEach((line, idx) => {
             const cols = line.split('\t');
             if (idx === 0 && isNaN(parseFloat(cols[0]))) return;
             if (cols.length < 3) return;
             rows.push({
-                siraNo:      parseInt(cols[0]) || (rows.length + 1),
-                sutKodu:     (cols[1] || '').trim(),
-                tetkikAdi:   (cols[2] || '').trim(),
-                testMiktari: parseFloat((cols[3] || '0').replace(',', '.')) || 0,
-                sutFiyat:    parseFloat((cols[4] || '0').replace(',', '.')) || 0,
-                sutCarpan:   parseFloat((cols[5] || '0.593').replace(',', '.')) || 0.593,
-                birimId:     null,
+                siraNo: parseInt(cols[0]) || (rows.length + 1),
+                sutKodu: (cols[1] || '').trim(),
+                tetkikAdi: (cols[2] || '').trim(),
+                testMiktari: parseFloat((cols[3] || '0').replace(',','.')) || 0,
+                sutFiyat:    parseFloat((cols[4] || '0').replace(',','.')) || 0,
+                sutCarpan:   parseFloat((cols[5] || '0.593').replace(',','.')) || 0.593,
+                birimId: null,
             });
         });
         return rows;
     }
-
     function renderPreview(tbodyId, infoId, rows) {
         const tbody = document.getElementById(tbodyId);
         tbody.innerHTML = '';
-
         rows.forEach((r, idx) => {
             const tr = document.createElement('tr');
             if (!r.tetkikAdi) tr.classList.add('krow-error');
@@ -1031,191 +1446,42 @@
                 <td style="text-align:right">${r.sutCarpan}</td>
             `;
             tbody.appendChild(tr);
-
             setTimeout(() => {
                 const sel = document.getElementById(selId);
-                if (sel) sel.addEventListener('change', () => {
-                    rows[idx].birimId = parseInt(sel.value) || null;
-                });
+                if (sel) sel.addEventListener('change', () => { rows[idx].birimId = parseInt(sel.value) || null; });
             }, 0);
         });
-
-        const valid   = rows.filter(r => r.tetkikAdi).length;
+        const valid = rows.filter(r => r.tetkikAdi).length;
         const invalid = rows.length - valid;
         document.getElementById(infoId).innerHTML =
-            `<strong>${rows.length}</strong> satır · ` +
-            `<strong style="color:#10b981">${valid}</strong> geçerli` +
+            `<strong>${rows.length}</strong> satır · <strong style="color:#10b981">${valid}</strong> geçerli` +
             (invalid > 0 ? ` · <strong style="color:#ef4444">${invalid}</strong> atlanacak` : '');
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // TOPLU KAYDET
-    // ══════════════════════════════════════════════════════════════════════
     async function kalemTopluKaydet() {
         const activeTab = document.querySelector('.ktab-btn.active').dataset.ktab;
         let rows = [];
-
         if      (activeTab === 'inline') rows = inlineVeriTopla();
         else if (activeTab === 'paste')  rows = pasteRows.filter(r => r.tetkikAdi);
         else if (activeTab === 'import') rows = importRows.filter(r => r.tetkikAdi);
-
         if (rows.length === 0) { alert('Kaydedilecek geçerli satır bulunamadı.'); return; }
-
         const btn  = document.getElementById('btnKalemKaydet');
         const info = document.getElementById('kalemSaveInfo');
-        btn.disabled    = true;
-        btn.textContent = `⏳ Kaydediliyor... (0/${rows.length})`;
-
+        btn.disabled = true; btn.textContent = `⏳ Kaydediliyor... (0/${rows.length})`;
         let ok = 0, err = 0;
         for (const row of rows) {
             try {
-                const res = await fetch(`${BASE}/KalemEkle`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ihaleId: IHALE_ID, ...row })
-                });
+                const res = await fetch(`${BASE}/KalemEkle`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ ihaleId:IHALE_ID, ...row }) });
                 if (!res.ok) throw new Error();
-                const result = await res.json();
-                result.success ? ok++ : err++;
+                (await res.json()).success ? ok++ : err++;
             } catch { err++; }
-            btn.textContent = `⏳ Kaydediliyor... (${ok + err}/${rows.length})`;
+            btn.textContent = `⏳ Kaydediliyor... (${ok+err}/${rows.length})`;
         }
-
-        btn.disabled    = false;
-        btn.textContent = '💾 Tümünü Kaydet';
-
+        btn.disabled = false; btn.textContent = '💾 Tümünü Kaydet';
         if (err === 0) {
             info.innerHTML = `<span style="color:#10b981">✓ ${ok} kalem kaydedildi</span>`;
             setTimeout(() => { closeModal('kalemTopluModal'); location.reload(); }, 700);
         } else {
             info.innerHTML = `<span style="color:#10b981">${ok} başarılı</span> · <span style="color:#ef4444">${err} hatalı</span>`;
         }
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // TEKLİ İŞLEMLER
-    // ══════════════════════════════════════════════════════════════════════
-    function kurGuncelle(sel) {
-        const kurMap = { TRY: 1, USD: Number(pageData.kurUSD), EUR: Number(pageData.kurEUR) };
-        const val = kurMap[sel.value] ?? 1;
-        document.getElementById('e_kur_raw').value = val;
-        document.getElementById('e_kur').value     = formatTR(val, 4);
-    }
-
-    // ── Personel Ekle ─────────────────────────────────────────────────────
-    async function personelEkle(devamEt = false) {
-        const gorevUnvan = document.getElementById('p_gorevUnvan').value.trim();
-        const birimFiyat = getRaw('p_birimFiyat_raw');
-
-        if (!gorevUnvan)                          { showFeedback('personelFeedback', 'Görev / Unvan zorunludur.', 'error'); return; }
-        if (isNaN(birimFiyat) || birimFiyat <= 0) { showFeedback('personelFeedback', 'Aylık Brüt Ücret geçerli giriniz.', 'error'); return; }
-
-        const data = {
-            ihaleId:         IHALE_ID,
-            birimId:         parseInt(document.getElementById('p_birimId').value) || null,
-            gorevUnvan,
-            sayi:            parseInt(document.getElementById('p_sayi').value) || 1,
-            egitimDurumu:    document.getElementById('p_egitim').value.trim(),
-            ucretTipi:       document.getElementById('p_ucretTipi').value,
-            birimFiyatAylik: birimFiyat,
-            aciklama:        document.getElementById('p_aciklama').value.trim()
-        };
-
-        try {
-            const res = await fetch(`${BASE}/PersonelEkle`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
-            });
-            if (!res.ok) throw new Error();
-            const r = await res.json();
-            if (r.success) {
-                if (devamEt) {
-                    showFeedback('personelFeedback', `"${gorevUnvan}" kaydedildi.`, 'success');
-                    personelFormSifirla();
-                } else {
-                    closeModal('personelModal');
-                    location.reload();
-                }
-            } else {
-                showFeedback('personelFeedback', 'Kayıt başarısız.', 'error');
-            }
-        } catch {
-            showFeedback('personelFeedback', 'Personel kaydı sırasında hata oluştu.', 'error');
-        }
-    }
-
-    async function personelSil(id, btn) {
-        if (!confirm('Silmek istiyor musunuz?')) return;
-        try {
-            const res = await fetch(`${BASE}/PersonelSil?id=${id}`, { method:'POST' });
-            if (!res.ok) throw new Error();
-            const r = await res.json();
-            if (r.success) btn.closest('tr')?.remove();
-        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
-    }
-
-    // ── Ek Gider Ekle ────────────────────────────────────────────────────
-    async function ekGiderEkle(devamEt = false) {
-        const giderAdi   = document.getElementById('e_giderAdi').value.trim();
-        const miktar     = getRaw('e_miktar_raw');
-        const birimFiyat = getRaw('e_birimFiyat_raw');
-        const kur        = getRaw('e_kur_raw');
-
-        if (!giderAdi)                            { showFeedback('ekGiderFeedback', 'Gider Adı zorunludur.', 'error'); return; }
-        if (isNaN(birimFiyat) || birimFiyat <= 0) { showFeedback('ekGiderFeedback', 'Birim Fiyat geçerli giriniz.', 'error'); return; }
-        if (isNaN(miktar)     || miktar <= 0)     { showFeedback('ekGiderFeedback', 'Miktar geçerli giriniz.', 'error'); return; }
-        if (isNaN(kur)        || kur <= 0)        { showFeedback('ekGiderFeedback', 'Kur geçerli giriniz.', 'error'); return; }
-
-        const data = {
-            ihaleId:    IHALE_ID,
-            birimId:    parseInt(document.getElementById('e_birimId').value) || null,
-            giderAdi,
-            kategori:   document.getElementById('e_kategori').value.trim(),
-            miktar,
-            birimFiyat,
-            paraBirimi: document.getElementById('e_paraBirimi').value,
-            kur,
-            aciklama:   document.getElementById('e_aciklama').value.trim()
-        };
-
-        try {
-            const res = await fetch(`${BASE}/EkGiderEkle`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
-            });
-            if (!res.ok) throw new Error();
-            const r = await res.json();
-            if (r.success) {
-                if (devamEt) {
-                    showFeedback('ekGiderFeedback', `"${giderAdi}" kaydedildi.`, 'success');
-                    ekGiderFormSifirla();
-                } else {
-                    closeModal('ekGiderModal');
-                    location.reload();
-                }
-            } else {
-                showFeedback('ekGiderFeedback', 'Kayıt başarısız.', 'error');
-            }
-        } catch {
-            showFeedback('ekGiderFeedback', 'Ek gider kaydı sırasında hata oluştu.', 'error');
-        }
-    }
-
-    async function ekGiderSil(id, btn) {
-        if (!confirm('Silmek istiyor musunuz?')) return;
-        try {
-            const res = await fetch(`${BASE}/EkGiderSil?id=${id}`, { method:'POST' });
-            if (!res.ok) throw new Error();
-            const r = await res.json();
-            if (r.success) btn.closest('tr')?.remove();
-        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
-    }
-
-    async function kalemSil(id, btn) {
-        if (!confirm('Silmek istiyor musunuz?')) return;
-        try {
-            const res = await fetch(`${BASE}/KalemSil?id=${id}`, { method:'POST' });
-            if (!res.ok) throw new Error();
-            const r = await res.json();
-            if (r.success) btn.closest('tr')?.remove();
-        } catch { alert('Silme işlemi sırasında hata oluştu.'); }
     }
 </script>

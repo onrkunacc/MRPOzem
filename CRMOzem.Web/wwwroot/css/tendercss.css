@@ -799,6 +799,21 @@
     margin-bottom: 1rem;
 }
 
+.tfoot-birim-row td {
+    padding: .5rem .85rem;
+    background: #f8f9fc;
+    border-top: 1px solid #e3e8f0;
+    border-bottom: none;
+}
+
+.tfoot-total-row td {
+    padding: .65rem .85rem;
+    background: #eff6ff;
+    border-top: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1a202c;
+}
+
 /* ── Print ───────────────────────────────────────────────────────────── */
 @media print {
     .header-actions, .btn, .tab-nav {

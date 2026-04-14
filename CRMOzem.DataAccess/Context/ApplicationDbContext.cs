@@ -253,6 +253,49 @@ namespace CRMOzem.DataAccess.Context
                 .HasForeignKey(k => k.BirimId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<Asset>().ToTable("Assets", "ozem");
+            builder.Entity<Assignee>().ToTable("Assignees", "ozem");
+            builder.Entity<Assignment>().ToTable("Assignments", "ozem");
+            builder.Entity<AssignmentItem>().ToTable("AssignmentItems", "ozem");
+
+            builder.Entity<Document>().ToTable("Documents", "ozem");
+            builder.Entity<EkGider>().ToTable("EkGiderler", "ozem");
+            builder.Entity<FileTransferQueue>().ToTable("FileTransferQueues", "ozem");
+
+            builder.Entity<Hospital>().ToTable("Hospitals", "ozem");
+            builder.Entity<HospitalTestMonthlyVolume>().ToTable("HospitalTestMonthlyVolumes", "ozem");
+
+            builder.Entity<Ihale>().ToTable("Ihaleler", "ozem");
+            builder.Entity<IhaleKalem>().ToTable("IhaleKalemler", "ozem");
+
+            builder.Entity<Kurum>().ToTable("Kurumlar", "ozem");
+            builder.Entity<KurumIstatistikAylik>().ToTable("KurumIstatistikAylik", "ozem");
+
+            builder.Entity<LeaveRequest>().ToTable("LeaveRequests", "ozem");
+            builder.Entity<LeaveStatus>().ToTable("LeaveStatuses", "ozem");
+            builder.Entity<LeaveType>().ToTable("LeaveTypes", "ozem");
+
+            builder.Entity<MonthlyShipment>().ToTable("MonthlyShipments", "ozem");
+            builder.Entity<MonthlyStatistics>().ToTable("MonthlyStatistics", "ozem");
+
+            builder.Entity<PersonelGider>().ToTable("PersonelGiderler", "ozem");
+
+            builder.Entity<Test>().ToTable("Tests", "ozem");
+            builder.Entity<TestTemplate>().ToTable("TestTemplates", "ozem");
+            builder.Entity<TestSutPoint>().ToTable("TestSutPoints", "ozem");
+
+            builder.Entity<Training>().ToTable("Trainings", "ozem");
+            builder.Entity<TrainingAnswer>().ToTable("TrainingAnswers", "ozem");
+            builder.Entity<TrainingParticipation>().ToTable("TrainingParticipations", "ozem");
+            builder.Entity<TrainingQuestion>().ToTable("TrainingQuestions", "ozem");
+            builder.Entity<TrainingResult>().ToTable("TrainingResults", "ozem");
+            builder.Entity<TrainingVisibleUser>().ToTable("TrainingVisibleUsers", "ozem");
+
+            builder.Entity<UserLeaveBalance>().ToTable("UserLeaveBalances", "ozem");
+            builder.Entity<UserSupervisor>().ToTable("UserSupervisors", "ozem");
+
+            builder.Entity<Birim>().ToTable("Birimler", "ozem");
+
 
         }
     }

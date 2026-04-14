@@ -53,7 +53,7 @@ namespace CRMOzem.Web.Controllers
             var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
             if (!result.Succeeded)
             {
-                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifr" +
+                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifre" +
                     "e.");
                 return View(model);
             }
@@ -71,7 +71,7 @@ namespace CRMOzem.Web.Controllers
             else if (roles.Contains("İstatistik"))
                 return RedirectToAction("Index", "Dashboard", new { area = "Istatistik" });
             else if (roles.Contains("İhale"))
-                return RedirectToAction("Index", "FileTransferWeb", new { area = "" });
+                return RedirectToAction("Index", "Ihale", new { area = "Ihale" });
             else if (roles.Contains("Evrak"))
                 return RedirectToAction("Index", "Document", new { area = "Evrak" });
             else if (roles.Contains("IT"))
@@ -149,7 +149,6 @@ namespace CRMOzem.Web.Controllers
             return RedirectToAction("Login", "Account");
         }
 
-        //[Authorize]
         public IActionResult AccessDenied()
         {
             return View();
@@ -207,7 +206,7 @@ namespace CRMOzem.Web.Controllers
             }
             catch (Exception ex)
             {
-                // loglama mekanizmanız varsa burada loglayabilirsiniz
+
                 TempData["Error"] = "İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.";
                 return View(model);
             }
