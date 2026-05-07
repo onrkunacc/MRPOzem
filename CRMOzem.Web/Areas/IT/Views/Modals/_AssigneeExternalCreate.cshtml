@@ -4,24 +4,51 @@
 }
 
 <div class="modal-header">
-    <h5 class="modal-title">Kayıtsız Kişi Ekle</h5>
+    <h5 class="modal-title"><i class="fe fe-user-plus me-2" style="color:#b45309"></i>Kayıtsız Kişi Ekle</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
 </div>
 
-<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+<form method="post" action="@postUrl" onsubmit="return postForm(this)">
     @Html.AntiForgeryToken()
     <div class="modal-body">
-        <div class="row g-2">
-            <div class="col-12"><input class="form-control" name="FullName" placeholder="Ad Soyad" required /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="Title" placeholder="Görev/Unvan" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="Department" placeholder="Departman" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="TcNo" placeholder="TC No" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="Phone" placeholder="Telefon" /></div>
-            <div class="col-12"><input class="form-control" name="Email" placeholder="Email" /></div>
+
+        <div class="iv-form-group">
+            <label>Ad Soyad <span style="color:#e53e3e">*</span></label>
+            <input class="form-control" name="FullName" placeholder="Ad ve soyadı giriniz" required />
         </div>
+
+        <div class="iv-form-row">
+            <div class="iv-form-group">
+                <label>Görev / Unvan</label>
+                <input class="form-control" name="Title" placeholder="örn. Teknisyen" />
+            </div>
+            <div class="iv-form-group">
+                <label>Departman</label>
+                <input class="form-control" name="Department" placeholder="örn. IT, Muhasebe" />
+            </div>
+        </div>
+
+        <div class="iv-form-row">
+            <div class="iv-form-group">
+                <label>TC No</label>
+                <input class="form-control" name="TcNo" placeholder="TC kimlik numarası" maxlength="11" />
+            </div>
+            <div class="iv-form-group">
+                <label>Telefon</label>
+                <input class="form-control" name="Phone" placeholder="0 5xx xxx xx xx" />
+            </div>
+        </div>
+
+        <div class="iv-form-group">
+            <label>E-posta</label>
+            <input class="form-control" name="Email" type="email" placeholder="ornek@sirket.com" />
+        </div>
+
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn btn-primary">Kaydet</button>
+        <button type="button" class="iv-btn iv-btn-ghost" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="iv-btn iv-btn-primary">
+            <i class="fe fe-save"></i> Kaydet
+        </button>
     </div>
 </form>

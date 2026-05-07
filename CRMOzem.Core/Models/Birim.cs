@@ -23,5 +23,7 @@ namespace CRMOzem.Core.Models
         public ICollection<PersonelGider> PersonelGiderler { get; set; } = new List<PersonelGider>();
         public ICollection<EkGider> EkGiderler { get; set; } = new List<EkGider>();
         public ICollection<IhaleKalem> IhaleKalemler { get; set; } = new List<IhaleKalem>();
+        public ICollection<HospitalBirim> HospitalBirimler { get; set; } = new List<HospitalBirim>();
+
     }
 }

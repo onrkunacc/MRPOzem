@@ -1,250 +1,529 @@
 ﻿@model CRMOzem.Web.Vm.InventoryDashboardVm
 @{
     ViewData["Title"] = "Envanter & Zimmet";
-    var error = TempData["Error"] as string;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var error = TempData["Error"] as string;
 
-    // URL'leri Razor ile üretelim (Area kırılmaz)
-    var urlAssetsTable = Url.Action("AssetsTable", "Inventory", new { area = "IT" });
-    var urlActiveTable = Url.Action("ActiveAssignmentsTable", "Inventory", new { area = "IT" });
-    var urlBrandTable = Url.Action("BrandSummaryTable", "Inventory", new { area = "IT" });
+    var urlAssetsTable  = Url.Action("AssetsTable",            "Inventory",   new { area = "IT" });
+    var urlActiveTable  = Url.Action("ActiveAssignmentsTable", "Inventory",   new { area = "IT" });
+    var urlBrandTable   = Url.Action("BrandSummaryTable",      "Inventory",   new { area = "IT" });
 
-    var urlModalAssetCreate = Url.Action("AssetCreate", "Modals", new { area = "IT" });
-    var urlModalAssigneeFromUser = Url.Action("AssigneeFromUser", "Modals", new { area = "IT" });
-    var urlModalAssigneeExternal = Url.Action("AssigneeExternalCreate", "Modals", new { area = "IT" });
-    var urlModalAssignmentCreate = Url.Action("AssignmentCreate", "Modals", new { area = "IT" });
+    var urlAssetCreate  = Url.Action("AssetCreate",            "Modals",      new { area = "IT" });
+    var urlAssigneeUser = Url.Action("AssigneeFromUser",        "Modals",      new { area = "IT" });
+    var urlAssigneeExt  = Url.Action("AssigneeExternalCreate", "Modals",      new { area = "IT" });
+    var urlAssignment   = Url.Action("AssignmentCreate",       "Modals",      new { area = "IT" });
 
-    // Dış controller'lar (area dışıysa area verme)
-    var urlReturnItem = Url.Action("ReturnItem", "Assignments");
-    var urlGeneratePdf = Url.Action("GeneratePdf", "Assignments");
+    var urlReturnItem   = Url.Action("ReturnItem",             "Assignments", new { area = "IT" });
+    var urlGeneratePdf  = Url.Action("GeneratePdf",            "Assignments", new { area = "IT" });
+
+    int totalAssets = Model.Assets?.Count ?? 0;
+    int activeItems = Model.ActiveItems?.Count ?? 0;
+    int available   = Model.Assets?.Count(a => a.Status == CRMOzem.Core.Enums.AssetStatus.Available)   ?? 0;
 }
 
-<div class="container-fluid py-3">
+<style>
+/* ────────────────────────────────────────────────
+   SAYFA SARMALAYICI  —  layout'un <main> içine oturur
+──────────────────────────────────────────────── */
+.iv-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; min-height: 100%; }
 
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <div>
-            <h3 class="mb-0">Envanter & Zimmet</h3>
-            <div class="text-muted small">IT – Envanter yönetimi ve zimmet işlemleri</div>
+/* ── Üst başlık ── */
+.iv-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.iv-header-left h4 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 2px; letter-spacing: -.02em; }
+.iv-header-left p  { font-size: 12px; color: #64748b; margin: 0; }
+.iv-header-right   { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Butonlar ── */
+.iv-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 600;
+    border: 1.5px solid transparent; cursor: pointer;
+    transition: transform .12s, box-shadow .12s, background .12s;
+    white-space: nowrap; text-decoration: none;
+}
+.iv-btn:hover   { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.10); }
+.iv-btn:active  { transform: none; box-shadow: none; }
+.iv-btn i, .iv-btn svg { font-size: 13px; }
+
+.iv-btn-primary { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.iv-btn-primary:hover { background: #1e40af; }
+.iv-btn-success { background: #15803d; color: #fff; border-color: #15803d; }
+.iv-btn-success:hover { background: #166534; }
+.iv-btn-ghost   { background: #fff; color: #374151; border-color: #e2e8f0; }
+.iv-btn-ghost:hover { background: #f8fafc; }
+.iv-btn-danger-xs  { font-size: 11px; padding: 4px 9px; border-radius: 6px; color: #991b1b; border-color: #fecaca; background: #fef2f2; }
+.iv-btn-danger-xs:hover  { background: #fee2e2; }
+.iv-btn-pdf-xs { font-size: 11px; padding: 4px 9px; border-radius: 6px; color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
+.iv-btn-pdf-xs:hover { background: #dbeafe; }
+
+/* ── Stat kartlar ── */
+.iv-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.iv-stat  {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 0;
+}
+.iv-stat-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; margin-bottom: 10px;
+}
+.ic-blue   { background: #eff6ff; color: #1d4ed8; }
+.ic-indigo { background: #eef2ff; color: #4338ca; }
+.ic-green  { background: #f0fdf4; color: #15803d; }
+.ic-amber  { background: #fffbeb; color: #b45309; }
+.iv-stat-val   { font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; }
+.iv-stat-label { font-size: 11.5px; color: #64748b; margin-top: 4px; font-weight: 500; }
+.iv-stat-note  { font-size: 10.5px; margin-top: 5px; }
+.note-green { color: #15803d; } .note-amber { color: #b45309; } .note-gray  { color: #94a3b8; }
+
+/* ── Panel ── */
+.iv-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.iv-panel-head {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #f1f5f9;
+}
+.iv-panel-title { font-size: 13.5px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 7px; }
+.iv-panel-title i { color: #64748b; font-size: 14px; }
+.iv-panel-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* ── İki kolon ── */
+.iv-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Tablo ── */
+.iv-table-wrap { overflow-x: auto; }
+.iv-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.iv-table thead th {
+    padding: 9px 18px; text-align: left; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; color: #94a3b8;
+    background: #f8fafc; border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+}
+.iv-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .08s; }
+.iv-table tbody tr:last-child { border-bottom: none; }
+.iv-table tbody tr:hover { background: #f8faff; }
+.iv-table td { padding: 10px 18px; color: #0f172a; vertical-align: middle; }
+.iv-table td.muted { color: #94a3b8; font-size: 11px; }
+.iv-table td.mono  { font-family: 'SFMono-Regular',Consolas,monospace; font-size: 10.5px; color: #94a3b8; }
+
+/* ── Avatar ── */
+.iv-av {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+}
+.av-blue   { background: #eff6ff; color: #1d4ed8; }
+.av-green  { background: #f0fdf4; color: #15803d; }
+.av-amber  { background: #fffbeb; color: #b45309; }
+.av-purple { background: #f5f3ff; color: #6d28d9; }
+.av-pink   { background: #fdf2f8; color: #9d174d; }
+
+/* ── Badge ── */
+.iv-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; white-space: nowrap;
+}
+.iv-badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.b-available   { background:#f0fdf4; color:#15803d; }
+.b-inuse       { background:#eff6ff; color:#1d4ed8; }
+.b-maintenance { background:#fffbeb; color:#b45309; }
+.b-retired     { background:#fef2f2; color:#991b1b; }
+.b-gray        { background:#f1f5f9; color:#64748b; }
+
+/* ── Bar ── */
+.iv-bar-list { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px; }
+.iv-bar-meta { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px; }
+.iv-bar-meta span:first-child { font-weight: 600; color: #0f172a; }
+.iv-bar-meta span:last-child  { color: #94a3b8; }
+.iv-bar-bg   { height: 5px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
+.iv-bar-fill { height: 100%; background: #1d4ed8; border-radius: 999px; }
+
+/* ── Arama ── */
+.iv-search-wrap { position: relative; }
+.iv-search-wrap input {
+    padding: 7px 10px 7px 30px; border: 1px solid #e2e8f0; border-radius: 8px;
+    font-size: 12px; width: 230px; background: #f8fafc; color: #0f172a;
+    transition: border-color .15s, box-shadow .15s;
+}
+.iv-search-wrap input:focus {
+    outline: none; border-color: #1d4ed8; background: #fff;
+    box-shadow: 0 0 0 3px rgba(29,78,216,.1);
+}
+.iv-search-ico { position:absolute; left:9px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:11px; pointer-events:none; }
+
+/* ── Sekme ── */
+.iv-tabs { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; padding: 0 18px; }
+.iv-tab {
+    padding: 10px 14px; font-size: 12.5px; font-weight: 600; color: #64748b;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .12s; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+}
+.iv-tab:hover { color: #0f172a; }
+.iv-tab.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+.iv-tab-n {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; background: #e0e7ff; color: #1d4ed8;
+}
+.iv-tab.active .iv-tab-n { background: #1d4ed8; color: #fff; }
+
+/* ── Hızlı İşlem panel ── */
+.iv-quick { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; }
+.iv-quick-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-radius: 9px; border: 1px solid #e2e8f0;
+    background: #fff; cursor: pointer; transition: all .12s; text-decoration: none;
+}
+.iv-quick-btn:hover { background: #f8fafc; border-color: #bfdbfe; transform: translateX(2px); }
+.iv-quick-btn .qb-icon {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.iv-quick-btn .qb-text { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+.iv-quick-btn .qb-sub  { font-size: 10.5px; color: #64748b; margin-top: 1px; }
+
+/* ── Loading ── */
+.iv-loading { display:flex; align-items:center; justify-content:center; gap:8px; padding:32px; color:#94a3b8; font-size:12px; }
+.iv-spin { width:16px; height:16px; border:2px solid #e2e8f0; border-top-color:#1d4ed8; border-radius:50%; animation:iv-spin .65s linear infinite; }
+@@keyframes iv-spin { to { transform:rotate(360deg); } }
+.refreshing .iv-spin { display:inline-block !important; }
+
+/* ── Empty ── */
+.iv-empty { padding:44px 16px; text-align:center; color:#94a3b8; }
+.iv-empty i { font-size:28px; opacity:.35; margin-bottom:8px; display:block; }
+.iv-empty p { font-size:12.5px; margin:0; }
+
+/* ── Modal ── */
+.iv-modal .modal-content { border:none; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.iv-modal .modal-header  { border-bottom:1px solid #e2e8f0; padding:14px 18px; background:#f8fafc; border-radius:14px 14px 0 0; }
+.iv-modal .modal-title   { font-size:14px; font-weight:700; color:#0f172a; }
+.iv-modal .modal-body    { padding:18px; }
+.iv-modal .modal-footer  { border-top:1px solid #e2e8f0; padding:12px 18px; background:#f8fafc; }
+
+/* ── Form grup ── */
+.iv-form-group { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+.iv-form-group label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
+.iv-form-group .form-control, .iv-form-group .form-select {
+    border:1px solid #e2e8f0; border-radius:8px; font-size:12.5px; padding:8px 10px;
+    transition:border-color .15s, box-shadow .15s;
+}
+.iv-form-group .form-control:focus, .iv-form-group .form-select:focus {
+    border-color:#1d4ed8; box-shadow:0 0 0 3px rgba(29,78,216,.1);
+}
+.iv-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* ── Toast ── */
+#iv-toasts { position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+.iv-toast {
+    display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px;
+    font-size:12.5px; font-weight:600; pointer-events:auto; min-width:220px;
+    box-shadow:0 4px 20px rgba(0,0,0,.1); animation:iv-toast-in .2s ease; transition:opacity .3s;
+}
+.iv-toast i { font-size:14px; flex-shrink:0; }
+.toast-ok  { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+.toast-err { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+@@keyframes iv-toast-in { from { transform:translateX(30px); opacity:0; } }
+
+/* ── Alert ── */
+.iv-alert { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:9px; font-size:12.5px; }
+.iv-alert-danger { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+
+/* ── Responsive ── */
+@@media (max-width:1100px) { .iv-stats { grid-template-columns:repeat(2,1fr); } }
+@@media (max-width:768px)  { .iv-two-col { grid-template-columns:1fr; } .iv-stats { grid-template-columns:repeat(2,1fr); } }
+@@media (max-width:500px)  { .iv-stats { grid-template-columns:1fr 1fr; } }
+</style>
+
+<div id="iv-toasts"></div>
+
+<div class="iv-page">
+
+    <!-- ── Başlık ── -->
+    <div class="iv-header">
+        <div class="iv-header-left">
+            <h4><i class="fe fe-cpu" style="color:#1d4ed8;margin-right:8px"></i>Envanter & Zimmet</h4>
+            <p>IT — Cihaz, kişi ve zimmet yönetimi</p>
         </div>
-
-        <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" onclick="openModal('@urlModalAssetCreate')">
-                <i class="bi bi-plus-circle me-1"></i> Cihaz
+        <div class="iv-header-right">
+            <button class="iv-btn iv-btn-ghost" onclick="openModal('@urlAssigneeUser')">
+                <i class="fe fe-user-check"></i> Kullanıcıdan Kişi
             </button>
-
-            <button class="btn btn-outline-secondary" onclick="openModal('@urlModalAssigneeFromUser')">
-                <i class="bi bi-person-check me-1"></i> Kayıtlı Kullanıcıdan Kişi
+            <button class="iv-btn iv-btn-ghost" onclick="openModal('@urlAssigneeExt')">
+                <i class="fe fe-user-plus"></i> Kayıtsız Kişi
             </button>
-
-            <button class="btn btn-outline-secondary" onclick="openModal('@urlModalAssigneeExternal')">
-                <i class="bi bi-person-plus me-1"></i> Kayıtsız Kişi
+            <button class="iv-btn iv-btn-ghost" onclick="openModal('@urlAssetCreate')">
+                <i class="fe fe-plus-circle"></i> Cihaz Ekle
             </button>
-
-            <button class="btn btn-success" onclick="openModal('@urlModalAssignmentCreate')">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Zimmet
+            <button class="iv-btn iv-btn-success" onclick="openModal('@urlAssignment')">
+                <i class="fe fe-log-in"></i> Zimmet Oluştur
             </button>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(error))
     {
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <div>@error</div>
-        </div>
+        <div class="iv-alert iv-alert-danger"><i class="fe fe-alert-circle"></i>@error</div>
     }
 
-    <!-- Özet kartları -->
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="text-muted small">Son 200 Cihaz</div>
-                    <div class="fs-4 fw-semibold">@Model.Assets?.Count</div>
-                </div>
+    <!-- ── Stat kartlar ── -->
+    <div class="iv-stats">
+        <div class="iv-stat">
+            <div class="iv-stat-icon ic-blue"><i class="fe fe-hard-drive"></i></div>
+            <div class="iv-stat-val">@totalAssets</div>
+            <div class="iv-stat-label">Toplam Cihaz</div>
+        </div>
+        <div class="iv-stat">
+            <div class="iv-stat-icon ic-indigo"><i class="fe fe-clipboard"></i></div>
+            <div class="iv-stat-val">@activeItems</div>
+            <div class="iv-stat-label">Aktif Zimmet</div>
+        </div>
+        <div class="iv-stat">
+            <div class="iv-stat-icon ic-green"><i class="fe fe-check-circle"></i></div>
+            <div class="iv-stat-val">@available</div>
+            <div class="iv-stat-label">Müsait Cihaz</div>
+            @if (totalAssets > 0)
+            {
+                <div class="iv-stat-note note-gray">%@((int)Math.Round((double)available / totalAssets * 100)) stok oranı</div>
+            }
+        </div>
+       
+    </div>
+
+    <!-- ── Sekme paneli ── -->
+    <div class="iv-panel">
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:13px 18px;border-bottom:1px solid #f1f5f9;">
+            <div class="iv-search-wrap">
+                <i class="fe fe-search iv-search-ico"></i>
+                <input id="iv-q" type="text" placeholder="Tabloda ara…" oninput="ivFilter()" autocomplete="off">
+            </div>
+            <button class="iv-btn iv-btn-ghost" id="iv-refresh-btn" onclick="ivRefreshAll()">
+                <span class="iv-spin" style="display:none"></span>
+                <i class="fe fe-refresh-cw"></i> Yenile
+            </button>
+        </div>
+
+        <!-- Sekmeler -->
+        <div class="iv-tabs">
+            <button class="iv-tab active" id="tab-active" onclick="ivTab('active')">
+                <i class="fe fe-users"></i> Aktif Zimmetler
+                <span class="iv-tab-n">@activeItems</span>
+            </button>
+            <button class="iv-tab" id="tab-assets" onclick="ivTab('assets')">
+                <i class="fe fe-hard-drive"></i> Cihazlar
+                <span class="iv-tab-n">@totalAssets</span>
+            </button>
+            <button class="iv-tab" id="tab-brand" onclick="ivTab('brand')">
+                <i class="fe fe-bar-chart-2"></i> Marka / Model
+            </button>
+        </div>
+
+        <!-- Pane: Aktif Zimmetler -->
+        <div id="pane-active" class="iv-pane">
+            <div id="activeTable">
+                @await Html.PartialAsync("Partials/_ActiveAssignmentsTable", Model.ActiveItems)
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="text-muted small">Aktif Zimmet</div>
-                    <div class="fs-4 fw-semibold">@Model.ActiveItems?.Count</div>
-                </div>
+
+        <!-- Pane: Cihazlar -->
+        <div id="pane-assets" class="iv-pane" style="display:none">
+            <div id="assetsTable">
+                @await Html.PartialAsync("Partials/_AssetsTable", Model.Assets)
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="text-muted small">Marka / Model Özeti</div>
-                    <div class="fs-4 fw-semibold">@Model.BrandSummary?.Count</div>
-                </div>
+
+        <!-- Pane: Marka -->
+        <div id="pane-brand" class="iv-pane" style="display:none">
+            <div id="brandTable">
+                @await Html.PartialAsync("Partials/_BrandSummaryTable", Model.BrandSummary)
             </div>
         </div>
     </div>
 
-    <!-- Tab yapısı -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-white">
-            <ul class="nav nav-tabs card-header-tabs" id="invTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="tab-assets" data-bs-toggle="tab" data-bs-target="#pane-assets" type="button" role="tab">
-                        Envanter
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-active" data-bs-toggle="tab" data-bs-target="#pane-active" type="button" role="tab">
-                        Aktif Zimmetler
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-brand" data-bs-toggle="tab" data-bs-target="#pane-brand" type="button" role="tab">
-                        Marka / Model Raporu
-                    </button>
-                </li>
-            </ul>
+    <!-- ── Alt iki kolon ── -->
+    <div class="iv-two-col">
+
+        <!-- Marka dağılım grafiği -->
+        <div class="iv-panel">
+            <div class="iv-panel-head">
+                <div class="iv-panel-title"><i class="fe fe-bar-chart-2"></i> Marka Dağılımı</div>
+            </div>
+            @{
+                var brandGrp = Model.Assets?
+                    .GroupBy(a => a.Brand)
+                    .OrderByDescending(g => g.Count())
+                    .Take(6).ToList();
+                var maxB = brandGrp?.Max(g => g.Count()) ?? 1;
+            }
+            @if (brandGrp != null && brandGrp.Any())
+            {
+                <div class="iv-bar-list">
+                    @foreach (var g in brandGrp)
+                    {
+                        var pct = (int)Math.Round((double)g.Count() / maxB * 100);
+                        <div>
+                            <div class="iv-bar-meta">
+                                <span>@g.Key</span>
+                                <span>@g.Count() cihaz</span>
+                            </div>
+                            <div class="iv-bar-bg">
+                                <div class="iv-bar-fill" style="width:@pct%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="iv-empty"><i class="fe fe-bar-chart-2"></i><p>Veri yok</p></div>
+            }
         </div>
 
-        <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                <div class="input-group" style="max-width: 420px;">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input id="q" type="text" class="form-control" placeholder="Tablodan filtrele (anlık)" oninput="filterTables()" />
-                </div>
-
-                <button class="btn btn-outline-primary" onclick="refreshAll()">
-                    <i class="bi bi-arrow-repeat me-1"></i> Yenile
+        <!-- Hızlı işlemler -->
+        <div class="iv-panel">
+            <div class="iv-panel-head">
+                <div class="iv-panel-title"><i class="fe fe-zap"></i> Hızlı İşlemler</div>
+            </div>
+            <div class="iv-quick">
+                <button class="iv-quick-btn" onclick="openModal('@urlAssetCreate')">
+                    <div class="qb-icon ic-blue"><i class="fe fe-plus-circle"></i></div>
+                    <div><div class="qb-text">Yeni Cihaz Ekle</div><div class="qb-sub">Envantere cihaz kaydet</div></div>
+                </button>
+                <button class="iv-quick-btn" onclick="openModal('@urlAssignment')">
+                    <div class="qb-icon ic-green"><i class="fe fe-log-in"></i></div>
+                    <div><div class="qb-text">Zimmet Oluştur</div><div class="qb-sub">Kişiye cihaz zimmetle</div></div>
+                </button>
+                <button class="iv-quick-btn" onclick="openModal('@urlAssigneeUser')">
+                    <div class="qb-icon ic-indigo"><i class="fe fe-user-check"></i></div>
+                    <div><div class="qb-text">Kullanıcıdan Kişi</div><div class="qb-sub">Sisteme kayıtlı kullanıcı</div></div>
+                </button>
+                <button class="iv-quick-btn" onclick="openModal('@urlAssigneeExt')">
+                    <div class="qb-icon ic-amber"><i class="fe fe-user-plus"></i></div>
+                    <div><div class="qb-text">Kayıtsız Kişi Ekle</div><div class="qb-sub">Dış personel / misafir</div></div>
                 </button>
             </div>
-
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="pane-assets" role="tabpanel">
-                    <div id="assetsTable">
-                        @await Html.PartialAsync("Partials/_AssetsTable", Model.Assets)
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="pane-active" role="tabpanel">
-                    <div id="activeTable">
-                        @await Html.PartialAsync("Partials/_ActiveAssignmentsTable", Model.ActiveItems)
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="pane-brand" role="tabpanel">
-                    <div id="brandTable">
-                        @await Html.PartialAsync("Partials/_BrandSummaryTable", Model.BrandSummary)
-                    </div>
-                </div>
-            </div>
         </div>
+
     </div>
+
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="appModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" id="appModalContent"></div>
+<div class="modal fade iv-modal" id="ivModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable" style="max-width:520px">
+        <div class="modal-content" id="ivModalBody">
+            <div class="iv-loading"><div class="iv-spin"></div> Yükleniyor…</div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        const modalEl = document.getElementById('appModal');
-        const modal = new bootstrap.Modal(modalEl);
+<script>
+(function(){
+    const U = {
+        assets : '@urlAssetsTable',
+        active : '@urlActiveTable',
+        brand  : '@urlBrandTable',
+        ret    : '@urlReturnItem',
+        pdf    : '@urlGeneratePdf'
+    };
 
-        // URL'leri backend'den aldık
-        const urlAssetsTable = '@urlAssetsTable';
-        const urlActiveTable = '@urlActiveTable';
-        const urlBrandTable  = '@urlBrandTable';
+    const bsModal = new bootstrap.Modal(document.getElementById('ivModal'));
 
-        const urlReturnItem  = '@urlReturnItem';
-        const urlGeneratePdf = '@urlGeneratePdf';
+    /* ── Sekme ── */
+    window.ivTab = function(name){
+        document.querySelectorAll('.iv-tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.iv-pane').forEach(p=>p.style.display='none');
+        document.getElementById('tab-'+name).classList.add('active');
+        document.getElementById('pane-'+name).style.display='';
+        ivFilter();
+    };
 
-        async function openModal(url) {
-            const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            const html = await res.text();
-            document.getElementById('appModalContent').innerHTML = html;
-            modal.show();
-        }
+    /* ── Modal ── */
+    window.openModal = async function(url){
+        document.getElementById('ivModalBody').innerHTML =
+            '<div class="iv-loading"><div class="iv-spin"></div> Yükleniyor…</div>';
+        bsModal.show();
+        const html = await fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text()).catch(()=>'<p style="padding:1rem;color:red">Yüklenemedi.</p>');
+        document.getElementById('ivModalBody').innerHTML = html;
+    };
 
-        async function postForm(form) {
-            const fd = new FormData(form);
-            const res = await fetch(form.action, {
-                method: form.method || 'POST',
-                body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
+    /* ── Form POST — çift submit engeli ── */
+    window.postForm = async function(form){
+        if(form.dataset.busy==='1') return false;
+        form.dataset.busy = '1';
+        const btn = form.querySelector('[type=submit]');
+        const orig = btn?.innerHTML;
+        if(btn){ btn.disabled=true; btn.innerHTML='<span class="iv-spin" style="display:inline-block;width:14px;height:14px;border-width:2px"></span>'; }
+        try{
+            const res  = await fetch(form.action,{method:form.method||'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'}});
+            const data = await res.json().catch(()=>null);
+            if(!res.ok||!data?.ok){ ivToast(data?.message||'Hata oluştu.','err'); if(btn){btn.disabled=false;btn.innerHTML=orig;} form.dataset.busy='0'; return false; }
+            bsModal.hide();
+            await ivRefreshAll();
+            ivToast('İşlem başarılı.','ok');
+        }catch{ ivToast('Sunucu hatası.','err'); if(btn){btn.disabled=false;btn.innerHTML=orig;} form.dataset.busy='0'; }
+        return false;
+    };
 
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data || data.ok === false) {
-                alert((data && data.message) ? data.message : 'Hata oluştu.');
-                return false;
-            }
+    /* ── Yenile ── */
+    window.ivRefreshAll = async function(){
+        const btn = document.getElementById('iv-refresh-btn');
+        btn.disabled=true;
+        btn.querySelector('.iv-spin').style.display='inline-block';
+        btn.querySelector('.fe-refresh-cw').style.display='none';
+        const L='<div class="iv-loading"><div class="iv-spin"></div></div>';
+        ['activeTable','assetsTable','brandTable'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=L;});
+        const [ac,as,br] = await Promise.all([
+            fetch(U.active,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text()),
+            fetch(U.assets,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text()),
+            fetch(U.brand, {headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text())
+        ]);
+        document.getElementById('activeTable').innerHTML=ac;
+        document.getElementById('assetsTable').innerHTML=as;
+        document.getElementById('brandTable').innerHTML=br;
+        btn.disabled=false;
+        btn.querySelector('.iv-spin').style.display='none';
+        btn.querySelector('.fe-refresh-cw').style.display='';
+        ivFilter();
+    };
 
-            modal.hide();
-            await refreshAll();
-            return false;
-        }
+    /* ── Filtre ── */
+    window.ivFilter = function(){
+        const q=(document.getElementById('iv-q').value||'').trim().toLowerCase();
+        document.querySelectorAll('#activeTable tbody tr,#assetsTable tbody tr,#brandTable tbody tr')
+            .forEach(tr=>{ tr.style.display=(!q||tr.innerText.toLowerCase().includes(q))?'':'none'; });
+    };
 
-        async function refreshAll() {
-            document.getElementById('assetsTable').innerHTML =
-                await fetch(urlAssetsTable, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.text());
+    /* ── İade ── */
+    window.returnItem = async function(id){
+        if(!confirm('Bu cihazı iade almak istiyor musunuz?')) return;
+        const tok=document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const fd=new FormData(); fd.append('itemId',id); if(tok)fd.append('__RequestVerificationToken',tok);
+        const res=await fetch(U.ret,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
+        const d=await res.json().catch(()=>null);
+        if(!res.ok||!d?.ok){ivToast(d?.message||'Hata.','err');return;}
+        await ivRefreshAll(); ivToast('Cihaz iade alındı.','ok');
+    };
 
-            document.getElementById('activeTable').innerHTML =
-                await fetch(urlActiveTable, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.text());
+    /* ── PDF ── */
+    window.generatePdf = async function(id){
+        const tok=document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const fd=new FormData(); fd.append('assignmentId',id); if(tok)fd.append('__RequestVerificationToken',tok);
+        const res=await fetch(U.pdf,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
+        const d=await res.json().catch(()=>null);
+        if(!res.ok||!d?.ok){ivToast(d?.message||'PDF üretilemedi.','err');return;}
+        ivToast('PDF oluşturuldu.','ok');
+    };
 
-            document.getElementById('brandTable').innerHTML =
-                await fetch(urlBrandTable, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.text());
-
-            filterTables(); // yenilemeden sonra filtreyi koru
-        }
-
-        function filterTables() {
-            const q = (document.getElementById('q').value || '').toLowerCase();
-            const tables = document.querySelectorAll('#assetsTable table tbody tr, #activeTable table tbody tr, #brandTable table tbody tr');
-            tables.forEach(tr => {
-                const text = tr.innerText.toLowerCase();
-                tr.style.display = text.includes(q) ? '' : 'none';
-            });
-        }
-
-        async function returnItem(itemId) {
-            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-            const fd = new FormData();
-            fd.append('itemId', itemId);
-            if (token) fd.append('__RequestVerificationToken', token);
-
-            const res = await fetch(urlReturnItem, {
-                method: 'POST',
-                body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data || data.ok === false) {
-                alert((data && data.message) ? data.message : 'Hata oluştu.');
-                return;
-            }
-            await refreshAll();
-        }
-
-        async function generatePdf(assignmentId) {
-            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-            const fd = new FormData();
-            fd.append('assignmentId', assignmentId);
-            if (token) fd.append('__RequestVerificationToken', token);
-
-            const res = await fetch(urlGeneratePdf, {
-                method: 'POST',
-                body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data || data.ok === false) {
-                alert((data && data.message) ? data.message : 'PDF üretilemedi.');
-                return;
-            }
-            alert('PDF oluşturuldu ve kaydedildi.');
-        }
-    </script>
+    /* ── Toast ── */
+    window.ivToast = function(msg,type){
+        const c=document.getElementById('iv-toasts');
+        const t=document.createElement('div');
+        t.className=`iv-toast toast-${type}`;
+        t.innerHTML=`<i class="fe fe-${type==='ok'?'check-circle':'alert-circle'}"></i>${msg}`;
+        c.appendChild(t);
+        setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),350);},3000);
+    };
+})();
+</script>
 }

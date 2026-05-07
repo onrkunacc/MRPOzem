@@ -46,6 +46,8 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<PersonelGider> PersonelGiderler { get; set; }
         public DbSet<EkGider> EkGiderler { get; set; }
         public DbSet<IhaleKalem> IhaleKalemler { get; set; }
+        public DbSet<HospitalBirim> HospitalBirimler { get; set; }
+
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -295,6 +297,23 @@ namespace CRMOzem.DataAccess.Context
             builder.Entity<UserSupervisor>().ToTable("UserSupervisors", "ozem");
 
             builder.Entity<Birim>().ToTable("Birimler", "ozem");
+
+            builder.Entity<HospitalBirim>(e =>
+            {
+                e.HasOne(x => x.Hospital)
+                 .WithMany(h => h.HospitalBirimler)
+                 .HasForeignKey(x => x.HospitalID)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.Birim)
+                 .WithMany(b => b.HospitalBirimler)
+                 .HasForeignKey(x => x.BirimId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasIndex(x => new { x.HospitalID, x.BirimId, x.Aktif });
+            });
+
+            builder.Entity<HospitalBirim>().ToTable("HospitalBirimler", "ozem");
 
 
         }

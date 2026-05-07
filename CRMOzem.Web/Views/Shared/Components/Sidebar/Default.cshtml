@@ -455,7 +455,6 @@
                 </li>
             </ul>
         </li>
-
         <!-- Hastaneler -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#hastane-menu">
@@ -473,6 +472,13 @@
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Hospital" asp-action="Create">
                         <i class="fe fe-plus-circle fe-14"></i>
                         <span class="ml-1 item-text">Hastane Ekle</span>
+                    </a>
+                </li>
+               
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                        <i class="fe fe-grid fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Birimleri</span>
                     </a>
                 </li>
             </ul>
@@ -513,19 +519,18 @@
             </a>
         </li>
     }
+ 
     @if (Model.Contains("IT"))
-    {
-        <li class="nav-item">
-            <a class="nav-link" asp-area="IT" asp-controller="Inventory" asp-action="Index">
-                <i class="fe fe-file-plus fe-16"></i>
-                <span class="ml-3 item-text">Zimmetler</span>
-            </a>
+    { 
+        <li class="nav-item nav-section">
+            <span class="nav-section-text">Envanter & Zimmet</span>
         </li>
         <li class="nav-item">
-            <a class="nav-link" asp-area="IT" asp-controller="Modals" asp-action="_AssetCreate">
-                <i class="fe fe-file-plus fe-16"></i>
-                <span class="ml-3 item-text">Modal ekleme</span>
+            <a class="nav-link" asp-area="IT" asp-controller="Inventory" asp-action="Index">
+                <i class="fe fe-hard-drive fe-16"></i>
+                <span class="ml-3 item-text">Envanter</span>
             </a>
         </li>
     }
+
 </ul>

@@ -1,0 +1,295 @@
+﻿@model HospitalBirimPageVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Hastane Birimleri";
+    var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
+    int? selectedHospitalId = ViewBag.SelectedHospitalId as int?;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        border: 1px solid rgba(0,0,0,.08);
+        background: #fff;
+        border-radius: 999px;
+        padding: .25rem .6rem;
+        font-size: .85rem;
+        color: #495057;
+        white-space: nowrap;
+    }
+
+        .pill strong {
+            font-weight: 800;
+        }
+
+    .badge-birim-large {
+        display: inline-block;
+        background: #eef2f7;
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 700;
+        font-size: .85rem;
+    }
+
+    .info-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: .85rem;
+        color: #4a5568;
+    }
+
+        .info-row span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+    .card-aktif {
+        border-left: 4px solid #10b981;
+    }
+
+    .card-pasif {
+        border-left: 4px solid #94a3b8;
+        opacity: .85;
+    }
+
+    .quick-add-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .35rem .7rem;
+        border-radius: 999px;
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        color: #0369a1;
+        font-size: .85rem;
+        text-decoration: none;
+        transition: all .15s;
+    }
+
+        .quick-add-chip:hover {
+            background: #0369a1;
+            color: #fff;
+            text-decoration: none;
+        }
+</style>
+
+<div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+    <div>
+        <h4 class="mb-1">Hastane Birimleri</h4>
+        <div class="text-muted small">Hangi hastanede hangi birimde ihalemiz olduğunu yönetin.</div>
+    </div>
+</div>
+
+<!-- Hastane Seçimi -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-8 col-lg-6">
+                <label class="form-label">Hastane</label>
+                <select name="hospitalId" class="form-select" onchange="this.form.submit()">
+                    <option value="">Seçiniz...</option>
+                    @foreach (var h in hospitals)
+                    {
+                        <option value="@h.Value" selected="@(selectedHospitalId?.ToString() == h.Value)">
+                            @h.Text
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-4 col-lg-6">
+                <div class="text-muted small">Hastane seçildiğinde detay otomatik yüklenir.</div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model == null)
+{
+    <div class="alert alert-info">Devam etmek için bir hastane seçin.</div>
+    return;
+}
+
+<!-- Üst Bilgi -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="pill"><i class="fe fe-home"></i> <strong>@Model.HospitalName</strong></span>
+    <span class="pill" style="background:rgba(16,185,129,.08); border-color:#86efac;">
+        <i class="fe fe-check-circle"></i> Aktif: <strong>@Model.AktifKayitlar.Count</strong>
+    </span>
+    @if (Model.PasifKayitlar.Any())
+    {
+        <span class="pill" style="background:rgba(148,163,184,.08); border-color:#cbd5e1;">
+            <i class="fe fe-archive"></i> Pasif: <strong>@Model.PasifKayitlar.Count</strong>
+        </span>
+    }
+    <a class="btn btn-sm btn-primary ms-auto" asp-action="Create" asp-route-hospitalId="@Model.HospitalID">
+        <i class="fe fe-plus mr-2"></i> Yeni Birim Ekle
+    </a>
+</div>
+
+<!-- Hızlı Ekleme: Henüz kaydı olmayan birimler -->
+@if (Model.EklenebilirBirimler.Any())
+{
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="text-muted small mb-2">
+                <i class="fe fe-zap"></i> Henüz kaydı olmayan birimler — tıklayarak hızlıca ekleyebilirsiniz:
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var b in Model.EklenebilirBirimler)
+                {
+                    <a class="quick-add-chip"
+                           asp-action="Create"
+                           asp-route-hospitalId="@Model.HospitalID"
+                           asp-route-birimId="@b.Id"
+                           title="@b.BirimAdi">
+                        <strong>@b.BirimKodu</strong> · @b.BirimAdi <i class="fe fe-plus"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Aktif Kayıtlar -->
+<h5 class="mb-3 mt-2">
+    <i class="fe fe-check-circle text-success"></i> Aktif Birimler
+</h5>
+
+@if (!Model.AktifKayitlar.Any())
+{
+    <div class="alert alert-light border">Bu hastane için aktif birim kaydı yok.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        @foreach (var r in Model.AktifKayitlar)
+        {
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm card-aktif h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge-birim-large">@r.BirimKodu</span>
+                                <div class="fw-semibold mt-1">@r.BirimAdi</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                       asp-action="Edit" asp-route-id="@r.Id" title="Düzenle">
+                                    <i class="fe fe-edit-2"></i>
+                                </a>
+                                <form method="post" asp-action="ToggleAktif" asp-route-id="@r.Id" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Pasife Al"
+                                            onclick="return confirm('Bu kaydı pasife almak istediğinize emin misiniz?')">
+                                        <i class="fe fe-archive"></i>
+                                    </button>
+                                </form>
+                                <form method="post" asp-action="Delete" asp-route-id="@r.Id" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Sil"
+                                            onclick="return confirm('Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?')">
+                                        <i class="fe fe-trash-2"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="info-row mt-2">
+                            @if (r.BaslangicTarihi.HasValue || r.BitisTarihi.HasValue)
+                            {
+                                <span>
+                                    <i class="fe fe-calendar"></i>
+                                    @(r.BaslangicTarihi?.ToString("dd.MM.yyyy") ?? "-")
+                                    →
+                                    @(r.BitisTarihi?.ToString("dd.MM.yyyy") ?? "-")
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(r.IhaleKayitNo))
+                            {
+                                <span><i class="fe fe-tag"></i> @r.IhaleKayitNo</span>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(r.Aciklama))
+                        {
+                            <div class="text-muted small mt-2 fst-italic">@r.Aciklama</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Pasif/Geçmiş Kayıtlar -->
+@if (Model.PasifKayitlar.Any())
+{
+    <h5 class="mb-3 mt-4">
+        <i class="fe fe-archive text-secondary"></i> Geçmiş Kayıtlar
+        <small class="text-muted">(yenilenmiş veya bitmiş ihaleler)</small>
+    </h5>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:120px">Birim</th>
+                            <th>Adı</th>
+                            <th style="width:200px">Tarih Aralığı</th>
+                            <th style="width:150px">İhale No</th>
+                            <th>Açıklama</th>
+                            <th style="width:160px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.PasifKayitlar)
+                        {
+                            <tr>
+                                <td><span class="badge-birim-large">@r.BirimKodu</span></td>
+                                <td>@r.BirimAdi</td>
+                                <td class="small">
+                                    @(r.BaslangicTarihi?.ToString("dd.MM.yyyy") ?? "-")
+                                    →
+                                    @(r.BitisTarihi?.ToString("dd.MM.yyyy") ?? "-")
+                                </td>
+                                <td class="small">@(r.IhaleKayitNo ?? "-")</td>
+                                <td class="small text-muted">@(r.Aciklama ?? "-")</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@r.Id">
+                                            <i class="fe fe-edit-2"></i>
+                                        </a>
+                                        <form method="post" asp-action="ToggleAktif" asp-route-id="@r.Id" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Aktif Et">
+                                                <i class="fe fe-rotate-ccw"></i>
+                                            </button>
+                                        </form>
+                                        <form method="post" asp-action="Delete" asp-route-id="@r.Id" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Bu kaydı kalıcı olarak silmek istiyor musunuz?')">
+                                                <i class="fe fe-trash-2"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

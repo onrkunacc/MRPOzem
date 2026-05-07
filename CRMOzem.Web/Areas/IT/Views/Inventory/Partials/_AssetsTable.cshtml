@@ -1,33 +1,56 @@
-﻿@model List<Asset>
+﻿@using CRMOzem.Core.Enums
+@model List<CRMOzem.Core.Inventory.Asset>
 
-<div class="table-responsive">
-    <table class="table table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>Kategori</th>
-                <th>Marka</th>
-                <th>Model</th>
-                <th>SN</th>
-                <th>Tag</th>
-                <th>Durum</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in Model)
-            {
+@{
+    string Cls(AssetStatus s) => s switch
+    {
+        AssetStatus.Available => "b-available",
+        AssetStatus.InUse => "b-inuse",
+        AssetStatus.Retired => "b-retired",
+        _ => "b-gray"
+    };
+    string Lbl(AssetStatus s) => s switch
+    {
+        AssetStatus.Available => "Müsait",
+        AssetStatus.InUse => "Kullanımda",
+        AssetStatus.Retired => "Kullanım Dışı",
+        _ => s.ToString()
+    };
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="iv-empty"><i class="fe fe-hard-drive"></i><p>Henüz kayıtlı cihaz yok.</p></div>
+}
+else
+{
+    <div class="iv-table-wrap">
+        <table class="iv-table">
+            <thead>
                 <tr>
-                    <td class="text-muted">@a.Id</td>
-                    <td class="fw-semibold">@a.Category</td>
-                    <td>@a.Brand</td>
-                    <td>@a.Model</td>
-                    <td class="text-muted">@a.SerialNumber</td>
-                    <td class="text-muted">@a.InventoryTag</td>
-                    <td>
-                        <span class="badge bg-secondary">@a.Status</span>
-                    </td>
+                    <th style="width:52px">#</th>
+                    <th>Kategori</th>
+                    <th>Marka</th>
+                    <th>Model</th>
+                    <th>Seri No</th>
+                    <th>Demirbaş Tag</th>
+                    <th>Durum</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td class="muted">@a.Id</td>
+                        <td style="font-weight:600">@a.Category</td>
+                        <td>@a.Brand</td>
+                        <td>@a.Model</td>
+                        <td class="mono">@(a.SerialNumber ?? "—")</td>
+                        <td class="mono">@(a.InventoryTag ?? "—")</td>
+                        <td><span class="iv-badge @Cls(a.Status)">@Lbl(a.Status)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

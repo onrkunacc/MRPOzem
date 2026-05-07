@@ -4,25 +4,67 @@
 }
 
 <div class="modal-header">
-    <h5 class="modal-title">Cihaz Ekle</h5>
+    <h5 class="modal-title"><i class="fe fe-hard-drive me-2" style="color:#1d4ed8"></i>Yeni Cihaz Ekle</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
 </div>
 
-<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+<form method="post" action="@postUrl" onsubmit="return postForm(this)">
     @Html.AntiForgeryToken()
     <div class="modal-body">
-        <div class="row g-2">
-            <div class="col-12 col-md-6"><input class="form-control" name="Category" placeholder="Kategori" required /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="Brand" placeholder="Marka" required /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="Model" placeholder="Model" required /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="SerialNumber" placeholder="Seri No" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="InventoryTag" placeholder="Demirbaş Tag" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="ImeiNo" placeholder="IMEI (telefon)" /></div>
-            <div class="col-12 col-md-6"><input class="form-control" name="BarcodeNo" placeholder="Barkod No" /></div>
+
+        <div class="iv-form-row">
+            <div class="iv-form-group">
+                <label>Kategori <span style="color:#e53e3e">*</span></label>
+                <select class="form-select" name="Category" required>
+                    <option value="">Seçiniz…</option>
+                    <option>Laptop</option>
+                    <option>Masaüstü Bilgisayar</option>
+                    <option>Tablet</option>
+                    <option>Telefon</option>
+                    <option>Monitör</option>
+                    <option>Yazıcı</option>
+                    <option>Ağ Cihazı</option>
+                    <option>Diğer</option>
+                </select>
+            </div>
+            <div class="iv-form-group">
+                <label>Marka <span style="color:#e53e3e">*</span></label>
+                <input class="form-control" name="Brand" placeholder="örn. Dell, Apple…" required />
+            </div>
         </div>
+
+        <div class="iv-form-row">
+            <div class="iv-form-group">
+                <label>Model <span style="color:#e53e3e">*</span></label>
+                <input class="form-control" name="Model" placeholder="örn. XPS 15" required />
+            </div>
+            <div class="iv-form-group">
+                <label>Seri No</label>
+                <input class="form-control" name="SerialNumber" placeholder="SN / Seri numarası" />
+            </div>
+        </div>
+
+        <div class="iv-form-row">
+            <div class="iv-form-group">
+                <label>Demirbaş Tag</label>
+                <input class="form-control" name="InventoryTag" placeholder="Demirbaş etiketi" />
+            </div>
+            <div class="iv-form-group">
+                <label>IMEI No</label>
+                <input class="form-control" name="ImeiNo" placeholder="Telefon için IMEI" />
+            </div>
+        </div>
+
+        <div class="iv-form-group">
+            <label>Barkod No</label>
+            <input class="form-control" name="BarcodeNo" placeholder="Barkod numarası" />
+        </div>
+
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn btn-primary">Kaydet</button>
+        <button type="button" class="iv-btn iv-btn-ghost" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="iv-btn iv-btn-primary">
+            <i class="fe fe-save"></i> Kaydet
+        </button>
     </div>
 </form>

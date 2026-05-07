@@ -1,0 +1,82 @@
+﻿@model HospitalBirimFormVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Yeni Hastane-Birim Kaydı";
+    var birimler = ViewBag.Birimler as List<SelectListItem> ?? new List<SelectListItem>();
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 mb-3">
+    <div>
+        <h4 class="mb-1">Yeni Birim Kaydı</h4>
+        <div class="text-muted small">@ViewBag.HospitalName</div>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-hospitalId="@Model.HospitalID">
+        <i class="fe fe-arrow-left mr-2"></i> Geri Dön
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post" asp-action="Create" class="row g-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="HospitalID" />
+
+            <div class="col-12 col-md-6">
+                <label class="form-label">Birim *</label>
+                <select asp-for="BirimId" asp-items="birimler" class="form-select">
+                    <option value="">Seçiniz...</option>
+                </select>
+                <span asp-validation-for="BirimId" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label d-block">Durum</label>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" role="switch" asp-for="Aktif" />
+                    <label class="form-check-label" for="@Html.IdFor(x => x.Aktif)">
+                        Aktif
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input asp-for="BaslangicTarihi" type="date" class="form-control" />
+                <span asp-validation-for="BaslangicTarihi" class="text-danger small"></span>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input asp-for="BitisTarihi" type="date" class="form-control" />
+                <span asp-validation-for="BitisTarihi" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label">İhale Kayıt No</label>
+                <input asp-for="IhaleKayitNo" class="form-control" placeholder="2024/123456" />
+                <span asp-validation-for="IhaleKayitNo" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Aciklama" class="form-control" rows="3" placeholder="Opsiyonel notlar..."></textarea>
+                <span asp-validation-for="Aciklama" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12 d-flex gap-2 mt-2">
+                <button class="btn btn-primary px-4" type="submit">
+                    <i class="fe fe-save mr-2"></i> Kaydet
+                </button>
+                <a class="btn btn-outline-secondary" asp-action="Index" asp-route-hospitalId="@Model.HospitalID">
+                    İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

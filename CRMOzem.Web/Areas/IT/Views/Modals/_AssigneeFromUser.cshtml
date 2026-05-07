@@ -4,23 +4,35 @@
 }
 
 <div class="modal-header">
-    <h5 class="modal-title">Kayıtlı Kullanıcıdan Kişi Oluştur</h5>
+    <h5 class="modal-title"><i class="fe fe-user-check me-2" style="color:#4338ca"></i>Kayıtlı Kullanıcıdan Kişi Oluştur</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
 </div>
 
-<form method="post" action="@postUrl" onsubmit="return postForm(this);">
+<form method="post" action="@postUrl" onsubmit="return postForm(this)">
     @Html.AntiForgeryToken()
     <div class="modal-body">
-        <select class="form-select" name="UserId" required>
-            <option value="">Kullanıcı seç...</option>
-            @foreach (var u in Model.Users)
-            {
-                <option value="@u.Id">@u.FullName (@u.Email)</option>
-            }
-        </select>
+
+        <div class="iv-form-group">
+            <label>Kullanıcı Seç <span style="color:#e53e3e">*</span></label>
+            <select class="form-select" name="UserId" required>
+                <option value="">Kullanıcı seçiniz…</option>
+                @foreach (var u in Model.Users)
+                {
+                    <option value="@u.Id">@u.FullName — @u.Email</option>
+                }
+            </select>
+        </div>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#1d4ed8;display:flex;align-items:flex-start;gap:8px">
+            <i class="fe fe-info" style="flex-shrink:0;margin-top:1px"></i>
+            <span>Kullanıcı daha önce eklenmişse mevcut kişi kaydı döndürülür, yeni kayıt oluşturulmaz.</span>
+        </div>
+
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn btn-primary">Oluştur</button>
+        <button type="button" class="iv-btn iv-btn-ghost" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="iv-btn iv-btn-primary">
+            <i class="fe fe-user-plus"></i> Kişi Oluştur
+        </button>
     </div>
 </form>

@@ -1,33 +1,78 @@
-﻿@model List<AssignmentItem>
+﻿@model List<CRMOzem.Core.Inventory.AssignmentItem>
 @Html.AntiForgeryToken()
 
-<div class="table-responsive">
-    <table class="table table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Kişi</th>
-                <th>Cihaz</th>
-                <th>SN</th>
-                <th>Tag</th>
-                <th>Tarih</th>
-                <th class="text-end" style="width: 190px;">İşlem</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var x in Model)
-            {
+@{
+    string[] avColors = { "av-blue", "av-green", "av-amber", "av-purple", "av-pink" };
+    string AvColor(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "av-blue";
+        return avColors[Math.Abs(name.GetHashCode()) % avColors.Length];
+    }
+    string Initials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpper()
+            : name[..Math.Min(2, name.Length)].ToUpper();
+    }
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="iv-empty"><i class="fe fe-clipboard"></i><p>Aktif zimmet kaydı bulunmuyor.</p></div>
+}
+else
+{
+    <div class="iv-table-wrap">
+        <table class="iv-table">
+            <thead>
                 <tr>
-                    <td class="fw-semibold">@x.Assignment?.Assignee?.FullName</td>
-                    <td>@x.Asset?.Category - @x.Asset?.Brand @x.Asset?.Model</td>
-                    <td class="text-muted">@x.Asset?.SerialNumber</td>
-                    <td class="text-muted">@x.Asset?.InventoryTag</td>
-                    <td>@x.Assignment?.AssignedAtUtc.ToLocalTime().ToString("dd.MM.yyyy")</td>
-                    <td class="text-end">
-                        <button class="btn btn-outline-danger btn-sm" onclick="returnItem(@x.Id)">İade</button>
-                        <button class="btn btn-outline-primary btn-sm" onclick="generatePdf(@x.AssignmentId)">PDF</button>
-                    </td>
+                    <th>Kişi</th>
+                    <th>Cihaz</th>
+                    <th>Seri No</th>
+                    <th>Tag</th>
+                    <th>Zimmet Tarihi</th>
+                    <th style="text-align:right;width:160px">İşlem</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var x in Model)
+                {
+                    var fullName = x.Assignment?.Assignee?.FullName ?? "—";
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div class="iv-av @AvColor(fullName)">@Initials(fullName)</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:12px">@fullName</div>
+                                    @if (!string.IsNullOrWhiteSpace(x.Assignment?.Assignee?.Department))
+                                    {
+                                        <div class="muted">@x.Assignment.Assignee.Department</div>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;font-size:12px">@x.Asset?.Category</div>
+                            <div class="muted">@x.Asset?.Brand @x.Asset?.Model</div>
+                        </td>
+                        <td class="mono">@(x.Asset?.SerialNumber ?? "—")</td>
+                        <td class="mono">@(x.Asset?.InventoryTag ?? "—")</td>
+                        <td class="muted">@x.Assignment?.AssignedAtUtc.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                        <td style="text-align:right">
+                            <div style="display:flex;gap:4px;justify-content:flex-end">
+                                <button class="iv-btn iv-btn-danger-xs" onclick="returnItem(@x.Id)">
+                                    <i class="fe fe-log-out"></i> İade
+                                </button>
+                                <button class="iv-btn iv-btn-pdf-xs" onclick="generatePdf(@x.AssignmentId)">
+                                    <i class="fe fe-file-text"></i> PDF
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

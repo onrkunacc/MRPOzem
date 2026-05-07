@@ -69,7 +69,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("SerialNumber");
 
-                    b.ToTable("Assets");
+                    b.ToTable("Assets", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Inventory.Assignee", b =>
@@ -109,7 +109,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Assignees");
+                    b.ToTable("Assignees", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Inventory.Assignment", b =>
@@ -133,7 +133,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("AssigneeId");
 
-                    b.ToTable("Assignments");
+                    b.ToTable("Assignments", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Inventory.AssignmentItem", b =>
@@ -165,7 +165,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("AssetId", "ReturnedAtUtc");
 
-                    b.ToTable("AssignmentItems");
+                    b.ToTable("AssignmentItems", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Inventory.Document", b =>
@@ -198,7 +198,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("AssignmentId");
 
-                    b.ToTable("Documents");
+                    b.ToTable("Documents", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.ApplicationUser", b =>
@@ -308,7 +308,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Birimler");
+                    b.ToTable("Birimler", "ozem");
 
                     b.HasData(
                         new
@@ -500,7 +500,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("IhaleId");
 
-                    b.ToTable("EkGiderler");
+                    b.ToTable("EkGiderler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.ExpenseDetail", b =>
@@ -605,7 +605,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FileTransferQueues");
+                    b.ToTable("FileTransferQueues", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.FollowDocument", b =>
@@ -676,7 +676,53 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("HospitalID");
 
-                    b.ToTable("Hospitals");
+                    b.ToTable("Hospitals", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalBirim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("BaslangicTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BirimId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("BitisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("GuncellenmeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IhaleKayitNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BirimId");
+
+                    b.HasIndex("HospitalID", "BirimId", "Aktif");
+
+                    b.ToTable("HospitalBirimler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>
@@ -709,7 +755,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("HospitalID", "TestID", "Year", "Month")
                         .IsUnique();
 
-                    b.ToTable("HospitalTestMonthlyVolumes");
+                    b.ToTable("HospitalTestMonthlyVolumes", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Ihale", b =>
@@ -768,7 +814,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Ihaleler");
+                    b.ToTable("Ihaleler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.IhaleKalem", b =>
@@ -812,7 +858,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("IhaleId");
 
-                    b.ToTable("IhaleKalemler");
+                    b.ToTable("IhaleKalemler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Invoices", b =>
@@ -875,7 +921,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Kurumlar", (string)null);
+                    b.ToTable("Kurumlar", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.KurumIstatistikAylik", b =>
@@ -910,7 +956,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("KurumId", "Yil", "Ay")
                         .IsUnique();
 
-                    b.ToTable("KurumIstatistikAylik", (string)null);
+                    b.ToTable("KurumIstatistikAylik", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveRequest", b =>
@@ -957,7 +1003,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("LeaveRequests");
+                    b.ToTable("LeaveRequests", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveStatus", b =>
@@ -982,7 +1028,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LeaveStatuses");
+                    b.ToTable("LeaveStatuses", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.LeaveType", b =>
@@ -1012,7 +1058,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LeaveTypes");
+                    b.ToTable("LeaveTypes", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.MonthlyShipment", b =>
@@ -1042,7 +1088,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("HospitalID", "TestID", "Month")
                         .IsUnique();
 
-                    b.ToTable("MonthlyShipments");
+                    b.ToTable("MonthlyShipments", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.MonthlyStatistics", b =>
@@ -1072,7 +1118,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("HospitalID", "TestID", "Month")
                         .IsUnique();
 
-                    b.ToTable("MonthlyStatistics");
+                    b.ToTable("MonthlyStatistics", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.PersonelGider", b =>
@@ -1119,7 +1165,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("IhaleId");
 
-                    b.ToTable("PersonelGiderler");
+                    b.ToTable("PersonelGiderler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Test", b =>
@@ -1141,7 +1187,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("TestID");
 
-                    b.ToTable("Tests");
+                    b.ToTable("Tests", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TestSutPoint", b =>
@@ -1166,7 +1212,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("TestID", "Year")
                         .IsUnique();
 
-                    b.ToTable("TestSutPoints");
+                    b.ToTable("TestSutPoints", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TestTemplate", b =>
@@ -1193,7 +1239,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("HospitalID", "TestID")
                         .IsUnique();
 
-                    b.ToTable("TestTemplates");
+                    b.ToTable("TestTemplates", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Training", b =>
@@ -1233,7 +1279,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Trainings");
+                    b.ToTable("Trainings", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingAnswer", b =>
@@ -1263,7 +1309,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TrainingAnswers");
+                    b.ToTable("TrainingAnswers", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingParticipation", b =>
@@ -1295,7 +1341,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("TrainingId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("TrainingParticipations");
+                    b.ToTable("TrainingParticipations", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingQuestion", b =>
@@ -1337,7 +1383,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("TrainingId");
 
-                    b.ToTable("TrainingQuestions");
+                    b.ToTable("TrainingQuestions", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingResult", b =>
@@ -1366,7 +1412,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TrainingResults");
+                    b.ToTable("TrainingResults", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.TrainingVisibleUser", b =>
@@ -1390,7 +1436,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TrainingVisibleUsers");
+                    b.ToTable("TrainingVisibleUsers", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.UserLeaveBalance", b =>
@@ -1418,7 +1464,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserLeaveBalances");
+                    b.ToTable("UserLeaveBalances", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.UserSupervisor", b =>
@@ -1443,7 +1489,7 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserSupervisors");
+                    b.ToTable("UserSupervisors", "ozem");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1683,6 +1729,25 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalBirim", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Birim", "Birim")
+                        .WithMany("HospitalBirimler")
+                        .HasForeignKey("BirimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("HospitalBirimler")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Birim");
+
+                    b.Navigation("Hospital");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>
@@ -1989,6 +2054,8 @@ namespace CRMOzem.DataAccess.Migrations
                 {
                     b.Navigation("EkGiderler");
 
+                    b.Navigation("HospitalBirimler");
+
                     b.Navigation("IhaleKalemler");
 
                     b.Navigation("PersonelGiderler");
@@ -2011,6 +2078,8 @@ namespace CRMOzem.DataAccess.Migrations
 
             modelBuilder.Entity("CRMOzem.Core.Models.Hospital", b =>
                 {
+                    b.Navigation("HospitalBirimler");
+
                     b.Navigation("MonthlyVolumes");
 
                     b.Navigation("Shipments");

@@ -27,6 +27,7 @@ namespace CRMOzem.Core.Models
         public ICollection<MonthlyStatistics> Statistics { get; set; }
         public ICollection<MonthlyShipment> Shipments { get; set; }
         public ICollection<HospitalTestMonthlyVolume> MonthlyVolumes { get; set; } = new List<HospitalTestMonthlyVolume>();
+        public ICollection<HospitalBirim> HospitalBirimler { get; set; } = new List<HospitalBirim>();
 
     }
 }

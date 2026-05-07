@@ -1,28 +1,44 @@
 ﻿@using CRMOzem.Web.Areas.IT.Controllers
-@model List<CRMOzem.Web.Areas.IT.Controllers.InventoryController.BrandSummaryRow>
+@model List<InventoryController.BrandSummaryRow>
 
-<div class="table-responsive">
-    <table class="table table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Kategori</th>
-                <th>Marka</th>
-                <th>Model</th>
-                <th>Durum</th>
-                <th class="text-end">Adet</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var r in Model)
-            {
+@if (Model == null || !Model.Any())
+{
+    <div class="iv-empty"><i class="fe fe-bar-chart-2"></i><p>Henüz veri yok.</p></div>
+}
+else
+{
+    var maxCount = Model.Max(r => r.Count);
+
+    <div class="iv-table-wrap">
+        <table class="iv-table">
+            <thead>
                 <tr>
-                    <td class="fw-semibold">@r.Category</td>
-                    <td>@r.Brand</td>
-                    <td>@r.Model</td>
-                    <td><span class="badge bg-secondary">@r.Status</span></td>
-                    <td class="text-end fw-semibold">@r.Count</td>
+                    <th>Kategori</th>
+                    <th>Marka</th>
+                    <th>Model</th>
+                    <th>Durum</th>
+                    <th style="width:180px">Dağılım</th>
+                    <th style="text-align:right;width:70px">Adet</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    var pct = maxCount > 0 ? (int)Math.Round((double)r.Count / maxCount * 100) : 0;
+                    <tr>
+                        <td style="font-weight:600">@r.Category</td>
+                        <td>@r.Brand</td>
+                        <td class="muted">@r.Model</td>
+                        <td><span class="iv-badge b-gray">@r.Status</span></td>
+                        <td>
+                            <div class="iv-bar-bg">
+                                <div class="iv-bar-fill" style="width:@pct%"></div>
+                            </div>
+                        </td>
+                        <td style="text-align:right;font-weight:700">@r.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
