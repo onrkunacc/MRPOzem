@@ -1,82 +1,546 @@
-﻿@{
-    ViewData["Title"] = "Yönetim Paneli";
+﻿@model AdminDashboardVm
+@using System.Globalization
+@{
+    ViewData["Title"] = "Yönetici Paneli";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var selectedPeriyot = (ViewBag.SelectedPeriyot as string) ?? "ay";
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    var now = DateTime.Now;
+    string greeting = now.Hour switch
+    {
+        < 5 => "İyi geceler",
+        < 12 => "Günaydın",
+        < 18 => "İyi günler",
+        _ => "İyi akşamlar"
+    };
+
+    var toplamKullaniciHarcama = Model.MasrafAnaliz.KullaniciHarcamalari.Sum(x => x.Toplam);
 }
 
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card shadow-lg border-0">
-                <div class="card-body">
-                    <h2 class="text-primary fw-bold">Hoş Geldiniz,</h2>
-                    <hr />
-                    <p class="text-muted">
-                        Özem CRM Yönetim Paneline hoş geldiniz. Buradan kullanıcı yönetimi, izin talepleri, raporlar ve diğer işlemleri kolayca gerçekleştirebilirsiniz.
-                    </p>
-                    <hr />
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card bg-light shadow-sm">
-                                <div class="card-body text-center">
-                                    <i class="fa fa-users fa-2x text-primary mb-2"></i>
-                                    <h5 class="fw-bold">Toplam Kullanıcı</h5>
-                                    <p class="text-muted">@ViewBag.AktifKullaniciSayisi Aktif Kullanıcı</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-light shadow-sm">
-                                <div class="card-body text-center">
-                                    <i class="fa fa-envelope-open-text fa-2x text-warning mb-2"></i>
-                                    <h5 class="fw-bold">Bekleyen İzin Talepleri</h5>
-                                    <p class="text-muted">5 Bekleyen Talep</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-light shadow-sm">
-                                <div class="card-body text-center">
-                                    <i class="fa fa-chart-bar fa-2x text-success mb-2"></i>
-                                    <h5 class="fw-bold">Aylık Masraf Raporu</h5>
-                                    <p class="text-muted">₺@ViewBag.ToplamAylikMasraf.ToString("N2")</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+
+<div class="ad-wrapper">
+
+    <!-- Selamlama -->
+    <div class="ad-greeting">
+        <h1>@greeting</h1>
+        <p>@now.ToString("dd MMMM yyyy, dddd", tr) — Bugünkü özet</p>
+    </div>
+
+    <!-- ═══ KPI Şerit ═══ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-label">Bu Ay Toplam Masraf</div>
+                <div class="kpi-value">@Model.Kpi.BuAyMasraf.ToString("N0", tr) ₺</div>
+                <div class="kpi-sub">
+                    @if (Model.Kpi.GecenAyMasraf > 0)
+                    {
+                        if (Model.Kpi.MasrafDegisimYuzde > 0)
+                        {
+                            <span class="kpi-trend-up">▲ %@Model.Kpi.MasrafDegisimYuzde.ToString("N1", tr)</span>
+                        }
+                        else if (Model.Kpi.MasrafDegisimYuzde < 0)
+                        {
+                            <span class="kpi-trend-down">▼ %@Math.Abs(Model.Kpi.MasrafDegisimYuzde).ToString("N1", tr)</span>
+                        }
+                        else
+                        {
+                            <span>Değişim yok</span>
+                        }
+                        <span style="opacity:.7">geçen aya göre</span>
+                    }
+                    else
+                    {
+                        <span>Geçen ay verisi yok</span>
+                    }
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-lg border-0">
-                <div class="card-header text-white">
-                    <h5 class="mb-0">Hızlı Erişim</h5>
+
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon">👥</div>
+                <div class="kpi-label">Aktif Kullanıcı</div>
+                <div class="kpi-value">@Model.Kpi.AktifKullaniciSayisi</div>
+                <div class="kpi-sub">
+                    <span style="opacity:.8">Onaylı kullanıcı sayısı</span>
                 </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">
-                            <a class="text-decoration-none" asp-area="Admin" asp-controller="AdminUser" asp-action="Index">
-                                <i class="fa fa-user-cog text-primary"></i>&nbsp;Kullanıcı Yönetimi
-                            </a>
-                        </li>
-                        <li class="list-group-item">
-                            <a asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index" class="text-decoration-none">
-                                <i class="fa fa-file-invoice text-success"></i>&nbsp;Masraf Raporları
-                            </a>
-                        </li>
-                        <li class="list-group-item">
-                            <a href="#" class="text-decoration-none">
-                                <i class="fa fa-calendar-check text-warning"></i>&nbsp;İzin Talepleri
-                            </a>
-                        </li>
-                        <li class="list-group-item">
-                            <a href="#" class="text-decoration-none">
-                                <i class="fa fa-cogs text-danger"></i>&nbsp;Sistem Ayarları
-                            </a>
-                        </li>
-                    </ul>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon">📋</div>
+                <div class="kpi-label">Aktif İhale</div>
+                <div class="kpi-value">@Model.Kpi.AktifIhaleSayisi</div>
+                <div class="kpi-sub">
+                    <span style="opacity:.8">Toplam: @Model.Kpi.ToplamIhaleMaliyet.ToString("N0", tr) ₺</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-6 col-xl-3">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon">🏥</div>
+                <div class="kpi-label">Aktif Hastane × Birim</div>
+                <div class="kpi-value">@Model.Kpi.AktifHastaneBirimSayisi</div>
+                <div class="kpi-sub">
+                    <span style="opacity:.8">@Model.Kpi.FarkliHastaneSayisi farklı hastane</span>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ═══ Ana Grid: Masraf Analizi (sol-büyük) + Aylık Trend (sağ) ═══ -->
+    <div class="row g-3 mb-4">
+        <!-- Masraf Analizi -->
+        <div class="col-12 col-xl-8">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>💸 Masraf Analizi</h5>
+                    <div class="periyot-tabs">
+                        <a href="@Url.Action("Index", new { periyot = "ay" })" class="@(selectedPeriyot == "ay" ? "active" : "")">Bu Ay</a>
+                        <a href="@Url.Action("Index", new { periyot = "ceyrek" })" class="@(selectedPeriyot == "ceyrek" ? "active" : "")">Son 3 Ay</a>
+                        <a href="@Url.Action("Index", new { periyot = "yil" })" class="@(selectedPeriyot == "yil" ? "active" : "")">Yıl</a>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Kullanıcı bazlı harcama (yatay bar) -->
+                    <div class="col-12 col-lg-7">
+                        <div class="mb-2" style="font-size:.85rem; font-weight:600; color:#4a5568;">
+                            👤 Kullanıcı Bazlı Harcamalar
+                        </div>
+                        <div id="kullaniciChart" style="min-height: 280px;"></div>
+                    </div>
+
+                    <!-- En yüksek 5 masraf -->
+                    <div class="col-12 col-lg-5">
+                        <div class="mb-2" style="font-size:.85rem; font-weight:600; color:#4a5568;">
+                            🔝 En Yüksek 5 Harcama
+                        </div>
+                        @if (Model.MasrafAnaliz.EnYuksekMasraflar.Any())
+                        {
+                            int rank = 1;
+                            foreach (var e in Model.MasrafAnaliz.EnYuksekMasraflar)
+                            {
+                                string rankClass = rank switch
+                                {
+                                    1 => "r1",
+                                    2 => "r2",
+                                    3 => "r3",
+                                    _ => "r-default"
+                                };
+                                <a href="@Url.Action("Details", "AdminExpenseReport", new { area = "Admin", id = e.ReportId })" class="top-expense-item" style="text-decoration:none;">
+                                    <div class="top-expense-rank @rankClass">@rank</div>
+                                    <div class="top-expense-content">
+                                        <div class="desc">@e.Aciklama</div>
+                                        <div class="meta">
+                                            @e.FullName · @e.Kategori · @e.Tarih.ToString("dd.MM.yyyy")
+                                        </div>
+                                    </div>
+                                    <div class="top-expense-amount">@e.Tutar.ToString("N0", tr) ₺</div>
+                                </a>
+                                rank++;
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <div class="icon">📭</div>
+                                <div>Bu dönemde masraf kaydı yok.</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aylık Trend -->
+        <div class="col-12 col-xl-4">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>📈 Aylık Trend</h5>
+                    <span class="badge-soft">Son 12 Ay</span>
+                </div>
+                <div id="trendChart" style="min-height: 320px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ İhaleler + Hastane×Birim ═══ -->
+    <div class="row g-3 mb-4">
+        <!-- Aktif İhaleler -->
+        <div class="col-12 col-xl-7">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>📋 Aktif İhaleler</h5>
+                    <a href="@Url.Action("Index", "Ihale", new { area = "Ihale" })" class="badge-soft" style="text-decoration:none;">
+                        Tümünü Gör →
+                    </a>
+                </div>
+
+                @if (Model.AktifIhaleler.Any())
+                {
+                    <div class="row g-2">
+                        @foreach (var ih in Model.AktifIhaleler)
+                        {
+                            <div class="col-12 col-md-6">
+                                <div class="ihale-card-mini">
+                                    <div class="ihale-card-header">
+                                        <div class="ihale-name">@ih.IhaleAdi</div>
+                                        @if (!string.IsNullOrEmpty(ih.IhaleKayitNo))
+                                        {
+                                            <span class="ihale-badge">@ih.IhaleKayitNo</span>
+                                        }
+                                    </div>
+                                    <div class="ihale-meta">
+                                        @if (ih.IhaleTarihi.HasValue)
+                                        {
+                                            <span>📅 @ih.IhaleTarihi.Value.ToString("dd.MM.yyyy")</span>
+                                        }
+                                        <span>⏱ @ih.IhaleSuresiGun gün</span>
+                                        <span>🔬 @ih.KalemSayisi kalem</span>
+                                    </div>
+                                    <div class="ihale-bottom">
+                                        <div class="maliyet">@ih.ToplamMaliyet.ToString("N0", tr) ₺</div>
+                                        <div class="ihale-actions">
+                                            <a href="@Url.Action("Detail", "Ihale", new { area = "Ihale", id = ih.Id })" class="ihale-btn-detail">Detay</a>
+                                            <a href="@Url.Action("Ozet", "Ihale", new { area = "Ihale", id = ih.Id })" class="ihale-btn-ozet">Özet</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="icon">📂</div>
+                        <div>Henüz aktif ihale yok.</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Hastane × Birim -->
+        <div class="col-12 col-xl-5">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>🏥 Hastane × Birim</h5>
+                    <span class="badge-soft">Top 5 / Birim Dağılımı</span>
+                </div>
+
+                <div class="row g-2">
+                    <!-- En aktif hastaneler listesi -->
+                    <div class="col-12 col-md-7">
+                        <div class="mb-2" style="font-size:.78rem; color:#718096; font-weight:600;">EN AKTİF HASTANELER</div>
+                        @if (Model.HastaneBirimOzet.EnAktifHastaneler.Any())
+                        {
+                            foreach (var h in Model.HastaneBirimOzet.EnAktifHastaneler)
+                            {
+                                <div class="hospital-mini">
+                                    <div class="hospital-icon">🏥</div>
+                                    <div class="hospital-info">
+                                        <div class="name" title="@h.HospitalName">@h.HospitalName</div>
+                                        <div class="birim-chips">
+                                            @foreach (var b in h.BirimKodlari)
+                                            {
+                                                <span class="birim-chip">@b</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="hospital-count">
+                                        <div class="num">@h.AktifBirimSayisi</div>
+                                        <div class="label">Birim</div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-state" style="padding:1rem;">
+                                <div>Henüz hastane-birim kaydı yok.</div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Birim dağılımı donut -->
+                    <div class="col-12 col-md-5">
+                        <div class="mb-2" style="font-size:.78rem; color:#718096; font-weight:600;">BİRİM DAĞILIMI</div>
+                        <div id="birimDonutChart" style="min-height: 230px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Hızlı Eylemler + Bekleyen Onaylar ═══ -->
+    <div class="row g-3 mb-4">
+        <!-- Hızlı Eylemler -->
+        <div class="col-12 col-xl-8">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>⚡ Hızlı Erişim</h5>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "AdminUser", new { area = "Admin" })" class="quick-action">
+                            <span class="icon">👥</span>
+                            <span>Kullanıcılar</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "AdminExpenseReport", new { area = "Admin" })" class="quick-action">
+                            <span class="icon">💰</span>
+                            <span>Masraf Raporları</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "Ihale", new { area = "Ihale" })" class="quick-action">
+                            <span class="icon">📋</span>
+                            <span>İhaleler</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "Hospital", new { area = "Istatistik" })" class="quick-action">
+                            <span class="icon">🏥</span>
+                            <span>Hastaneler</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "HospitalBirim", new { area = "Istatistik" })" class="quick-action">
+                            <span class="icon">🔬</span>
+                            <span>Hastane-Birim</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "Dashboard", new { area = "Istatistik" })" class="quick-action">
+                            <span class="icon">📊</span>
+                            <span>İstatistik</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "Document", new { area = "Evrak" })" class="quick-action">
+                            <span class="icon">📁</span>
+                            <span>Evraklar</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="@Url.Action("Index", "AdminRole", new { area = "Admin" })" class="quick-action">
+                            <span class="icon">🔑</span>
+                            <span>Roller</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bekleyen Onaylar -->
+        <div class="col-12 col-xl-4">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>⏳ Bekleyen Onaylar</h5>
+                </div>
+
+                @if (Model.BekleyenOnaylar.BekleyenKullaniciSayisi > 0)
+                {
+                    <div class="pending-card">
+                        <div class="pending-count">@Model.BekleyenOnaylar.BekleyenKullaniciSayisi</div>
+                        <div class="pending-label">Onay bekleyen kullanıcı</div>
+                    </div>
+
+                    @foreach (var u in Model.BekleyenOnaylar.SonBekleyenler)
+                    {
+                        var initials = (u.FullName ?? "??").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        var inichar = string.Concat(initials.Take(2).Select(x => x[0]));
+
+                        <div class="pending-list-item">
+                            <div class="av">@inichar</div>
+                            <div class="info">
+                                <div class="name">@u.FullName</div>
+                                <div class="title">@(u.Title ?? u.Email ?? "")</div>
+                            </div>
+                        </div>
+                    }
+
+                    <a href="@Url.Action("PendingApprovals", "AdminUser", new { area = "Admin" })"
+                           class="btn btn-sm w-100 mt-2"
+                           style="background: var(--grad-warning); color:#fff; border:0; font-weight:600;">
+                        Tümünü İncele →
+                    </a>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="icon">✨</div>
+                        <div>Bekleyen onay yok. Her şey güncel!</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
 </div>
 
+@section Scripts {
+    <script>
+        (function () {
+            // ── 1) Kullanıcı bazlı harcama (yatay bar) ───────────────────
+            const kullaniciData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.MasrafAnaliz.KullaniciHarcamalari.Select(k => new
+                            {
+                                    name = k.FullName,
+                                    total = k.Toplam,
+                                    count = k.IslemSayisi
+                            })
+                    ));
+
+            if (kullaniciData.length > 0) {
+                new ApexCharts(document.querySelector("#kullaniciChart"), {
+                    chart: {
+                        type: 'bar',
+                        height: 320,
+                        toolbar: { show: false },
+                        fontFamily: 'inherit',
+                        animations: { enabled: true, speed: 600 }
+                    },
+                    series: [{
+                        name: 'Toplam Harcama',
+                        data: kullaniciData.map(x => x.total)
+                    }],
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            borderRadius: 8,
+                            barHeight: '70%',
+                            distributed: true,
+                            dataLabels: { position: 'top' }
+                        }
+                    },
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+                             '#00f2fe', '#11998e', '#38ef7d', '#fa709a', '#fee140'],
+                    dataLabels: {
+                        enabled: true,
+                        offsetX: -8,
+                        style: { fontSize: '11px', fontWeight: 600, colors: ['#1a202c'] },
+                        formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(v) + ' ₺'
+                    },
+                    xaxis: {
+                        categories: kullaniciData.map(x => x.name),
+                        labels: { style: { fontSize: '11px' } }
+                    },
+                    yaxis: {
+                        labels: { style: { fontSize: '12px', fontWeight: 500 } }
+                    },
+                    legend: { show: false },
+                    grid: { borderColor: 'rgba(0,0,0,0.06)' },
+                    tooltip: {
+                        y: {
+                            formatter: (v, opts) => {
+                                const idx = opts.dataPointIndex;
+                                const islem = kullaniciData[idx].count;
+                                return new Intl.NumberFormat('tr-TR').format(v) + ' ₺ (' + islem + ' işlem)';
+                            }
+                        }
+                    }
+                }).render();
+            } else {
+                document.querySelector("#kullaniciChart").innerHTML =
+                    '<div class="empty-state" style="padding-top:80px;"><div class="icon">📊</div><div>Bu dönemde veri yok.</div></div>';
+            }
+
+            // ── 2) Aylık trend (area) ────────────────────────────────────
+            const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.AylikTrend.Select(t => new { ay = t.AyAdi, val = t.ToplamMasraf })
+                    ));
+
+            new ApexCharts(document.querySelector("#trendChart"), {
+                chart: {
+                    type: 'area',
+                    height: 320,
+                    toolbar: { show: false },
+                    fontFamily: 'inherit',
+                    animations: { enabled: true, speed: 800 }
+                },
+                series: [{ name: 'Toplam Masraf', data: trendData.map(x => x.val) }],
+                colors: ['#667eea'],
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.05, stops: [0, 100] }
+                },
+                stroke: { curve: 'smooth', width: 3 },
+                dataLabels: { enabled: false },
+                xaxis: {
+                    categories: trendData.map(x => x.ay),
+                    labels: { style: { fontSize: '10px' }, rotate: -45 }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0, notation: 'compact' }).format(v) + ' ₺',
+                        style: { fontSize: '11px' }
+                    }
+                },
+                grid: { borderColor: 'rgba(0,0,0,0.06)', strokeDashArray: 4 },
+                tooltip: {
+                    y: { formatter: v => new Intl.NumberFormat('tr-TR').format(v) + ' ₺' }
+                },
+                markers: { size: 4, hover: { size: 7 } }
+            }).render();
+
+            // ── 3) Birim dağılımı (donut) ────────────────────────────────
+            const birimData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.HastaneBirimOzet.BirimDagilim.Select(b => new { kod = b.BirimKodu, sayi = b.HastaneSayisi })
+                    ));
+
+            if (birimData.length > 0) {
+                new ApexCharts(document.querySelector("#birimDonutChart"), {
+                    chart: {
+                        type: 'donut',
+                        height: 240,
+                        fontFamily: 'inherit',
+                        animations: { enabled: true, speed: 600 }
+                    },
+                    series: birimData.map(x => x.sayi),
+                    labels: birimData.map(x => x.kod),
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+                             '#00f2fe', '#11998e', '#38ef7d'],
+                    legend: {
+                        position: 'bottom',
+                        fontSize: '11px',
+                        markers: { width: 10, height: 10 }
+                    },
+                    dataLabels: { enabled: false },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '65%',
+                                labels: {
+                                    show: true,
+                                    name: { fontSize: '11px' },
+                                    value: { fontSize: '16px', fontWeight: 700, color: '#1a202c' },
+                                    total: {
+                                        show: true,
+                                        label: 'Toplam',
+                                        fontSize: '11px',
+                                        formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0) + ' anlaşma'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    tooltip: {
+                        y: { formatter: v => v + ' hastane' }
+                    }
+                }).render();
+            } else {
+                document.querySelector("#birimDonutChart").innerHTML =
+                    '<div class="empty-state" style="padding-top:60px;"><div class="icon">🔬</div><div>Veri yok</div></div>';
+            }
+        })();
+    </script>
+}

@@ -1,73 +1,250 @@
-﻿@model CRMOzem.Core.ViewModels.AdminExpenseReportViewModel
+﻿@model AdminExpenseChartsVm
+@using System.Globalization
+
 @{
-    ViewData["Title"] = "Masraf Grafiği";
+    ViewData["Title"] = "Masraf Grafikleri";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
 }
 
-<div class="container mt-4">
-    <h2 class="text-center text-primary font-weight-bold">Masraf Raporları Grafiği</h2>
-    <hr />
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/admin-expense.css" asp-append-version="true" />
 
-    <!-- Kullanıcı Seçme -->
-    <form method="get" class="mb-4">
-        <div class="row">
-            <div class="col-md-6">
-                <label for="userId">Kullanıcı Seç:</label>
-                <select id="userId" name="userId" class="form-control">
+<div class="ad-wrapper">
+
+    <div class="ad-greeting" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <h1>📊 Masraf Analizi</h1>
+            <p>@Model.SelectedYear yılı — kullanıcı, kategori ve trend analizi</p>
+        </div>
+        <a href="@Url.Action("Index")" class="btn-detail-back">
+            <i class="fe fe-arrow-left"></i> Listeye Dön
+        </a>
+    </div>
+
+    <!-- Filtre -->
+    <div class="glass-card no-hover mb-4">
+        <form method="get" asp-action="Charts" class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="filter-label">Kullanıcı</label>
+                <select name="userId" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Tüm Kullanıcılar</option>
-                    @foreach (var user in Model.Users)
+                    @foreach (var u in Model.Users)
                     {
-                        <option value="@user.Value" selected="@(user.Value == Model.SelectedUserId ? "selected" : null)">
-                            @user.Text
-                        </option>
+                        <option value="@u.Value" selected="@(u.Value == Model.SelectedUserId)">@u.Text</option>
                     }
                 </select>
             </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary mt-4">Filtrele</button>
+            <div class="col-12 col-md-3">
+                <label class="filter-label">Yıl</label>
+                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var y in Model.AvailableYears)
+                    {
+                        <option value="@y" selected="@(y == Model.SelectedYear)">@y</option>
+                    }
+                    @if (!Model.AvailableYears.Contains(DateTime.Now.Year))
+                    {
+                        <option value="@DateTime.Now.Year" selected="@(Model.SelectedYear == DateTime.Now.Year)">@DateTime.Now.Year</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-grid">
+                <button class="btn btn-sm btn-primary" type="submit" style="background: var(--grad-primary); border:0;">
+                    <i class="fe fe-refresh-cw"></i> Yenile
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-6">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-label">@Model.SelectedYear Toplam</div>
+                <div class="kpi-value">@Model.YilToplam.ToString("N0", tr) ₺</div>
             </div>
         </div>
-    </form>
-
-    <!-- Masraf Grafiği -->
-    <canvas id="expenseChart" height="100"></canvas>
-
-    <hr />
-    <div class="text-center">
-        <a href="@Url.Action("Index", "AdminExpenseReport")" class="btn btn-secondary">
-            <i class="fa fa-arrow-left"></i> Geri Dön
-        </a>
+        <div class="col-6 col-md-6">
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon">📅</div>
+                <div class="kpi-label">Aylık Ortalama</div>
+                <div class="kpi-value">@Model.AylikOrtalama.ToString("N0", tr) ₺</div>
+                <div class="kpi-sub">Verili aylar üzerinden</div>
+            </div>
+        </div>
     </div>
+
+    <!-- Aylık Trend -->
+    <div class="glass-card no-hover mb-4">
+        <div class="section-title">
+            <h5>📈 Aylık Trend (@Model.SelectedYear)</h5>
+        </div>
+        <div id="trendChart" style="min-height: 320px;"></div>
+    </div>
+
+    <!-- Kullanıcı Karşılaştırması + Kategori Dağılımı -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-7">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>👥 Kullanıcı Karşılaştırması</h5>
+                    <span class="badge-soft">Top 10</span>
+                </div>
+                <div id="userBarChart" style="min-height: 350px;"></div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-5">
+            <div class="glass-card no-hover">
+                <div class="section-title">
+                    <h5>🥧 Kategori Dağılımı</h5>
+                </div>
+                <div id="categoryDonut" style="min-height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- En Yüksek 10 Harcama -->
+    <div class="glass-card no-hover">
+        <div class="section-title">
+            <h5>🏆 En Yüksek 10 Harcama</h5>
+        </div>
+
+        @if (Model.EnYuksek10.Any())
+        {
+            <div class="row g-2">
+                @{
+                    int rank = 1;
+                }
+                @foreach (var e in Model.EnYuksek10)
+                {
+                    string rankClass = rank switch
+                    {
+                        1 => "r1",
+                        2 => "r2",
+                        3 => "r3",
+                        _ => "r-default"
+                    };
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <a href="@Url.Action("Details", new { id = e.ReportId })" class="top-expense-item" style="text-decoration:none;">
+                            <div class="top-expense-rank @rankClass">@rank</div>
+                            <div class="top-expense-content">
+                                <div class="desc">@e.Aciklama</div>
+                                <div class="meta">@e.FullName · @e.Kategori · @e.Tarih.ToString("dd.MM.yyyy")</div>
+                            </div>
+                            <div class="top-expense-amount">@e.Tutar.ToString("N0", tr) ₺</div>
+                        </a>
+                    </div>
+                    rank++;
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div>Bu dönem için harcama yok.</div>
+            </div>
+        }
+    </div>
+
 </div>
 
-<!-- Chart.js Kütüphanesi -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        var ctx = document.getElementById('expenseChart').getContext('2d');
+@section Scripts {
+    <script>
+        (function () {
+            const trend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.AylikTrend.Select(t => new { lbl = t.Label, val = t.Toplam })));
 
-        var chartData = {
-            labels: @Html.Raw(Json.Serialize(Model.MonthlyExpenses.Select(m => m.MonthName))),
-            datasets: [{
-                label: 'Aylık Masraf (₺)',
-                data: @Html.Raw(Json.Serialize(Model.MonthlyExpenses.Select(m => m.TotalAmount))),
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2
-            }]
-        };
-
-        var expenseChart = new Chart(ctx, {
-            type: 'bar', // Çubuk Grafik
-            data: chartData,
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
+            new ApexCharts(document.querySelector('#trendChart'), {
+                chart: { type: 'area', height: 320, toolbar: { show: false }, fontFamily: 'inherit' },
+                series: [{ name: 'Toplam Masraf', data: trend.map(x => x.val) }],
+                colors: ['#667eea'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.05 } },
+                stroke: { curve: 'smooth', width: 3 },
+                dataLabels: { enabled: false },
+                xaxis: { categories: trend.map(x => x.lbl) },
+                yaxis: {
+                    labels: {
+                        formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0, notation: 'compact' }).format(v) + ' ₺'
                     }
-                }
+                },
+                grid: { borderColor: 'rgba(0,0,0,0.06)', strokeDashArray: 4 },
+                tooltip: { y: { formatter: v => new Intl.NumberFormat('tr-TR').format(v) + ' ₺' } },
+                markers: { size: 4, hover: { size: 7 } }
+            }).render();
+
+            // Kullanıcı bar
+            const users = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.KullaniciKarsilastirma.Select(u => new { name = u.FullName, val = u.Toplam, cnt = u.IslemSayisi })));
+
+            if (users.length > 0) {
+                new ApexCharts(document.querySelector('#userBarChart'), {
+                    chart: { type: 'bar', height: 350, toolbar: { show: false }, fontFamily: 'inherit' },
+                    series: [{ name: 'Toplam', data: users.map(x => x.val) }],
+                    plotOptions: {
+                        bar: { horizontal: true, borderRadius: 8, barHeight: '70%', distributed: true }
+                    },
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+                             '#00f2fe', '#11998e', '#38ef7d', '#fa709a', '#fee140'],
+                    dataLabels: {
+                        enabled: true, offsetX: -8, style: { fontSize: '11px', fontWeight: 600, colors: ['#1a202c'] },
+                        formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(v) + ' ₺'
+                    },
+                    xaxis: { categories: users.map(x => x.name) },
+                    legend: { show: false },
+                    tooltip: {
+                        y: {
+                            formatter: (v, opts) => {
+                                const cnt = users[opts.dataPointIndex].cnt;
+                                return new Intl.NumberFormat('tr-TR').format(v) + ' ₺ (' + cnt + ' işlem)';
+                            }
+                        }
+                    }
+                }).render();
+            } else {
+                document.querySelector('#userBarChart').innerHTML =
+                    '<div class="empty-state" style="padding-top:80px;"><div class="icon">👥</div><div>Veri yok</div></div>';
             }
-        });
-    });
-</script>
+
+            // Kategori donut
+            const cats = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.KategoriDagilim.Select(c => new { name = c.Kategori, val = c.Toplam })));
+
+            if (cats.length > 0) {
+                new ApexCharts(document.querySelector('#categoryDonut'), {
+                    chart: { type: 'donut', height: 350, fontFamily: 'inherit' },
+                    series: cats.map(x => x.val),
+                    labels: cats.map(x => x.name),
+                    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+                             '#00f2fe', '#11998e', '#38ef7d', '#fa709a', '#fee140'],
+                    legend: { position: 'bottom', fontSize: '11px' },
+                    dataLabels: { enabled: false },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '65%',
+                                labels: {
+                                    show: true,
+                                    value: {
+                                        fontSize: '14px', fontWeight: 700,
+                                        formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(v) + ' ₺'
+                                    },
+                                    total: {
+                                        show: true, label: 'Toplam', fontSize: '11px',
+                                        formatter: w => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
+                                            .format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' ₺'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    tooltip: { y: { formatter: v => new Intl.NumberFormat('tr-TR').format(v) + ' ₺' } }
+                }).render();
+            } else {
+                document.querySelector('#categoryDonut').innerHTML =
+                    '<div class="empty-state" style="padding-top:80px;"><div class="icon">🥧</div><div>Veri yok</div></div>';
+            }
+        })();
+    </script>
+}

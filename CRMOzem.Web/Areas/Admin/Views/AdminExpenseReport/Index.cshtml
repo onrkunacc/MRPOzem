@@ -1,135 +1,284 @@
-﻿@model CRMOzem.Core.ViewModels.AdminExpenseReportViewModel
+﻿@model AdminExpenseIndexVm
+@using System.Globalization
+@using X.PagedList
+@using X.PagedList.Mvc.Core
+
 @{
     ViewData["Title"] = "Masraf Raporları";
     Layout = "~/Views/Shared/_Layout.cshtml";
-
-    var currentMonth = DateTime.Now.Month;
-    var selectedYear = Model.SelectedYear ?? DateTime.Now.Year;
-
-    var selectedMonthTotal = Model.Reports
-        .Where(r => r.MonthYear.Month == currentMonth && r.MonthYear.Year == selectedYear)
-        .Sum(r => r.TotalAmount);
-
-    var selectedYearTotal = Model.Reports
-        .Where(r => r.MonthYear.Year == selectedYear)
-        .Sum(r => r.TotalAmount);
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    var f = Model.Filter;
 }
 
-<div class="container py-4">
-    <h2 class="text-center font-bold text-2xl mb-4">Masraf Raporları</h2>
-    <hr />
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/admin-expense.css" asp-append-version="true" />
 
-    <form method="get" class="mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <label for="userId" class="font-weight-bold">Kullanıcı Seç:</label>
-                @Html.DropDownList("userId", Model.Users, "Tüm Kullanıcılar", new
-                    {
-                        @class = "form-control",
-                        onchange = "this.form.submit()"
-                    })
-            </div>
-            <div class="col-md-3">
-                <label for="year" class="font-weight-bold">Yıl Seç:</label>
-                @Html.DropDownList("year", Model.YearSelectList, "Tüm Yıllar", new
-                    {
-                        @class = "form-control",
-                        onchange = "this.form.submit()"
-                    })
+<div class="ad-wrapper">
+
+    <div class="ad-greeting">
+        <h1>💰 Masraf Raporları</h1>
+        <p>Tüm kullanıcıların masraflarını analiz edin, filtreleyin ve detaylara inin.</p>
+    </div>
+
+    <!-- ═══ SUMMARY KARTLAR ═══ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-label">Seçili Dönem Toplam</div>
+                <div class="kpi-value">@Model.Summary.SeciliDonemToplam.ToString("N0", tr) ₺</div>
+                <div class="kpi-sub">@Model.Summary.SeciliDonemIslemSayisi işlem</div>
             </div>
         </div>
-    </form>
-
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <h4>
-                @DateTime.Now.ToString("MMMM") Ayı Toplam:
-                <span class="text-primary font-weight-bold">
-                    @selectedMonthTotal.ToString("C")
-                </span>
-            </h4>
-        </div>
-        <div class="col-md-6">
-            <h4>
-                Yıllık Toplam:
-                <span class="text-danger font-weight-bold">
-                    @selectedYearTotal.ToString("C")
-                </span>
-            </h4>
+        <div class="col-12 col-md-6">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon">📅</div>
+                <div class="kpi-label">Yıl Toplam</div>
+                <div class="kpi-value">@Model.Summary.YilToplam.ToString("N0", tr) ₺</div>
+                <div class="kpi-sub">@(f.Year ?? DateTime.Now.Year) yılı</div>
+            </div>
         </div>
     </div>
 
-    <table class="table table-bordered table-hover">
-        <thead class="bg-dark text-white">
-            <tr>
-                <th>
-                    <a href="@Url.Action("Index", new {
-                        userId = Context.Request.Query["userId"],
-                        year = Context.Request.Query["year"],
-                        sortColumn = "MonthYear",
-                        sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc"
-                    })" class="text-white">
-                        Tarih
-                        @if (Context.Request.Query["sortColumn"] == "MonthYear")
-                        {
-                            <i class="fa @(Context.Request.Query["sortDirection"] == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
-                        }
-                    </a>
-                </th>
-                <th>Kullanıcı</th>
-                <th>
-                    <a href="@Url.Action("Index", new {
-                        userId = Context.Request.Query["userId"],
-                        year = Context.Request.Query["year"],
-                        sortColumn = "TotalAmount",
-                        sortDirection = Context.Request.Query["sortDirection"] == "asc" ? "desc" : "asc"
-                    })" class="text-white">
-                        Toplam Tutar (₺)
-                        @if (Context.Request.Query["sortColumn"] == "TotalAmount")
-                        {
-                            <i class="fa @(Context.Request.Query["sortDirection"] == "asc" ? "fa-arrow-up" : "fa-arrow-down")"></i>
-                        }
-                    </a>
-                </th>
-                <th>Detaylar</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var report in Model.PagedReports)
-            {
-                <tr>
-                    <td>@report.MonthYear.ToString("MMMM yyyy")</td>
-                    <td>@report.UserName</td>
-                    <td class="text-success font-weight-bold">@report.TotalAmount.ToString("C")</td>
-                    <td>
-                        <a href="@Url.Action("Details", "AdminExpenseReport", new { id = report.Id })" class="btn btn-info btn-sm">
-                            <i class="fa fa-eye"></i> Detayları Gör
-                        </a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <!-- ═══ FİLTRE PANELİ ═══ -->
+    <div class="glass-card no-hover mb-4">
+        <div class="section-title">
+            <h5>🔎 Filtrele</h5>
+            <a href="@Url.Action("Index")" class="badge-soft" style="text-decoration:none;">Temizle ↻</a>
+        </div>
 
-    <div class="d-flex justify-content-center">
-        @Html.PagedListPager(Model.PagedReports, page => Url.Action("Index", new
-            {
-                userId = Context.Request.Query["userId"],
-                year = Context.Request.Query["year"],
-                sortColumn = Context.Request.Query["sortColumn"],
-                sortDirection = Context.Request.Query["sortDirection"],
-                page
-            }), new PagedListRenderOptions
-   {
-       Display = PagedListDisplayMode.IfNeeded,
-       MaximumPageNumbersToDisplay = 5,
-       DisplayEllipsesWhenNotShowingAllPageNumbers = true
-   })
+        <form method="get" asp-action="Index" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="filter-label">Kullanıcı</label>
+                <select name="UserId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Tüm Kullanıcılar</option>
+                    @foreach (var u in Model.Users)
+                    {
+                        <option value="@u.Value" selected="@(u.Value == f.UserId)">@u.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="filter-label">Yıl</label>
+                <select name="Year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Tümü</option>
+                    @foreach (var y in Model.AvailableYears)
+                    {
+                        <option value="@y" selected="@(f.Year == y)">@y</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="filter-label">Ay</label>
+                <select name="Month" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Tümü</option>
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        var name = new DateTime(2000, m, 1).ToString("MMMM", tr);
+                        <option value="@m" selected="@(f.Month == m)">@name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="filter-label">Kategori</label>
+                <select name="Category" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Tümü</option>
+                    @foreach (var c in Model.AvailableCategories)
+                    {
+                        <option value="@c" selected="@(f.Category == c)">@c</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-1">
+                <label class="filter-label">Min ₺</label>
+                <input name="MinAmount" type="number" step="100" class="form-control form-control-sm"
+                       value="@(f.MinAmount?.ToString())" placeholder="0" />
+            </div>
+
+            <div class="col-6 col-md-1">
+                <label class="filter-label">Max ₺</label>
+                <input name="MaxAmount" type="number" step="100" class="form-control form-control-sm"
+                       value="@(f.MaxAmount?.ToString())" placeholder="∞" />
+            </div>
+
+            <input type="hidden" name="SortColumn" value="@f.SortColumn" />
+            <input type="hidden" name="SortDirection" value="@f.SortDirection" />
+
+            <div class="col-12 col-md-2 ms-auto d-grid">
+                <button class="btn btn-sm btn-primary" type="submit"
+                        style="background: var(--grad-primary); border:0; font-weight:600;">
+                    <i class="fe fe-filter"></i> Uygula
+                </button>
+            </div>
+        </form>
     </div>
 
-    <div class="text-center mt-4">
-        <a href="@Url.Action("Charts", "AdminExpenseReport")" class="btn btn-primary btn-lg">
-            <i class="fe fe-chart"></i> Grafik Görüntüle
-        </a>
+    <!-- ═══ TABLO ═══ -->
+    <div class="glass-card no-hover">
+        <div class="section-title">
+            <h5>📋 Rapor Listesi</h5>
+            <span class="badge-soft">@(Model.PagedReports?.TotalItemCount ?? 0) kayıt</span>
+        </div>
+
+        @if (Model.PagedReports != null && Model.PagedReports.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle ae-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                @{
+                                    var dateDir = f.SortColumn == "MonthYear" && f.SortDirection == "asc" ? "desc" : "asc";
+                                }
+                                <a class="sort-link" href="@Url.Action("Index", new {
+                                    UserId = f.UserId, Year = f.Year, Month = f.Month, Category = f.Category,
+                                    MinAmount = f.MinAmount, MaxAmount = f.MaxAmount,
+                                    SortColumn = "MonthYear", SortDirection = dateDir })">
+                                    Dönem
+                                    @if (f.SortColumn == "MonthYear")
+                                    {
+                                        <span>@(f.SortDirection == "asc" ? "▲" : "▼")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a class="sort-link" href="@Url.Action("Index", new {
+                                    UserId = f.UserId, Year = f.Year, Month = f.Month, Category = f.Category,
+                                    MinAmount = f.MinAmount, MaxAmount = f.MaxAmount,
+                                    SortColumn = "UserName",
+                                    SortDirection = f.SortColumn == "UserName" && f.SortDirection == "asc" ? "desc" : "asc" })">
+                                    Kullanıcı
+                                    @if (f.SortColumn == "UserName")
+                                    {
+                                        <span>@(f.SortDirection == "asc" ? "▲" : "▼")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th class="text-end">
+                                <a class="sort-link" href="@Url.Action("Index", new {
+                                    UserId = f.UserId, Year = f.Year, Month = f.Month, Category = f.Category,
+                                    MinAmount = f.MinAmount, MaxAmount = f.MaxAmount,
+                                    SortColumn = "TotalAmount",
+                                    SortDirection = f.SortColumn == "TotalAmount" && f.SortDirection == "asc" ? "desc" : "asc" })">
+                                    Toplam Tutar
+                                    @if (f.SortColumn == "TotalAmount")
+                                    {
+                                        <span>@(f.SortDirection == "asc" ? "▲" : "▼")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th class="text-center">İşlem</th>
+                            <th class="text-center">Son 6 Ay</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.PagedReports)
+                        {
+                            var initials = string.Concat((r.UserName ?? "??")
+                                .Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Take(2).Select(x => x[0]));
+
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@r.MonthYear.ToString("MMMM yyyy", tr)</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="user-avatar-sm">@initials</div>
+                                        <div>@r.UserName</div>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-semibold text-success">
+                                    @r.TotalAmount.ToString("N2", tr) ₺
+                                </td>
+                                <td class="text-center">
+                                    <span class="islem-badge">@r.IslemSayisi</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="sparkline-wrapper" data-spark="@string.Join(',', r.Sparkline)"></div>
+                                </td>
+                                <td class="text-end">
+                                    <a href="@Url.Action("Details", new { id = r.Id })"
+                                       class="btn btn-sm btn-detail">
+                                        <i class="fe fe-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                <small class="text-muted">
+                    Sayfa @Model.PagedReports.PageNumber / @Model.PagedReports.PageCount
+                </small>
+                <div class="pagination-glass">
+                    @Html.PagedListPager(Model.PagedReports, page => Url.Action("Index", new
+                       {
+                           UserId = f.UserId,
+                           Year = f.Year,
+                           Month = f.Month,
+                           Category = f.Category,
+                           MinAmount = f.MinAmount,
+                           MaxAmount = f.MaxAmount,
+                           SortColumn = f.SortColumn,
+                           SortDirection = f.SortDirection,
+                           Page = page
+                       }), new PagedListRenderOptions
+                {
+                    Display = PagedListDisplayMode.IfNeeded,
+                    MaximumPageNumbersToDisplay = 5,
+                    LiElementClasses = new[] { "page-item" },
+                    PageClasses = new[] { "page-link" }
+                })
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <div>Filtreye uygun rapor bulunamadı.</div>
+            </div>
+        }
+
+        <div class="text-center mt-4">
+            <a href="@Url.Action("Charts")" class="btn-grad-primary">
+                <i class="fe fe-bar-chart-2"></i> Grafik Görüntüle
+            </a>
+        </div>
     </div>
+
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            document.querySelectorAll('.sparkline-wrapper').forEach(el => {
+                const raw = el.getAttribute('data-spark') || '';
+                const data = raw.split(',').map(x => parseFloat(x) || 0);
+                if (data.every(v => v === 0)) {
+                    el.innerHTML = '<span style="font-size:.7rem;color:#cbd5e0;">veri yok</span>';
+                    return;
+                }
+                new ApexCharts(el, {
+                    chart: { type: 'line', height: 40, width: 110, sparkline: { enabled: true }, animations: { enabled: false } },
+                    series: [{ data }],
+                    stroke: { curve: 'smooth', width: 2 },
+                    colors: ['#667eea'],
+                    tooltip: {
+                        enabled: true,
+                        x: { show: false },
+                        y: { formatter: v => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(v) + ' ₺' }
+                    }
+                }).render();
+            });
+        })();
+    </script>
+}

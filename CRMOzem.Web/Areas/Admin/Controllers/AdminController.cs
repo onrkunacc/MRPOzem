@@ -1,45 +1,31 @@
-﻿using CRMOzem.Core.Models;
-using CRMOzem.DataAccess.Context;
+﻿using CRMOzem.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CRMOzem.Web.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Authorize(Roles ="Yönetici")]
+    [Authorize(Roles = "Yönetici")]
     public class AdminController : Controller
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationDbContext _context;
+        private readonly IAdminDashboardService _dashboardService;
 
-        public AdminController(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
+        public AdminController(IAdminDashboardService dashboardService)
         {
-            _userManager = userManager;
-            _context = context;
+            _dashboardService = dashboardService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string periyot = "ay", CancellationToken ct = default)
         {
             try
             {
-                var usersInRole = await _userManager.GetUsersInRoleAsync("Kullanıcı");
-                ViewBag.AktifKullaniciSayisi = usersInRole.Count;
-
-                var currentMonth = DateTime.Now.Month;
-                var currentYear = DateTime.Now.Year;
-
-                var toplamMasraf = _context.ExpenseReports
-                    .Where(x => x.MonthYear.Year == currentYear && x.MonthYear.Month == currentMonth)
-                    .Sum(x => x.TotalAmount);
-
-                ViewBag.ToplamAylikMasraf = toplamMasraf;
-
-                return View();
+                var vm = await _dashboardService.GetDashboardAsync(periyot, ct);
+                ViewBag.SelectedPeriyot = periyot;
+                return View(vm);
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Bir hata oluştu: {ex.Message}";
+                TempData["Error"] = $"Dashboard yüklenirken hata: {ex.Message}";
                 return RedirectToAction("Index", "Home");
             }
         }

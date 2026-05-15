@@ -51,6 +51,7 @@ builder.Services.AddScoped<IMonthlyVolumeService, MonthlyVolumeService>();
 builder.Services.AddScoped<ISutPointService, SutPointService>();
 builder.Services.AddScoped<IIhaleService, IhaleService>();
 builder.Services.AddScoped<IIhaleExportService, IhaleExportService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
@@ -115,9 +116,21 @@ app.Use(async (context, next) =>
 {
     var path = (context.Request.Path.Value ?? "").ToLowerInvariant();
 
-    // Auth sayfalarını ve statikleri yönlendirme dışında bırakın
-    if (path.StartsWith("/account") || path.StartsWith("/identity") || path.StartsWith("/css") ||
-        path.StartsWith("/js") || path.StartsWith("/lib") || path.StartsWith("/favicon"))
+    // Auth, statik, identity, swagger vb. yolları es geç
+    if (path.StartsWith("/account") || path.StartsWith("/identity")
+        || path.StartsWith("/css") || path.StartsWith("/js")
+        || path.StartsWith("/lib") || path.StartsWith("/favicon")
+        || path.StartsWith("/tinydash-master"))
+    {
+        await next();
+        return;
+    }
+
+    // Sadece kök veya Home/Index'te rol bazlı varsayılan yönlendirme yap.
+    // Diğer tüm yollarda kullanıcı serbest gezsin — yetki kontrolü [Authorize]'a bırakılır.
+    bool isLandingPath = path == "/" || path == "/home" || path == "/home/index";
+
+    if (!isLandingPath)
     {
         await next();
         return;
@@ -128,10 +141,8 @@ app.Use(async (context, next) =>
         var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
         var user = await userManager.GetUserAsync(context.User);
 
-        
         if (user == null)
         {
-            // en temiz yaklaşım: cookie’yi temizle ve login’e gönder
             await context.SignOutAsync();
             context.Response.Redirect("/Account/Login");
             return;
@@ -139,26 +150,50 @@ app.Use(async (context, next) =>
 
         var roles = await userManager.GetRolesAsync(user);
 
-        // Rol isimleri DB’de ne ise birebir onu kullanın (Admin/Yönetici vs)
-        if (roles.Contains("Yönetici") && !path.StartsWith("/admin"))
+        if (roles.Contains("Yönetici"))
         {
             context.Response.Redirect("/Admin/Admin/Index");
             return;
         }
-        else if (roles.Contains("Muhasebe") && !path.StartsWith("/muhasebe") && !path.StartsWith("/admin") && !path.StartsWith("/evrak"))
+        if (roles.Contains("Muhasebe"))
         {
             context.Response.Redirect("/Muhasebe/Cari/Index");
             return;
         }
-        else if (roles.Contains("IT") && !path.StartsWith("/it"))
+        if (roles.Contains("IT"))
         {
             context.Response.Redirect("/IT/Inventory/Index");
             return;
         }
+        if (roles.Contains("İstatistik") || roles.Contains("İstatistikYonetici")
+            || roles.Contains("İstatistikGiris") || roles.Contains("DepoGiris")
+            || roles.Contains("IstatistikRapor") || roles.Contains("IstatistikGoruntule"))
+        {
+            context.Response.Redirect("/Istatistik/Dashboard/Index");
+            return;
+        }
+        if (roles.Contains("İhale") || roles.Contains("IhaleYonetici")
+            || roles.Contains("IhaleGiris") || roles.Contains("IhaleGoruntule"))
+        {
+            context.Response.Redirect("/Ihale/Ihale/Index");
+            return;
+        }
+        if (roles.Contains("Evrak"))
+        {
+            context.Response.Redirect("/Evrak/Document/Index");
+            return;
+        }
+        if (roles.Contains("İnsan Kaynakları"))
+        {
+            context.Response.Redirect("/InsanKaynaklari/Leave/Index");
+            return;
+        }
+        // Kullanıcı/Finans vb. → Home/Index'te kalsın (varsayılan)
     }
 
     await next();
-});
+}); 
+
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllerRoute(

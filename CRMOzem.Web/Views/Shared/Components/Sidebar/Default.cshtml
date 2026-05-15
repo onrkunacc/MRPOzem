@@ -60,136 +60,173 @@
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
     {
+        <!-- ═══ 📊 YÖNETİM ═══════════════════════════════════ -->
+        <li class="sidebar-group-title">
+            <span class="group-icon">📊</span>
+            <span>Yönetim</span>
+        </li>
+
         <li class="nav-item">
             <a class="nav-link" asp-area="Admin" asp-controller="Admin" asp-action="Index">
                 <i class="fe fe-home fe-16"></i>
                 <span class="ml-3 item-text">Ana Sayfa</span>
             </a>
         </li>
-        @*<li class="nav-item">
-            <a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
-                <i class="fe fe-settings fe-16"></i>
-                <span class="ml-3 item-text">Yönetim Paneli</span>
-            </a>
-        </li> *@
 
-
-        <li class="nav-item dropdown">
-            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#masraf-rapor-menu">
-                <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">Masraf Raporu</span>
-            </a>
-            <ul class="collapse list-unstyled pl-4 w-100" id="masraf-rapor-menu">
-                <li class="nav-item">
-                    <a class="nav-link" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
-                        <i class="fe fe-filter fe-16"></i>
-                        <span class="ml-3 item-text">Masraf Raporları Aylık</span>
-                    </a>
-                </li>
-               @*  <li class="nav-item">
-                    <a class="nav-link" asp-area="Admin" asp-controller="AdminBillingCycle" asp-action="Index">
-                        <i class="fe fe-filter fe-16"></i>
-                        <span class="ml-3 item-text">Masraf Raporları Ekstre</span>
-                    </a>
-                </li> *@
-            </ul>
-        </li>
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#kullanici-menu">
-                <i class="fe fe-user fe-16"></i>
-                <span class="ml-3 item-text">Kullanıcı Yönetimi</span>
+                <i class="fe fe-users fe-16"></i>
+                <span class="ml-3 item-text">Kullanıcılar</span>
             </a>
             <ul class="collapse list-unstyled pl-4 w-100" id="kullanici-menu">
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminUser" asp-action="Index">
-                        <i class="fe fe-users fe-16"></i>
-                        <span class="ml-3 item-text">Kullanıcılar</span>
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Kullanıcı Listesi</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminUser" asp-action="PendingApprovals">
-                        <i class="fe fe-user-check fe-16"></i>
-                        <span class="ml-3 item-text">Kullanıcı Onay</span>
+                        <i class="fe fe-user-check fe-14"></i>
+                        <span class="ml-1 item-text">Onay Bekleyenler</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminRole" asp-action="Index">
-                        <i class="fe fe-user-plus fe-16"></i>
-                        <span class="ml-3 item-text">Rol Listesi</span>
+                        <i class="fe fe-shield fe-14"></i>
+                        <span class="ml-1 item-text">Roller</span>
                     </a>
                 </li>
             </ul>
         </li>
-        <!-- Fatura Takip Menüsü -->
-        <li class="nav-item dropdown">
-            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#fatura-menu">
-                <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">Fatura Takip</span>
-            </a>
-            <ul class="collapse list-unstyled pl-4 w-100" id="fatura-menu">
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="AddInvoice">
-                        <i class="fe fe-plus fe-14"></i>
-                        <span class="ml-1 item-text">Fatura Ekle</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="Index">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">Fatura Takip Listesi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="AnalizPaneli">
-                        <i class="fe fe-bar-chart fe-14"></i>
-                        <span class="ml-1 item-text">Fatura Analiz</span>
-                    </a>
-                </li>
-            </ul>
-        </li>
-          <!-- Cari İşlemler Menüsü -->
-        <li class="nav-item dropdown">
-            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#cari-menu">
-                <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">Cari İşlemler</span>
-            </a>
-            <ul class="collapse list-unstyled pl-4 w-100" id="cari-menu">
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Index">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">Cari Listesi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Cari" asp-action="Create">
-                        <i class="fe fe-plus fe-14"></i>
-                        <span class="ml-1 item-text">Cari Ekle</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Muhasebe" asp-controller="Invoice" asp-action="ExportToExcelView">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">Raporlama</span>
-                    </a>
-                </li>
-            </ul>
-        </li>
-        <!--İhale Dosyaları-->
-        <li class="nav-item">
-            <a class="nav-link" asp-area="" asp-controller="FileBrowser" asp-action="Index">
-                <i class="fe fe-clipboard fe-16"></i>
-                <span class="ml-3 item-text">İhale Dosyaları</span>
-            </a>
 
+        <!-- ═══ 💰 FİNANS & MUHASEBE ═════════════════════════ -->
+        <li class="sidebar-group-title">
+            <span class="group-icon">💰</span>
+            <span>Finans & Muhasebe</span>
         </li>
-        <!--Evrak Listesi-->
+
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#masraf-rapor-menu">
+                <i class="fe fe-file-text fe-16"></i>
+                <span class="ml-3 item-text">Masraf Raporları</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="masraf-rapor-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Aylık Raporlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Admin" asp-controller="AdminExpenseReport" asp-action="Charts">
+                        <i class="fe fe-bar-chart fe-14"></i>
+                        <span class="ml-1 item-text">Grafikler</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+      
+        
+
+        <!-- ═══ 🔬 OPERASYON ════════════════════════════════ -->
+        <li class="sidebar-group-title">
+            <span class="group-icon">🔬</span>
+            <span>Operasyon</span>
+        </li>
+
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#istatistik-yon-menu">
+                <i class="fe fe-activity fe-16"></i>
+                <span class="ml-3 item-text">İstatistik</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="istatistik-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Dashboard" asp-action="Index">
+                        <i class="fe fe-bar-chart fe-14"></i>
+                        <span class="ml-1 item-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="IstatistikTakip" asp-action="Index">
+                        <i class="fe fe-check-square fe-14"></i>
+                        <span class="ml-1 item-text">Kurum Takip</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#hastane-yon-menu">
+                <i class="fe fe-map-pin fe-16"></i>
+                <span class="ml-3 item-text">Hastaneler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="hastane-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Hospital" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Listesi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                        <i class="fe fe-grid fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Birimleri</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#ihale-yon-menu">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İhaleler</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="ihale-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Ihale" asp-controller="Ihale" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">İhale Listesi</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#depo-yon-menu">
+                <i class="fe fe-truck fe-16"></i>
+                <span class="ml-3 item-text">Depo</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="depo-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Shipment" asp-action="Index">
+                        <i class="fe fe-list fe-14"></i>
+                        <span class="ml-1 item-text">Giden Listesi</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- ═══ 📁 DOKÜMANTASYON ════════════════════════════ -->
+        <li class="sidebar-group-title">
+            <span class="group-icon">📁</span>
+            <span>Dokümantasyon</span>
+        </li>
+
         <li class="nav-item">
             <a class="nav-link" asp-area="Evrak" asp-controller="Document" asp-action="Index">
                 <i class="fe fe-book fe-16"></i>
-                <span class="ml-3 item-text">Evrak Listesi</span>
+                <span class="ml-3 item-text">Evraklar</span>
             </a>
         </li>
-       
+
+        @* <li class="nav-item">
+        <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Report">
+            <i class="fe fe-award fe-16"></i>
+            <span class="ml-3 item-text">Eğitim Raporu</span>
+        </a>
+    </li> *@
     }
 
     @if (Model.Contains("Muhasebe"))

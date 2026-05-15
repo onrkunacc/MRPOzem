@@ -29,3 +29,48 @@
 .sidebar-left.collapsed .sidebar-logo {
     max-width: 60px; /* Sidebar küçüldüğünde logoyu küçült */
 }
+/* ═══════════════════════════════════════════════════════════════
+   Sidebar Grup Başlıkları — TinyDash uyumlu
+═══════════════════════════════════════════════════════════════ */
+
+.sidebar-group-title {
+    padding: 0.85rem 1.25rem 0.35rem 1.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #a0aec0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.5rem;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+    .sidebar-group-title:first-child {
+        margin-top: 0;
+    }
+
+    .sidebar-group-title .group-icon {
+        font-size: 0.85rem;
+        opacity: 0.6;
+    }
+
+    .sidebar-group-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(160, 174, 192, 0.25), transparent);
+        margin-left: 0.3rem;
+    }
+
+/* Sidebar dar mod desteği (collapsed) */
+.sidebar-left.collapsed .sidebar-group-title {
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+    .sidebar-left.collapsed .sidebar-group-title span:not(.group-icon),
+    .sidebar-left.collapsed .sidebar-group-title::after {
+        display: none;
+    }
