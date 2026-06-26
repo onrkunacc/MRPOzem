@@ -1,0 +1,406 @@
+﻿/* ═══════════════════════════════════════════════════════════════
+   İHALE LİSTESİ — Yaklaşan İhaleler Tablosu + Kart İyileştirmeleri
+═══════════════════════════════════════════════════════════════ */
+
+/* ── YAKLAŞAN İHALELER TABLOSU ────────────────────────────────── */
+.upcoming-table-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 18px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+}
+
+.upcoming-table-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.04), rgba(118, 75, 162, 0.04));
+}
+
+    .upcoming-table-head h4 {
+        margin: 0 0 0.2rem 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+.upcoming-table-sub {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #718096;
+}
+
+.upcoming-table-count {
+    padding: 0.35rem 0.85rem;
+    background: rgba(102, 126, 234, 0.1);
+    color: #5a67d8;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.upcoming-table-wrap {
+    overflow-x: auto;
+}
+
+.upcoming-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+    .upcoming-table thead th {
+        background: #f8fafc;
+        color: #4a5568;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .upcoming-table thead .th-urgency {
+        width: 120px;
+    }
+
+    .upcoming-table thead .th-date {
+        width: 140px;
+    }
+
+    .upcoming-table thead .th-time {
+        width: 100px;
+        text-align: center;
+    }
+
+    .upcoming-table tbody td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        vertical-align: middle;
+        background: #fff;
+        transition: background 0.15s ease;
+    }
+
+    .upcoming-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .upcoming-table tbody tr:hover td {
+        background: rgba(102, 126, 234, 0.03);
+    }
+
+    /* Satır rengi (sol kenarlık aciliyete göre) */
+    .upcoming-table tbody tr {
+        position: relative;
+    }
+
+    .upcoming-table tbody td:first-child {
+        border-left: 4px solid transparent;
+    }
+
+    .upcoming-table tbody tr.row-today td:first-child {
+        border-left-color: #f5576c;
+    }
+
+    .upcoming-table tbody tr.row-tomorrow td:first-child {
+        border-left-color: #f5a623;
+    }
+
+    .upcoming-table tbody tr.row-soon td:first-child {
+        border-left-color: #f59e0b;
+    }
+
+    .upcoming-table tbody tr.row-week td:first-child {
+        border-left-color: #4facfe;
+    }
+
+    .upcoming-table tbody tr.row-month td:first-child {
+        border-left-color: #667eea;
+    }
+
+    /* Bugün satırı için arkaplan vurgu */
+    .upcoming-table tbody tr.row-today td {
+        background: linear-gradient(90deg, rgba(245, 87, 108, 0.06), rgba(255, 255, 255, 0));
+    }
+
+    .upcoming-table tbody tr.row-today:hover td {
+        background: linear-gradient(90deg, rgba(245, 87, 108, 0.1), rgba(102, 126, 234, 0.03));
+    }
+
+/* Aciliyet rozeti */
+.urgency-badge {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    padding: 0.45rem 0.7rem;
+    border-radius: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.urgency-days {
+    font-size: 1.4rem;
+    margin-bottom: 0.15rem;
+}
+
+.urgency-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+.urgency-row-today {
+    background: linear-gradient(135deg, #f5576c, #c44569);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.35);
+}
+
+.urgency-row-tomorrow {
+    background: linear-gradient(135deg, #f5a623, #d97706);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+}
+
+.urgency-row-soon {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(251, 191, 36, 0.3);
+}
+
+.urgency-row-week {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(79, 172, 254, 0.3);
+}
+
+.urgency-row-month {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.urgency-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 14px;
+    border: 2px solid rgba(245, 87, 108, 0.5);
+    animation: urgency-pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes urgency-pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0;
+    }
+}
+
+/* Hücre içerikleri */
+.ihale-name-cell {
+    font-weight: 600;
+    color: #1a202c;
+    line-height: 1.4;
+}
+
+.td-date strong {
+    color: #1a202c;
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+
+.td-date-day {
+    font-size: 0.7rem;
+    color: #718096;
+    text-transform: capitalize;
+    margin-top: 0.15rem;
+}
+
+.td-time {
+    text-align: center;
+}
+
+.time-chip {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    background: rgba(102, 126, 234, 0.1);
+    color: #5a67d8;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.kayit-no-chip {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    background: rgba(0, 0, 0, 0.04);
+    color: #4a5568;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.sekil-chip {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.08));
+    color: #11998e;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* ── ALTTAKİ KART BÖLÜMÜ ─────────────────────────────────────── */
+.ihale-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0 0 0.85rem 0.25rem;
+    padding-top: 0.5rem;
+}
+
+/* ── KART STATUS CHIP (kart bölümünde) ──────────────────────── */
+.card-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: currentColor;
+}
+
+    .status-dot.pulsing {
+        animation: dot-pulse 1.5s ease-in-out infinite;
+    }
+
+@keyframes dot-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 currentColor;
+        opacity: 1;
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px transparent;
+        opacity: 0.7;
+    }
+}
+
+.ihale-card.status-today .card-status-chip {
+    background: rgba(245, 87, 108, 0.12);
+    color: #c44569;
+}
+
+.ihale-card.status-tomorrow .card-status-chip {
+    background: rgba(245, 166, 35, 0.14);
+    color: #d97706;
+}
+
+.ihale-card.status-soon .card-status-chip {
+    background: rgba(251, 191, 36, 0.14);
+    color: #d97706;
+}
+
+.ihale-card.status-week .card-status-chip {
+    background: rgba(79, 172, 254, 0.14);
+    color: #0284c7;
+}
+
+.ihale-card.status-month .card-status-chip {
+    background: rgba(102, 126, 234, 0.1);
+    color: #5a67d8;
+}
+
+.ihale-card.status-future .card-status-chip {
+    background: rgba(0, 0, 0, 0.05);
+    color: #4a5568;
+}
+
+.ihale-card.status-past .card-status-chip {
+    background: rgba(0, 0, 0, 0.04);
+    color: #94a3b8;
+}
+
+.ihale-card.status-none .card-status-chip {
+    background: rgba(0, 0, 0, 0.04);
+    color: #a0aec0;
+}
+
+/* Kart sol kenarlığı durumla renkleniyor */
+.ihale-card.status-today {
+    border-left: 4px solid #f5576c;
+}
+
+.ihale-card.status-tomorrow {
+    border-left: 4px solid #f5a623;
+}
+
+.ihale-card.status-soon {
+    border-left: 4px solid #fbbf24;
+}
+
+.ihale-card.status-week {
+    border-left: 4px solid #4facfe;
+}
+
+.ihale-card.status-month {
+    border-left: 4px solid #667eea;
+}
+
+.ihale-card.status-past {
+    opacity: 0.85;
+}
+
+/* Saat meta vurgu */
+.meta-item.meta-time {
+    background: rgba(102, 126, 234, 0.08);
+    color: #5a67d8;
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    font-weight: 600;
+}
+
+/* ── MOBİL ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .upcoming-table thead th,
+    .upcoming-table tbody td {
+        padding: 0.6rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .urgency-badge {
+        min-width: 60px;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .urgency-days {
+        font-size: 1.1rem;
+    }
+}

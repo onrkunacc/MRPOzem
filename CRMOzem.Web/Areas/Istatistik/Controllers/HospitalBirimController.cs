@@ -33,11 +33,31 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             ViewBag.SelectedHospitalId = selectedHospitalId;
         }
 
-        // /Istatistik/HospitalBirim?hospitalId=1
         [HttpGet]
         public async Task<IActionResult> Index(int? hospitalId, CancellationToken ct)
         {
             await LoadHospitalsAsync(hospitalId, ct);
+
+            // Genel özet — hastane seçilmemiş olsa bile göster
+            var bugun = DateTime.Today;
+            var tumKayitlar = await _context.HospitalBirimler.AsNoTracking()
+                .Select(x => new { x.HospitalID, x.Aktif, x.BitisTarihi })
+                .ToListAsync(ct);
+
+            var toplamHastane = await _context.Hospitals.AsNoTracking().CountAsync(ct);
+            var overview = new HospitalBirimOverviewVm
+            {
+                ToplamHastane = toplamHastane,
+                AktifEslesmeVarHastane = tumKayitlar.Where(x => x.Aktif).Select(x => x.HospitalID).Distinct().Count(),
+                ToplamAktifEslesme = tumKayitlar.Count(x => x.Aktif),
+                SuresiYaklasanSayisi = tumKayitlar.Count(x =>
+                    x.Aktif && x.BitisTarihi.HasValue
+                    && x.BitisTarihi.Value.Date >= bugun
+                    && (x.BitisTarihi.Value.Date - bugun).TotalDays <= 30),
+                SuresiDolmusAktifSayisi = tumKayitlar.Count(x =>
+                    x.Aktif && x.BitisTarihi.HasValue && x.BitisTarihi.Value.Date < bugun)
+            };
+            ViewBag.Overview = overview;
 
             if (hospitalId == null)
                 return View(null as HospitalBirimPageVm);
@@ -51,7 +71,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Bu hastaneye ait tüm hastane-birim kayıtları
             var kayitlar = await _context.HospitalBirimler.AsNoTracking()
                 .Include(x => x.Birim)
                 .Where(x => x.HospitalID == hospitalId.Value)
@@ -59,20 +78,39 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 .ThenByDescending(x => x.BaslangicTarihi)
                 .ToListAsync(ct);
 
-            var rows = kayitlar.Select(x => new HospitalBirimRowVm
+            var rows = kayitlar.Select(x =>
             {
-                Id = x.Id,
-                BirimId = x.BirimId,
-                BirimKodu = x.Birim.BirimKodu,
-                BirimAdi = x.Birim.BirimAdi,
-                Aktif = x.Aktif,
-                BaslangicTarihi = x.BaslangicTarihi,
-                BitisTarihi = x.BitisTarihi,
-                IhaleKayitNo = x.IhaleKayitNo,
-                Aciklama = x.Aciklama
+                int? kalanGun = null;
+                bool suresiDoldu = false;
+                bool suresiYaklasti = false;
+
+                if (x.BitisTarihi.HasValue)
+                {
+                    var bitis = x.BitisTarihi.Value.Date;
+                    var fark = (bitis - bugun).TotalDays;
+                    kalanGun = (int)fark;
+
+                    if (x.Aktif && fark < 0) suresiDoldu = true;
+                    else if (x.Aktif && fark <= 30 && fark >= 0) suresiYaklasti = true;
+                }
+
+                return new HospitalBirimRowVm
+                {
+                    Id = x.Id,
+                    BirimId = x.BirimId,
+                    BirimKodu = x.Birim.BirimKodu,
+                    BirimAdi = x.Birim.BirimAdi,
+                    Aktif = x.Aktif,
+                    BaslangicTarihi = x.BaslangicTarihi,
+                    BitisTarihi = x.BitisTarihi,
+                    IhaleKayitNo = x.IhaleKayitNo,
+                    Aciklama = x.Aciklama,
+                    KalanGun = kalanGun,
+                    SuresiDoldu = suresiDoldu,
+                    SuresiYaklasti = suresiYaklasti
+                };
             }).ToList();
 
-            // Bu hastane için hiç kaydı olmayan birimler (hızlı ekleme listesi için)
             var mevcutBirimIds = kayitlar.Select(x => x.BirimId).Distinct().ToHashSet();
             var eklenebilir = await _context.Birimler.AsNoTracking()
                 .Where(b => b.Aktif && !mevcutBirimIds.Contains(b.Id))
@@ -293,6 +331,85 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     Selected = selectedBirimId.HasValue && b.Id == selectedBirimId.Value
                 })
                 .ToListAsync(ct);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CreatePartial(int hospitalId, int? birimId, CancellationToken ct)
+        {
+            var hospital = await _context.Hospitals.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.HospitalID == hospitalId, ct);
+
+            if (hospital == null)
+                return NotFound();
+
+            await LoadBirimlerAsync(birimId, ct);
+            ViewBag.HospitalName = hospital.HospitalName;
+
+            var model = new HospitalBirimFormVm
+            {
+                HospitalID = hospitalId,
+                BirimId = birimId ?? 0,
+                Aktif = true,
+                BaslangicTarihi = DateTime.Today
+            };
+
+            return PartialView("_CreatePartial", model);
+        }
+
+        // ──────────────────────────────────────────────────────────
+        // MODAL — JSON döner (AJAX submit)
+        // ──────────────────────────────────────────────────────────
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAjax(HospitalBirimFormVm model, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value!.Errors.Count > 0)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return Json(new { success = false, errors });
+            }
+
+            if (model.BaslangicTarihi.HasValue && model.BitisTarihi.HasValue
+                && model.BitisTarihi < model.BaslangicTarihi)
+            {
+                return Json(new
+                {
+                    success = false,
+                    errors = new Dictionary<string, string[]>
+                    {
+                        [nameof(model.BitisTarihi)] = new[] { "Bitiş tarihi, başlangıç tarihinden önce olamaz." }
+                    }
+                });
+            }
+
+            try
+            {
+                var entity = new HospitalBirim
+                {
+                    HospitalID = model.HospitalID,
+                    BirimId = model.BirimId,
+                    Aktif = model.Aktif,
+                    BaslangicTarihi = model.BaslangicTarihi,
+                    BitisTarihi = model.BitisTarihi,
+                    IhaleKayitNo = string.IsNullOrWhiteSpace(model.IhaleKayitNo) ? null : model.IhaleKayitNo.Trim(),
+                    Aciklama = string.IsNullOrWhiteSpace(model.Aciklama) ? null : model.Aciklama.Trim(),
+                    OlusturmaTarihi = DateTime.Now
+                };
+
+                _context.HospitalBirimler.Add(entity);
+                await _context.SaveChangesAsync(ct);
+
+                return Json(new { success = true, message = "Hastane-birim kaydı eklendi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Kayıt sırasında hata: " + ex.Message });
+            }
         }
     }
 }

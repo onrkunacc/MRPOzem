@@ -1,15 +1,24 @@
-﻿@model IEnumerable<CRMOzem.Core.ViewModels.HospitalViewModel>
+﻿@model CRMOzem.Core.ViewModels.HospitalListVm
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Hastane Listesi";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
 
-    var flat = Model.Select(m => new
+    var flat = Model.Hospitals.Select(m => new
     {
-        hospitalID = m.HospitalID,
-        hospitalName = m.HospitalName ?? ""
+        id = m.HospitalID,
+        name = m.HospitalName ?? "",
+        address = m.Address ?? "",
+        phone = m.Phone ?? "",
+        aktif = m.AktifBirimSayisi,
+        toplam = m.ToplamBirimKaydi,
+        birimler = m.AktifBirimAdlari,
+        test = m.TestTemplateSayisi,
+        son = m.SonVeriTarihi.HasValue ? m.SonVeriTarihi.Value.ToString("MM.yyyy") : ""
     });
 
     var json = JsonSerializer.Serialize(flat, new JsonSerializerOptions
@@ -19,79 +28,141 @@
     });
 }
 
-<style>
-    .sticky-head thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background: #fff;
-    }
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/admin-expense.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/hospital-list.css" asp-append-version="true" />
 
-    .table-sm td, .table-sm th {
-        padding-top: .5rem;
-        padding-bottom: .5rem
-    }
+<div class="ad-wrapper">
 
-    .pagination .page-link {
-        min-width: 2.25rem;
-        text-align: center
-    }
-
-    .badge-muted {
-        background-color: #eef1f4;
-        color: #495057
-    }
-</style>
-
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <h5 class="mb-0"><i class="fa fa-hospital me-2"></i> Hastane Listesi</h5>
-            <span class="badge badge-muted" id="totalBadge">Toplam: 0</span>
+    <!-- ═══ BAŞLIK ═══ -->
+    <div class="ad-greeting" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <h1>🏥 Hastane Listesi</h1>
+            <p>Sisteme tanımlı tüm hastaneler, aktif birim sayıları ve veri durumu</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary btn-sm">
-            <i class="fa fa-plus"></i> Yeni Hastane
+        <a asp-action="Create" class="btn-grad-primary">
+            <i class="fe fe-plus"></i> Yeni Hastane
         </a>
     </div>
 
-    <div class="card-body">
-        <div class="row g-2 align-items-end mb-3">
-            <div class="col-12 col-md-6 col-lg-4">
-                <label class="form-label mb-1">Ara</label>
-                <input type="text" id="q" class="form-control form-control-sm" placeholder="Hastane adı ile ara">
+    <!-- ═══ KPI ═══ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon">🏥</div>
+                <div class="kpi-label">Toplam Hastane</div>
+                <div class="kpi-value">@Model.Summary.ToplamHastane</div>
+                <div class="kpi-sub">kayıtlı</div>
             </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label mb-1">Sayfa Boyutu</label>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon">🧪</div>
+                <div class="kpi-label">Aktif Birim Toplamı</div>
+                <div class="kpi-value">@Model.Summary.AktifBirimToplam</div>
+                <div class="kpi-sub">hastane × birim</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-label">Verisi Olan Hastane</div>
+                <div class="kpi-value">@Model.Summary.VerisiOlanHastane</div>
+                <div class="kpi-sub">aylık veri girilen</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon">📋</div>
+                <div class="kpi-label">Test Tanımlı</div>
+                <div class="kpi-value">@Model.Summary.TestTanimliHastane</div>
+                <div class="kpi-sub">test şablonu var</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ FİLTRE + ARAMA ═══ -->
+    <div class="glass-card no-hover mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="filter-label">🔍 Arama</label>
+                <input type="text" id="q" class="form-control form-control-sm"
+                       placeholder="Hastane adı, adres veya telefon ile ara..." />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="filter-label">Birim Durumu</label>
+                <select id="birimFilter" class="form-select form-select-sm">
+                    <option value="all">Tümü</option>
+                    <option value="hasActive">Aktif Birimi Olanlar</option>
+                    <option value="noActive">Aktif Birimi Olmayanlar</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="filter-label">Görünüm</label>
+                <div class="btn-group btn-group-sm w-100" role="group">
+                    <button type="button" class="btn view-toggle active" data-view="card">
+                        <i class="fe fe-grid"></i>
+                    </button>
+                    <button type="button" class="btn view-toggle" data-view="table">
+                        <i class="fe fe-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="filter-label">Sayfa Boyutu</label>
                 <select id="pageSize" class="form-select form-select-sm">
-                    <option>5</option>
-                    <option selected>10</option>
-                    <option>20</option>
-                    <option>50</option>
+                    <option>12</option>
+                    <option selected>24</option>
+                    <option>48</option>
+                    <option>96</option>
                 </select>
             </div>
         </div>
+    </div>
 
-        <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle sticky-head" id="dataTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>Hastane Adı</th>
-                        <th class="text-end">İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td colspan="2" class="text-center text-muted py-4">Yükleniyor…</td></tr>
-                </tbody>
-            </table>
+    <!-- ═══ İÇERİK ═══ -->
+    <div class="glass-card no-hover">
+        <div class="section-title">
+            <h5>📂 Hastaneler</h5>
+            <span class="badge-soft" id="totalBadge">0 kayıt</span>
         </div>
 
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-2">
-            <div id="pageInfo" class="text-muted small">Sayfa 1 / 1</div>
-            <nav aria-label="Sayfalama">
-                <ul class="pagination mb-0" id="pager"></ul>
+        <!-- Kart görünümü -->
+        <div id="cardView" class="row g-3"></div>
+
+        <!-- Tablo görünümü -->
+        <div id="tableView" class="d-none">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle ae-table">
+                    <thead>
+                        <tr>
+                            <th>Hastane</th>
+                            <th>İletişim</th>
+                            <th class="text-center">Aktif Birim</th>
+                            <th>Birimler</th>
+                            <th class="text-center">Son Veri</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="emptyState" class="empty-state d-none">
+            <div class="icon">🏥</div>
+            <div>Filtreye uygun hastane bulunamadı.</div>
+        </div>
+
+        <!-- Sayfalama -->
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <small class="text-muted" id="pageInfo">Sayfa 1 / 1</small>
+            <nav>
+                <ul class="pagination pagination-glass mb-0" id="pager"></ul>
             </nav>
         </div>
     </div>
+
 </div>
 
 <div id="af" class="d-none">
@@ -100,104 +171,257 @@
     </form>
 </div>
 
-<script>
-    (function(){
-        const trTR='tr-TR';
-        const raw = @Html.Raw(json);
+@section Scripts {
+    <script>
+        (function () {
+            const trTR = 'tr-TR';
+            const raw = @Html.Raw(json);
 
-        const state = { q:'', page:1, pageSize: parseInt(document.getElementById('pageSize').value, 10) || 10 };
+            const state = {
+                q: '',
+                birimFilter: 'all',
+                view: 'card',
+                page: 1,
+                pageSize: 24
+            };
 
-        const els = {
-            q: document.getElementById('q'),
-            pageSize: document.getElementById('pageSize'),
-            tbody: document.querySelector('#dataTable tbody'),
-            pager: document.getElementById('pager'),
-            pageInfo: document.getElementById('pageInfo'),
-            totalBadge: document.getElementById('totalBadge')
-        };
+            const els = {
+                q: document.getElementById('q'),
+                birimFilter: document.getElementById('birimFilter'),
+                pageSize: document.getElementById('pageSize'),
+                cardView: document.getElementById('cardView'),
+                tableView: document.getElementById('tableView'),
+                tableBody: document.getElementById('tableBody'),
+                emptyState: document.getElementById('emptyState'),
+                pager: document.getElementById('pager'),
+                pageInfo: document.getElementById('pageInfo'),
+                totalBadge: document.getElementById('totalBadge'),
+                toggles: document.querySelectorAll('.view-toggle')
+            };
 
-        let t=null;
-        els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(()=>{ state.q=(els.q.value||'').trim(); state.page=1; render(); }, 200); });
-        els.pageSize.addEventListener('change', ()=>{ state.pageSize=parseInt(els.pageSize.value,10)||10; state.page=1; render(); });
+            let t = null;
+            els.q.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(() => { state.q = (els.q.value || '').trim(); state.page = 1; render(); }, 200);
+            });
+            els.birimFilter.addEventListener('change', () => { state.birimFilter = els.birimFilter.value; state.page = 1; render(); });
+            els.pageSize.addEventListener('change', () => { state.pageSize = parseInt(els.pageSize.value, 10) || 24; state.page = 1; render(); });
 
-        function filterData(data){
-            const q = state.q.toLocaleLowerCase(trTR);
-            if(!q) return data;
-            return data.filter(x => (x.hospitalName||'').toLocaleLowerCase(trTR).includes(q));
-        }
+            els.toggles.forEach(b => b.addEventListener('click', () => {
+                els.toggles.forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                state.view = b.dataset.view;
+                render();
+            }));
 
-        function paginate(data){
-            const total = data.length;
-            const size = state.pageSize;
-            const totalPages = Math.max(1, Math.ceil(total/size));
-            if(state.page > totalPages) state.page = totalPages;
-            const start = (state.page-1)*size;
-            const items = data.slice(start, start+size);
-            return { items, total, totalPages, start, end: Math.min(start+size, total) };
-        }
+            function filterData(data) {
+                const q = state.q.toLocaleLowerCase(trTR);
+                return data.filter(x => {
+                    if (q) {
+                        const blob = (x.name + ' ' + x.address + ' ' + x.phone).toLocaleLowerCase(trTR);
+                        if (!blob.includes(q)) return false;
+                    }
+                    if (state.birimFilter === 'hasActive' && x.aktif <= 0) return false;
+                    if (state.birimFilter === 'noActive' && x.aktif > 0) return false;
+                    return true;
+                });
+            }
 
-        function render(){
-            const filtered = filterData(raw);
-            const {items,total,totalPages,start,end} = paginate(filtered);
+            function paginate(data) {
+                const total = data.length;
+                const size = state.pageSize;
+                const totalPages = Math.max(1, Math.ceil(total / size));
+                if (state.page > totalPages) state.page = totalPages;
+                const start = (state.page - 1) * size;
+                const items = data.slice(start, start + size);
+                return { items, total, totalPages, start, end: Math.min(start + size, total) };
+            }
 
-            els.totalBadge.textContent = `Toplam: ${total}`;
-            els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages} (${total ? (start+1) : 0} - ${end} / ${total})`;
+            function initials(name) {
+                return (name || '??').trim().split(/\s+/).slice(0, 2).map(s => s[0] || '').join('').toUpperCase();
+            }
 
-            const fr = document.createDocumentFragment();
-            if(items.length===0){
-                const tr=document.createElement('tr');
-                tr.innerHTML=`<td colspan="2" class="text-center text-muted py-4">Kayıt bulunamadı.</td>`;
-                fr.appendChild(tr);
-            } else {
-                const token=(document.querySelector('#af input[name="__RequestVerificationToken"]')||{}).value||'';
-                items.forEach(x=>{
-                    const tr=document.createElement('tr');
+            function escapeHtml(s) {
+                return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+            }
+
+            function birimChips(arr, max = 5) {
+                if (!arr || arr.length === 0) {
+                    return '<span class="hl-no-birim">Aktif birim yok</span>';
+                }
+                const shown = arr.slice(0, max).map(b => `<span class="hl-chip">${escapeHtml(b)}</span>`).join('');
+                const extra = arr.length > max ? `<span class="hl-chip hl-chip-more">+${arr.length - max}</span>` : '';
+                return shown + extra;
+            }
+
+            function editUrl(id) { return '@Url.Action("Edit", "Hospital", new { area = "Istatistik" })/' + id; }
+            function deleteUrl(id) { return '@Url.Action("Delete", "Hospital", new { area = "Istatistik" })/' + id; }
+            function birimUrl(id) { return '@Url.Action("Index", "HospitalBirim", new { area = "Istatistik" })?hospitalId=' + id; }
+
+            function renderCards(items) {
+                els.cardView.innerHTML = '';
+                const token = (document.querySelector('#af input[name="__RequestVerificationToken"]') || {}).value || '';
+
+                const fr = document.createDocumentFragment();
+                items.forEach(x => {
+                    const col = document.createElement('div');
+                    col.className = 'col-12 col-md-6 col-xl-4';
+                    col.innerHTML = `
+                        <div class="hospital-card">
+                            <div class="hl-card-head">
+                                <div class="hl-avatar">${escapeHtml(initials(x.name))}</div>
+                                <div class="hl-head-info">
+                                    <div class="hl-name" title="${escapeHtml(x.name)}">${escapeHtml(x.name)}</div>
+                                    ${x.phone ? `<div class="hl-meta"><i class="fe fe-phone"></i> ${escapeHtml(x.phone)}</div>` : ''}
+                                    ${x.address ? `<div class="hl-meta"><i class="fe fe-map-pin"></i> ${escapeHtml(x.address)}</div>` : ''}
+                                </div>
+                            </div>
+
+                            <div class="hl-stats">
+                                <div class="hl-stat">
+                                    <div class="hl-stat-value">${x.aktif}</div>
+                                    <div class="hl-stat-label">Aktif Birim</div>
+                                </div>
+                                <div class="hl-stat">
+                                    <div class="hl-stat-value">${x.test}</div>
+                                    <div class="hl-stat-label">Test Şablonu</div>
+                                </div>
+                                <div class="hl-stat">
+                                    <div class="hl-stat-value">${x.son || '—'}</div>
+                                    <div class="hl-stat-label">Son Veri</div>
+                                </div>
+                            </div>
+
+                            <div class="hl-chips">${birimChips(x.birimler)}</div>
+
+                            <div class="hl-actions">
+                                <a href="${birimUrl(x.id)}" class="btn-detail" title="Birimler">
+                                    <i class="fe fe-grid"></i> Birimler
+                                </a>
+                                <a href="${editUrl(x.id)}" class="btn-detail" title="Düzenle">
+                                    <i class="fe fe-edit-2"></i> Düzenle
+                                </a>
+                                <form method="post" action="${deleteUrl(x.id)}" class="d-inline ms-auto">
+                                    <input type="hidden" name="__RequestVerificationToken" value="${token}">
+                                    <button type="submit" class="btn-delete-icon"
+                                            onclick="return confirm('${escapeHtml(x.name)} hastanesini silmek istediğinize emin misiniz?')"
+                                            title="Sil">
+                                        <i class="fe fe-trash-2"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>`;
+                    fr.appendChild(col);
+                });
+                els.cardView.appendChild(fr);
+            }
+
+            function renderTable(items) {
+                const token = (document.querySelector('#af input[name="__RequestVerificationToken"]') || {}).value || '';
+                const fr = document.createDocumentFragment();
+
+                items.forEach(x => {
+                    const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${escapeHtml(x.hospitalName)}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="user-avatar-sm">${escapeHtml(initials(x.name))}</div>
+                                <div class="fw-semibold">${escapeHtml(x.name)}</div>
+                            </div>
+                        </td>
+                        <td>
+                            ${x.phone ? `<div class="small">${escapeHtml(x.phone)}</div>` : ''}
+                            ${x.address ? `<div class="small text-muted">${escapeHtml(x.address)}</div>` : ''}
+                            ${(!x.phone && !x.address) ? '<span class="text-muted small">—</span>' : ''}
+                        </td>
+                        <td class="text-center">
+                            <span class="islem-badge">${x.aktif} / ${x.toplam}</span>
+                        </td>
+                        <td>
+                            <div class="hl-chips-row">${birimChips(x.birimler, 4)}</div>
+                        </td>
+                        <td class="text-center">
+                            ${x.son ? `<span class="hl-date-chip">${x.son}</span>` : '<span class="text-muted small">—</span>'}
+                        </td>
                         <td class="text-end">
-                            <a href="@Url.Action("Edit", "Hospital", new { area = "Istatistik" })/${x.hospitalID}" class="btn btn-sm btn-warning">
-                                <i class="fa fa-edit"></i>
+                            <a href="${birimUrl(x.id)}" class="btn-detail" title="Birimler">
+                                <i class="fe fe-grid"></i>
                             </a>
-                            <form class="d-inline" method="post" action="@Url.Action("Delete", "Hospital", new { area = "Istatistik" })/${x.hospitalID}">
-                                <input name="__RequestVerificationToken" type="hidden" value="${token}">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Silmek istediğinize emin misiniz?')">
-                                    <i class="fa fa-trash"></i>
+                            <a href="${editUrl(x.id)}" class="btn-detail" title="Düzenle">
+                                <i class="fe fe-edit-2"></i>
+                            </a>
+                            <form method="post" action="${deleteUrl(x.id)}" class="d-inline">
+                                <input type="hidden" name="__RequestVerificationToken" value="${token}">
+                                <button type="submit" class="btn-delete-icon"
+                                        onclick="return confirm('${escapeHtml(x.name)} hastanesini silmek istediğinize emin misiniz?')"
+                                        title="Sil">
+                                    <i class="fe fe-trash-2"></i>
                                 </button>
                             </form>
                         </td>`;
                     fr.appendChild(tr);
                 });
+
+                els.tableBody.innerHTML = '';
+                els.tableBody.appendChild(fr);
             }
-            els.tbody.innerHTML=''; els.tbody.appendChild(fr);
-            renderPager(totalPages);
-        }
 
-        function renderPager(totalPages){
-            const ul = els.pager; ul.innerHTML='';
-            const p = state.page;
+            function renderPager(totalPages) {
+                const ul = els.pager;
+                ul.innerHTML = '';
+                const p = state.page;
 
-            const makeItem = (label, page, disabled=false, active=false)=>{
-                const li=document.createElement('li');
-                li.className=`page-item ${disabled?'disabled':''} ${active?'active':''}`;
-                const a=document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent=label;
-                if(!disabled && !active){
-                    a.addEventListener('click', e=>{ e.preventDefault(); state.page=page; render(); });
+                const makeItem = (label, page, disabled = false, active = false) => {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                    const a = document.createElement('a');
+                    a.className = 'page-link';
+                    a.href = '#';
+                    a.textContent = label;
+                    if (!disabled && !active) {
+                        a.addEventListener('click', e => { e.preventDefault(); state.page = page; render(); });
+                    }
+                    li.appendChild(a);
+                    return li;
+                };
+
+                ul.appendChild(makeItem('«', 1, p <= 1));
+                const start = Math.max(1, p - 2);
+                const end = Math.min(totalPages, p + 2);
+                for (let i = start; i <= end; i++) ul.appendChild(makeItem(String(i), i, false, i === p));
+                ul.appendChild(makeItem('»', totalPages, p >= totalPages));
+            }
+
+            function render() {
+                const filtered = filterData(raw);
+                const { items, total, totalPages, start, end } = paginate(filtered);
+
+                els.totalBadge.textContent = `${total} kayıt`;
+                els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages} · ${total ? (start + 1) : 0}-${end} / ${total}`;
+
+                if (state.view === 'card') {
+                    els.cardView.classList.remove('d-none');
+                    els.tableView.classList.add('d-none');
+                } else {
+                    els.cardView.classList.add('d-none');
+                    els.tableView.classList.remove('d-none');
                 }
-                li.appendChild(a); return li;
-            };
 
-            ul.appendChild(makeItem('«',1,p<=1));
-            ul.appendChild(makeItem('Önceki',Math.max(1,p-1),p<=1));
+                if (items.length === 0) {
+                    els.emptyState.classList.remove('d-none');
+                    els.cardView.innerHTML = '';
+                    els.tableBody && (els.tableBody.innerHTML = '');
+                } else {
+                    els.emptyState.classList.add('d-none');
+                    if (state.view === 'card') renderCards(items);
+                    else renderTable(items);
+                }
 
-            const start=Math.max(1,p-2), end=Math.min(totalPages,p+2);
-            for(let i=start;i<=end;i++) ul.appendChild(makeItem(String(i), i, false, i===p));
+                renderPager(totalPages);
+            }
 
-            ul.appendChild(makeItem('Sonraki',Math.min(totalPages,p+1),p>=totalPages));
-            ul.appendChild(makeItem('»', totalPages, p>=totalPages));
-        }
-
-        function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-        render();
-    })();
-</script>
+            state.pageSize = parseInt(els.pageSize.value, 10) || 24;
+            render();
+        })();
+    </script>
+}

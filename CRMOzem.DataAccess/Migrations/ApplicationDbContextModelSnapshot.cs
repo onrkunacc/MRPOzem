@@ -665,10 +665,20 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit");
+
                     b.Property<string>("HospitalName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("IhaleNumarasi")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("IhaleTarihi")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(50)
@@ -677,6 +687,41 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasKey("HospitalID");
 
                     b.ToTable("Hospitals", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalAylikIstatistik", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Ay")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("GeldiMi")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Not")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Yil")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HospitalID", "Yil", "Ay")
+                        .IsUnique();
+
+                    b.ToTable("HospitalAylikIstatistikler", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalBirim", b =>
@@ -1731,6 +1776,17 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalAylikIstatistik", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
+                        .WithMany("AylikIstatistikler")
+                        .HasForeignKey("HospitalID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hospital");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalBirim", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.Birim", "Birim")
@@ -2078,6 +2134,8 @@ namespace CRMOzem.DataAccess.Migrations
 
             modelBuilder.Entity("CRMOzem.Core.Models.Hospital", b =>
                 {
+                    b.Navigation("AylikIstatistikler");
+
                     b.Navigation("HospitalBirimler");
 
                     b.Navigation("MonthlyVolumes");

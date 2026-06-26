@@ -52,6 +52,7 @@ builder.Services.AddScoped<ISutPointService, SutPointService>();
 builder.Services.AddScoped<IIhaleService, IhaleService>();
 builder.Services.AddScoped<IIhaleExportService, IhaleExportService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddMemoryCache();
 
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
@@ -192,13 +193,13 @@ app.Use(async (context, next) =>
     }
 
     await next();
-}); 
+});
 
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllerRoute(
         name: "areas",
-        pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}"
+        pattern: "{area:exists}/{controller}/{action=Index}/{id?}"
     );
 
     endpoints.MapControllerRoute(

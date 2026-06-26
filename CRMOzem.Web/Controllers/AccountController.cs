@@ -61,25 +61,27 @@ namespace CRMOzem.Web.Controllers
             var roles = await _userManager.GetRolesAsync(user);
 
             if (roles.Contains("Yönetici"))
-                return RedirectToAction("Index", "Admin", new { area = "Admin" });
-            else if (roles.Contains("Muhasebe"))
-                return RedirectToAction("Index", "Cari", new { area = "Muhasebe" });
-            else if (roles.Contains("Finans"))
-                return RedirectToAction("Index", "Dashboard", new { area = "Finans" });
-            else if (roles.Contains("İnsan Kaynakları"))
-                return RedirectToAction("Index", "Leave", new { area = "InsanKaynaklari" });
-            else if (roles.Contains("İstatistik"))
-                return RedirectToAction("Index", "Dashboard", new { area = "Istatistik" });
-            else if (roles.Contains("İhale"))
-                return RedirectToAction("Index", "Ihale", new { area = "Ihale" });
-            else if (roles.Contains("Evrak"))
-                return RedirectToAction("Index", "Document", new { area = "Evrak" });
-            else if (roles.Contains("IT"))
-                return RedirectToAction("Index", "Inventory", new { area = "IT" });
+                return Redirect("/Admin/Admin/Index");
+            if (roles.Contains("Muhasebe"))
+                return Redirect("/Muhasebe/Cari/Index");
+            if (roles.Contains("Finans"))
+                return Redirect("/Finans/Dashboard/Index");
+            if (roles.Contains("İnsan Kaynakları"))
+                return Redirect("/InsanKaynaklari/Leave/Index");
+            if (roles.Contains("İstatistik") || roles.Contains("İstatistikYonetici")
+                || roles.Contains("İstatistikGiris") || roles.Contains("DepoGiris")
+                || roles.Contains("IstatistikRapor") || roles.Contains("IstatistikGoruntule"))
+                return Redirect("/Istatistik/Dashboard/Index");
+            if (roles.Contains("İhale") || roles.Contains("IhaleYonetici")
+                || roles.Contains("IhaleGiris") || roles.Contains("IhaleGoruntule"))
+                return Redirect("/Ihale/Ihale/Index");
+            if (roles.Contains("Evrak"))
+                return Redirect("/Evrak/Document/Index");
+            if (roles.Contains("IT"))
+                return Redirect("/IT/Inventory/Index");
 
+            return RedirectToAction("Index", "Home");
 
-                return RedirectToAction("Index", "Home");
-            
         }
 
         public IActionResult Register()

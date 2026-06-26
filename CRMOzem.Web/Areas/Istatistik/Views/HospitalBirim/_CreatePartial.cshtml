@@ -1,0 +1,81 @@
+﻿@model HospitalBirimFormVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    var birimler = ViewBag.Birimler as List<SelectListItem> ?? new List<SelectListItem>();
+    var hospitalName = ViewBag.HospitalName as string ?? "-";
+}
+
+<form id="hbCreateForm" method="post" asp-action="CreateAjax">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="HospitalID" />
+    <input type="hidden" asp-for="Id" />
+
+    <div class="modal-body">
+
+        <div class="hb-modal-hospital">
+            <i class="fe fe-home"></i>
+            <span>@hospitalName</span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label asp-for="BirimId" class="filter-label">Birim *</label>
+                <select asp-for="BirimId" asp-items="birimler" class="form-select form-select-sm">
+                    <option value="0">— Seçiniz —</option>
+                </select>
+                <span asp-validation-for="BirimId" class="text-danger small d-block mt-1"
+                      data-field="BirimId"></span>
+            </div>
+
+            <div class="col-6">
+                <label asp-for="BaslangicTarihi" class="filter-label">Başlangıç</label>
+                <input asp-for="BaslangicTarihi" type="date" class="form-control form-control-sm" />
+                <span asp-validation-for="BaslangicTarihi" class="text-danger small d-block mt-1"
+                      data-field="BaslangicTarihi"></span>
+            </div>
+
+            <div class="col-6">
+                <label asp-for="BitisTarihi" class="filter-label">Bitiş</label>
+                <input asp-for="BitisTarihi" type="date" class="form-control form-control-sm" />
+                <span asp-validation-for="BitisTarihi" class="text-danger small d-block mt-1"
+                      data-field="BitisTarihi"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="IhaleKayitNo" class="filter-label">İhale Kayıt No</label>
+                <input asp-for="IhaleKayitNo" class="form-control form-control-sm"
+                       placeholder="Örn: 2024/123456" maxlength="50" />
+                <span asp-validation-for="IhaleKayitNo" class="text-danger small d-block mt-1"
+                      data-field="IhaleKayitNo"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Aciklama" class="filter-label">Açıklama</label>
+                <textarea asp-for="Aciklama" class="form-control form-control-sm" rows="2"
+                          maxlength="500" placeholder="İsteğe bağlı not..."></textarea>
+                <span asp-validation-for="Aciklama" class="text-danger small d-block mt-1"
+                      data-field="Aciklama"></span>
+            </div>
+
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input asp-for="Aktif" class="form-check-input" />
+                    <label asp-for="Aktif" class="form-check-label">
+                        <strong>Aktif kayıt</strong>
+                        <span class="text-muted small d-block">Yenileme senaryosunda eski kayıt pasife alınabilir</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="hbCreateGlobalError" class="alert alert-danger d-none mt-3 mb-0 small"></div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-sm btn-grad-primary" id="hbCreateSubmit">
+            <i class="fe fe-save"></i> Kaydet
+        </button>
+    </div>
+</form>

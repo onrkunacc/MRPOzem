@@ -29,6 +29,9 @@ namespace CRMOzem.Core.ViewModels
         public DateTime? BitisTarihi { get; set; }
         public string? IhaleKayitNo { get; set; }
         public string? Aciklama { get; set; }
+        public int? KalanGun { get; set; }        // bitiş tarihine kalan gün (null = bitiş yok)
+        public bool SuresiDoldu { get; set; }      // BitisTarihi geçmişte ama Aktif=true ise
+        public bool SuresiYaklasti { get; set; }   // 30 günden az kaldıysa
     }
 
     public class BirimMiniVm
@@ -62,5 +65,14 @@ namespace CRMOzem.Core.ViewModels
 
         [MaxLength(500)]
         public string? Aciklama { get; set; }
+    }
+    
+    public class HospitalBirimOverviewVm
+    {
+        public int ToplamHastane { get; set; }
+        public int AktifEslesmeVarHastane { get; set; }
+        public int ToplamAktifEslesme { get; set; }
+        public int SuresiYaklasanSayisi { get; set; }
+        public int SuresiDolmusAktifSayisi { get; set; }
     }
 }

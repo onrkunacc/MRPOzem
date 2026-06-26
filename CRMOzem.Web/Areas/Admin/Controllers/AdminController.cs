@@ -17,17 +17,9 @@ namespace CRMOzem.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> Index(string periyot = "ay", CancellationToken ct = default)
         {
-            try
-            {
-                var vm = await _dashboardService.GetDashboardAsync(periyot, ct);
-                ViewBag.SelectedPeriyot = periyot;
-                return View(vm);
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Dashboard yüklenirken hata: {ex.Message}";
-                return RedirectToAction("Index", "Home");
-            }
+            var vm = await _dashboardService.GetDashboardAsync(periyot, ct);
+            ViewBag.SelectedPeriyot = periyot;
+            return View(vm);
         }
     }
 }

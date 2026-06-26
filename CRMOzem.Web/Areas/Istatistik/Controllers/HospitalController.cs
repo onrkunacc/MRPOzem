@@ -21,13 +21,48 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
-            var hospitals = await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct);
-            var viewModel = hospitals.Select(h => new HospitalViewModel
+            var hospitals = await _context.Hospitals
+                .AsNoTracking()
+                .Include(h => h.HospitalBirimler)
+                    .ThenInclude(hb => hb.Birim)
+                .Include(h => h.TestTemplates)
+                .Include(h => h.MonthlyVolumes)
+                .OrderBy(x => x.HospitalName)
+                .ToListAsync(ct);
+
+            var rows = hospitals.Select(h => new HospitalRowVm
             {
                 HospitalID = h.HospitalID,
-                HospitalName = h.HospitalName
+                HospitalName = h.HospitalName,
+                Address = h.Address,
+                Phone = h.Phone,
+                AktifBirimSayisi = h.HospitalBirimler.Count(x => x.Aktif),
+                ToplamBirimKaydi = h.HospitalBirimler.Count,
+                AktifBirimAdlari = h.HospitalBirimler
+                    .Where(x => x.Aktif && x.Birim != null)
+                    .Select(x => x.Birim!.BirimAdi)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList(),
+                TestTemplateSayisi = h.TestTemplates?.Count ?? 0,
+                SonVeriTarihi = h.MonthlyVolumes?.Any() == true
+                    ? h.MonthlyVolumes.Max(v => (DateTime?)new DateTime(v.Year, v.Month, 1))
+                    : null
             }).ToList();
-            return View(viewModel);
+
+            var vm = new HospitalListVm
+            {
+                Hospitals = rows,
+                Summary = new HospitalListSummaryVm
+                {
+                    ToplamHastane = rows.Count,
+                    AktifBirimToplam = rows.Sum(x => x.AktifBirimSayisi),
+                    VerisiOlanHastane = rows.Count(x => x.SonVeriTarihi != null),
+                    TestTanimliHastane = rows.Count(x => x.TestTemplateSayisi > 0)
+                }
+            };
+
+            return View(vm);
         }
 
         [HttpGet]

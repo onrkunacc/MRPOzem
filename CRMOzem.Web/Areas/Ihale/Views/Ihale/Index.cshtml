@@ -2,8 +2,56 @@
 @{
     ViewData["Title"] = "İhaleler";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var now = DateTime.Now;
+    var bugun = now.Date;
+
+    // Yaklaşan ihaleler (gelecek 30 gün)
+    var yaklasanList = Model
+        .Where(x => x.IhaleTarihi.HasValue && x.IhaleTarihi.Value.Date >= bugun
+                                           && x.IhaleTarihi.Value.Date <= bugun.AddDays(30))
+        .OrderBy(x => x.IhaleTarihi)
+        .ToList();
+
+    string GetStatusClass(DateTime? tarih)
+    {
+        if (!tarih.HasValue) return "status-none";
+        var d = (tarih.Value.Date - bugun).Days;
+        if (d < 0) return "status-past";
+        if (d == 0) return "status-today";
+        if (d == 1) return "status-tomorrow";
+        if (d <= 3) return "status-soon";
+        if (d <= 7) return "status-week";
+        if (d <= 30) return "status-month";
+        return "status-future";
+    }
+
+    string FormatSaat(TimeSpan? saat) => saat.HasValue ? saat.Value.ToString(@"hh\:mm") : "";
+
+    string GetStatusText(DateTime? tarih, TimeSpan? saat)
+    {
+        if (!tarih.HasValue) return "Tarih belirlenmemiş";
+        var d = (tarih.Value.Date - bugun).Days;
+        var saatStr = FormatSaat(saat);
+        if (d < 0) return $"{Math.Abs(d)} gün önce tamamlandı";
+        if (d == 0) return string.IsNullOrEmpty(saatStr) ? "BUGÜN" : $"BUGÜN · {saatStr}";
+        if (d == 1) return string.IsNullOrEmpty(saatStr) ? "YARIN" : $"YARIN · {saatStr}";
+        if (d <= 30) return $"{d} gün kaldı";
+        return tarih.Value.ToString("dd.MM.yyyy");
+    }
+
+    string GetUrgencyLabel(int days)
+    {
+        if (days == 0) return "BUGÜN";
+        if (days == 1) return "YARIN";
+        if (days <= 3) return "ACİL";
+        if (days <= 7) return "BU HAFTA";
+        return "BU AY";
+    }
 }
+
 <link rel="stylesheet" href="~/css/tendercss.css" />
+<link rel="stylesheet" href="~/css/tender-upcoming.css" asp-append-version="true" />
 
 <div class="page-header">
     <div>
@@ -12,6 +60,97 @@
     </div>
     <a asp-area="Ihale" asp-controller="Ihale" asp-action="Create" class="btn btn-primary">+ Yeni İhale</a>
 </div>
+
+@if (Model.Any() && yaklasanList.Any())
+{
+    <!-- ═══ YAKLAŞAN İHALELER TABLOSU ═══ -->
+    <div class="upcoming-table-card">
+        <div class="upcoming-table-head">
+            <div>
+                <h4>⏳ Yaklaşan İhaleler</h4>
+                <p class="upcoming-table-sub">Önümüzdeki 30 gün içerisinde gerçekleşecek ihaleler</p>
+            </div>
+            <span class="upcoming-table-count">@yaklasanList.Count ihale</span>
+        </div>
+
+        <div class="upcoming-table-wrap">
+            <table class="upcoming-table">
+                <thead>
+                    <tr>
+                        <th class="th-urgency">Durum</th>
+                        <th>İhale Adı</th>
+                        <th class="th-date">Tarih</th>
+                        <th class="th-time">Saat</th>
+                        <th>Kayıt No</th>
+                        <th>Şekil</th>
+                        <th class="text-end">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in yaklasanList)
+                    {
+                        var days = (u.IhaleTarihi.Value.Date - bugun).Days;
+                        string rowClass = days == 0 ? "row-today"
+                                          : days == 1 ? "row-tomorrow"
+                                          : days <= 3 ? "row-soon"
+                                          : days <= 7 ? "row-week"
+                                          : "row-month";
+                        string urgencyLabel = GetUrgencyLabel(days);
+
+                        <tr class="@rowClass">
+                            <td class="td-urgency">
+                                <span class="urgency-badge urgency-@rowClass">
+                                    @if (days == 0)
+                                    {
+                                        <span class="urgency-pulse"></span>
+                                    }
+                                    <span class="urgency-days">@days</span>
+                                    <span class="urgency-label">@urgencyLabel</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="ihale-name-cell">@u.IhaleAdi</div>
+                            </td>
+                            <td class="td-date">
+                                <strong>@u.IhaleTarihi.Value.ToString("dd.MM.yyyy")</strong>
+                                <div class="td-date-day">@u.IhaleTarihi.Value.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))</div>
+                            </td>
+                            <td class="td-time">
+                                @if (u.IhaleSaati.HasValue)
+                                {
+                                    <span class="time-chip">🕒 @u.IhaleSaati.Value.ToString(@"hh\:mm")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(u.IhaleKayitNo))
+                                {
+                                    <span class="kayit-no-chip">@u.IhaleKayitNo</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="sekil-chip">@(u.IhaleSekli ?? "HİZMET")</span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-area="Ihale" asp-controller="Ihale" asp-action="Detail" asp-route-id="@u.Id"
+                                   class="btn btn-outline btn-sm">Detay →</a>
+                                <a asp-area="Ihale" asp-controller="Ihale" asp-action="Ozet" asp-route-id="@u.Id" 
+                                    class="btn btn-outline btn-sm">Özet →</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @if (!Model.Any())
 {
@@ -24,15 +163,33 @@
 }
 else
 {
+    <h4 class="ihale-section-title">Tüm İhaleler</h4>
     <div class="ihale-grid">
         @foreach (var ihale in Model)
         {
-            <div class="ihale-card">
+            var statusClass = GetStatusClass(ihale.IhaleTarihi);
+            var statusText = GetStatusText(ihale.IhaleTarihi, ihale.IhaleSaati);
+
+            <div class="ihale-card @statusClass">
                 <div class="card-header">
                     <span class="card-badge">@(ihale.IhaleSekli ?? "HİZMET")</span>
                     <span class="card-date">@ihale.OlusturmaTarihi.ToString("dd.MM.yyyy")</span>
                 </div>
+
                 <h3 class="card-title">@ihale.IhaleAdi</h3>
+
+                <div class="card-status-chip">
+                    @if (statusClass == "status-today")
+                    {
+                        <span class="status-dot pulsing"></span>
+                    }
+                    else
+                    {
+                        <span class="status-dot"></span>
+                    }
+                    <span>@statusText</span>
+                </div>
+
                 <div class="card-meta">
                     @if (!string.IsNullOrEmpty(ihale.IhaleKayitNo))
                     {
@@ -41,9 +198,14 @@ else
                     @if (ihale.IhaleTarihi.HasValue)
                     {
                         <span class="meta-item">📅 @ihale.IhaleTarihi.Value.ToString("dd.MM.yyyy")</span>
+                        @if (ihale.IhaleSaati.HasValue)
+                        {
+                            <span class="meta-item meta-time">🕒 @ihale.IhaleSaati.Value.ToString(@"hh\:mm")</span>
+                        }
                     }
                     <span class="meta-item">⏱ @ihale.IhaleSuresiGun gün</span>
                 </div>
+
                 <div class="card-params">
                     <div class="param">
                         <span class="param-label">KDV</span>
@@ -62,6 +224,7 @@ else
                         <span class="param-value">@ihale.KurEUR ₺</span>
                     </div>
                 </div>
+
                 <div class="card-actions">
                     <a asp-area="Ihale" asp-controller="Ihale" asp-action="Detail" asp-route-id="@ihale.Id" class="btn btn-outline btn-sm">Detay</a>
                     <a asp-area="Ihale" asp-controller="Ihale" asp-action="Ozet" asp-route-id="@ihale.Id" class="btn btn-ghost btn-sm">Özet</a>

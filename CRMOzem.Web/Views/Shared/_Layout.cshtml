@@ -25,9 +25,62 @@
     <link rel="stylesheet" href="~/tinydash-master/dark/css/app-dark.css" id="darkTheme" disabled>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-   
+    <link rel="stylesheet" href="~/css/page-skeleton.css" asp-append-version="true" />
 </head>
 <body class="vertical light">
+    <div id="pageSkeleton" class="page-skeleton" aria-hidden="true">
+        <div class="skel-container">
+            <!-- Greeting -->
+            <div class="skel-header">
+                <div class="skel-block skel-h1"></div>
+                <div class="skel-block skel-p"></div>
+            </div>
+
+            <!-- KPI cards -->
+            <div class="skel-grid skel-grid-4">
+                <div class="skel-card">
+                    <div class="skel-block skel-icon"></div>
+                    <div class="skel-block skel-label"></div>
+                    <div class="skel-block skel-value"></div>
+                    <div class="skel-block skel-sub"></div>
+                </div>
+                <div class="skel-card">
+                    <div class="skel-block skel-icon"></div>
+                    <div class="skel-block skel-label"></div>
+                    <div class="skel-block skel-value"></div>
+                    <div class="skel-block skel-sub"></div>
+                </div>
+                <div class="skel-card">
+                    <div class="skel-block skel-icon"></div>
+                    <div class="skel-block skel-label"></div>
+                    <div class="skel-block skel-value"></div>
+                    <div class="skel-block skel-sub"></div>
+                </div>
+                <div class="skel-card">
+                    <div class="skel-block skel-icon"></div>
+                    <div class="skel-block skel-label"></div>
+                    <div class="skel-block skel-value"></div>
+                    <div class="skel-block skel-sub"></div>
+                </div>
+            </div>
+
+            <!-- 2 büyük kart -->
+            <div class="skel-grid skel-grid-2">
+                <div class="skel-card-large">
+                    <div class="skel-block skel-title"></div>
+                    <div class="skel-bar-row"><div class="skel-block skel-bar"></div></div>
+                    <div class="skel-bar-row"><div class="skel-block skel-bar skel-bar-2"></div></div>
+                    <div class="skel-bar-row"><div class="skel-block skel-bar skel-bar-3"></div></div>
+                    <div class="skel-bar-row"><div class="skel-block skel-bar skel-bar-4"></div></div>
+                    <div class="skel-bar-row"><div class="skel-block skel-bar skel-bar-5"></div></div>
+                </div>
+                <div class="skel-card-large">
+                    <div class="skel-block skel-title"></div>
+                    <div class="skel-block skel-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="wrapper">
         <!-- Navbar -->
         <nav class="topnav navbar navbar-light">
@@ -198,7 +251,52 @@
                 .catch(error => console.log("Service Worker Hatası:", error));
         }
     </script>
+    <script>
+        (function () {
+        const skel = document.getElementById('pageSkeleton');
+        if (!skel) return;
 
+        // Sayfa yüklenince skeleton'ı gizle
+        window.addEventListener('load', () => {
+        skel.classList.add('hide');
+        setTimeout(() => skel.style.display = 'none', 400);
+        });
+
+        // Link tıklandığında skeleton'ı tekrar göster (sayfa geçişleri)
+        document.body.addEventListener('click', function (e) {
+        const link = e.target.closest('a');
+        if (!link) return;
+
+        // Sadece internal navigation'da
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')
+        || link.target === '_blank' || link.hasAttribute('download')
+        || link.hasAttribute('data-bs-toggle')) return;
+
+        // Form içindeyse veya AJAX butonsa atla
+        if (link.closest('form') || link.classList.contains('js-no-skel')) return;
+
+        // External link'leri atla
+        try {
+        const url = new URL(href, window.location.origin);
+        if (url.origin !== window.location.origin) return;
+        } catch { return; }
+
+        // Skeleton'ı göster
+        skel.style.display = '';
+        skel.classList.remove('hide');
+        });
+
+        // Form submit'lerde de göster (POST sonrası redirect için)
+        document.body.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (form.classList.contains('js-no-skel')) return;
+        if (form.getAttribute('data-ajax') === 'true') return;
+        skel.style.display = '';
+        skel.classList.remove('hide');
+        });
+        })();
+    </script>
     @RenderSection("Scripts", required: false)
 </body>
 </html>

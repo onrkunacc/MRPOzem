@@ -1,0 +1,185 @@
+﻿/* ═══════════════════════════════════════════════════════════════
+   PAGE SKELETON LOADER
+═══════════════════════════════════════════════════════════════ */
+
+.page-skeleton {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%);
+    overflow: hidden;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+    opacity: 1;
+}
+
+    .page-skeleton.hide {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+.skel-container {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* ── Animasyonlu shimmer efekti ──────────────────────────────── */
+.skel-block {
+    position: relative;
+    background: linear-gradient(90deg, rgba(160, 174, 192, 0.15) 0%, rgba(160, 174, 192, 0.3) 50%, rgba(160, 174, 192, 0.15) 100%);
+    background-size: 200% 100%;
+    border-radius: 8px;
+    animation: skel-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skel-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* ── Header (greeting) ────────────────────────────────────────── */
+.skel-header {
+    margin-bottom: 1.75rem;
+}
+
+.skel-h1 {
+    width: 280px;
+    height: 32px;
+    margin-bottom: 0.6rem;
+}
+
+.skel-p {
+    width: 420px;
+    max-width: 80%;
+    height: 16px;
+}
+
+/* ── Grid ─────────────────────────────────────────────────────── */
+.skel-grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.skel-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.skel-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* ── KPI Card ─────────────────────────────────────────────────── */
+.skel-card {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 18px;
+    padding: 1.25rem;
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.skel-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+
+.skel-label {
+    width: 60%;
+    height: 12px;
+}
+
+.skel-value {
+    width: 80%;
+    height: 28px;
+}
+
+.skel-sub {
+    width: 50%;
+    height: 11px;
+}
+
+/* ── Large Card ───────────────────────────────────────────────── */
+.skel-card-large {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 18px;
+    padding: 1.5rem;
+    min-height: 320px;
+}
+
+.skel-title {
+    width: 35%;
+    height: 18px;
+    margin-bottom: 1.25rem;
+}
+
+.skel-bar-row {
+    margin-bottom: 0.75rem;
+}
+
+.skel-bar {
+    width: 100%;
+    height: 14px;
+}
+
+.skel-bar-2 {
+    width: 85%;
+}
+
+.skel-bar-3 {
+    width: 92%;
+}
+
+.skel-bar-4 {
+    width: 78%;
+}
+
+.skel-bar-5 {
+    width: 95%;
+}
+
+.skel-chart {
+    width: 100%;
+    height: 240px;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
+/* ── Mobil ────────────────────────────────────────────────────── */
+@media (max-width: 992px) {
+    .skel-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .skel-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .skel-h1 {
+        width: 200px;
+    }
+
+    .skel-p {
+        width: 280px;
+    }
+}
+
+@media (max-width: 576px) {
+    .skel-grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .skel-container {
+        padding: 1.25rem 1rem;
+    }
+}

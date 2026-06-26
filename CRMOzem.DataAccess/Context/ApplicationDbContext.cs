@@ -48,6 +48,7 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<IhaleKalem> IhaleKalemler { get; set; }
         public DbSet<HospitalBirim> HospitalBirimler { get; set; }
 
+        public DbSet<HospitalAylikIstatistik> HospitalAylikIstatistikler => Set<HospitalAylikIstatistik>();
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
@@ -173,6 +174,25 @@ namespace CRMOzem.DataAccess.Context
                 // Aynı kurum + yıl + ay için tek kayıt
                 entity.HasIndex(x => new { x.KurumId, x.Yil, x.Ay })
                       .IsUnique();
+            });
+            // ═══ HospitalAylikIstatistik (yeni Plan B) ═══
+            builder.Entity<HospitalAylikIstatistik>(entity =>
+            {
+                entity.ToTable("HospitalAylikIstatistikler", "ozem");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Yil).IsRequired();
+                entity.Property(x => x.Ay).IsRequired();
+                entity.Property(x => x.GeldiMi).IsRequired();
+                entity.Property(x => x.Not).HasMaxLength(2000);
+                entity.Property(x => x.UpdatedAt).IsRequired();
+
+                entity.HasOne(x => x.Hospital)
+                      .WithMany(h => h.AylikIstatistikler)
+                      .HasForeignKey(x => x.HospitalID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => new { x.HospitalID, x.Yil, x.Ay }).IsUnique();
             });
 
             builder.Entity<TestSutPoint>()
