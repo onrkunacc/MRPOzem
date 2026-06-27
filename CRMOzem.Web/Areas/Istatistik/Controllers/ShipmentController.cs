@@ -14,11 +14,16 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
     public class ShipmentController : Controller
     {
         private readonly IStatisticsService _statisticsService;
+        private readonly IShipmentTemplateService _shipmentTemplateService;
         private readonly ApplicationDbContext _context;
 
-        public ShipmentController(IStatisticsService statisticsService, ApplicationDbContext context)
+        public ShipmentController(
+            IStatisticsService statisticsService,
+            IShipmentTemplateService shipmentTemplateService,
+            ApplicationDbContext context)
         {
             _statisticsService = statisticsService;
+            _shipmentTemplateService = shipmentTemplateService;
             _context = context;
         }
 
@@ -28,7 +33,9 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             try
             {
                 var shipments = await _statisticsService.GetShipmentsAsync(hospitalId ?? 0, startDate, endDate, ct);
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
+                ViewBag.Hospitals = new SelectList(
+                    await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct),
+                    "HospitalID", "HospitalName");
                 ViewBag.SelectedHospitalID = hospitalId;
                 ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
                 ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
@@ -36,48 +43,81 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction(nameof(Index));
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
+                return View(new List<MonthlyShipment>());
             }
         }
 
+        // ═════════════════════════════════════════════
+        // YENİ — Şablona bağlı toplu gönderim
+        // ═════════════════════════════════════════════
         [HttpGet]
-        public async Task<IActionResult> Create(CancellationToken ct)
+        public async Task<IActionResult> Create(int? hospitalId, DateTime? month, CancellationToken ct)
         {
             try
             {
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
-                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName");
-                return View(new ShipmentViewModel { Month = DateTime.Now });
+                await LoadHospitalsAsync(hospitalId, ct);
+
+                if (hospitalId == null || hospitalId <= 0)
+                {
+                    ViewBag.SelectedMonth = (month ?? DateTime.Now).ToString("yyyy-MM");
+                    return View(model: null);
+                }
+
+                var m = month ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                var vm = await _shipmentTemplateService.BuildFormAsync(hospitalId.Value, m, ct);
+
+                ViewBag.SelectedMonth = m.ToString("yyyy-MM");
+                return View(vm);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction(nameof(Index));
+                TempData["Error"] = "Form yüklenemedi: " + ex.Message;
+                await LoadHospitalsAsync(hospitalId, ct);
+                return View(model: null);
             }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ShipmentViewModel model, CancellationToken ct)
+        public async Task<IActionResult> Create(ShipmentTemplateSaveVm model, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName");
-                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName");
-                return View(model);
-            }
-
             try
             {
-                await _statisticsService.AddShipmentAsync(model.HospitalID, model.TestID, model.Month, model.SentCount, ct);
-                TempData["SuccessMessage"] = "Gönderim başarıyla kaydedildi.";
-                return RedirectToAction(nameof(Index));
+                if (model == null || model.HospitalID <= 0)
+                {
+                    TempData["Error"] = "Geçersiz veri.";
+                    return RedirectToAction(nameof(Create));
+                }
+
+                var result = await _shipmentTemplateService.SaveAsync(model, ct);
+
+                if (!result.Success)
+                {
+                    TempData["Error"] = result.ErrorMessage ?? "Kayıt başarısız.";
+                    return RedirectToAction(nameof(Create), new
+                    {
+                        hospitalId = model.HospitalID,
+                        month = model.Month.ToString("yyyy-MM-dd")
+                    });
+                }
+
+                var mesaj = $"İşlem başarılı: " +
+                    $"{result.EklenenSatir} yeni, {result.GuncellenenSatir} güncellendi" +
+                    (result.AtlananSatir > 0 ? $", {result.AtlananSatir} atlandı" : "") +
+                    $". Toplam {result.ToplamAdet} adet kayıt.";
+
+                TempData["SuccessMessage"] = mesaj;
+                return RedirectToAction(nameof(Index), new { hospitalId = model.HospitalID });
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
-                return RedirectToAction(nameof(Index));
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
+                return RedirectToAction(nameof(Create), new
+                {
+                    hospitalId = model?.HospitalID,
+                    month = model?.Month.ToString("yyyy-MM-dd")
+                });
             }
         }
 
@@ -86,7 +126,9 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         {
             try
             {
-                var shipment = await _context.MonthlyShipments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+                var shipment = await _context.MonthlyShipments.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == id, ct);
+
                 if (shipment == null)
                 {
                     TempData["Error"] = "Gönderim bulunamadı.";
@@ -102,14 +144,18 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     SentCount = shipment.SentCount
                 };
 
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", shipment.HospitalID);
-                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", shipment.TestID);
+                ViewBag.Hospitals = new SelectList(
+                    await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct),
+                    "HospitalID", "HospitalName", shipment.HospitalID);
+                ViewBag.Tests = new SelectList(
+                    await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct),
+                    "TestID", "TestName", shipment.TestID);
 
                 return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -120,8 +166,12 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
-                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
+                ViewBag.Hospitals = new SelectList(
+                    await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct),
+                    "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(
+                    await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct),
+                    "TestID", "TestName", model.TestID);
                 return View(model);
             }
 
@@ -134,7 +184,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // shipment.Id = model.Id; // GEREKSİZ — kaldırıldı
                 shipment.HospitalID = model.HospitalID;
                 shipment.TestID = model.TestID;
                 shipment.Month = new DateTime(model.Month.Year, model.Month.Month, 1);
@@ -147,15 +196,18 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (DbUpdateException ex)
             {
-                // Unique index çakışması vb.
-                ModelState.AddModelError("", $"Güncelleme hatası: {ex.Message}");
-                ViewBag.Hospitals = new SelectList(await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct), "HospitalID", "HospitalName", model.HospitalID);
-                ViewBag.Tests = new SelectList(await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct), "TestID", "TestName", model.TestID);
+                ModelState.AddModelError("", "Güncelleme hatası: " + ex.Message);
+                ViewBag.Hospitals = new SelectList(
+                    await _context.Hospitals.AsNoTracking().OrderBy(x => x.HospitalName).ToListAsync(ct),
+                    "HospitalID", "HospitalName", model.HospitalID);
+                ViewBag.Tests = new SelectList(
+                    await _context.Tests.AsNoTracking().OrderBy(x => x.TestName).ToListAsync(ct),
+                    "TestID", "TestName", model.TestID);
                 return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -181,7 +233,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -192,14 +244,31 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             try
             {
                 var balance = await _statisticsService.GetHospitalTestBalanceAsync(hospitalId, startDate, endDate, ct);
-                ViewBag.Hospital = await _context.Hospitals.AsNoTracking().FirstOrDefaultAsync(h => h.HospitalID == hospitalId, ct);
+                ViewBag.Hospital = await _context.Hospitals.AsNoTracking()
+                    .FirstOrDefaultAsync(h => h.HospitalID == hospitalId, ct);
                 return View(balance);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata oluştu: {ex.Message}";
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        // ═════════════════════════════════════════════
+        // Helper
+        // ═════════════════════════════════════════════
+        private async Task LoadHospitalsAsync(int? selectedHospitalId, CancellationToken ct)
+        {
+            ViewBag.Hospitals = await _context.Hospitals.AsNoTracking()
+                .OrderBy(x => x.HospitalName)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.HospitalID.ToString(),
+                    Text = x.HospitalName,
+                    Selected = selectedHospitalId.HasValue && x.HospitalID == selectedHospitalId.Value
+                })
+                .ToListAsync(ct);
         }
     }
 }

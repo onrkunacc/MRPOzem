@@ -1,0 +1,567 @@
+﻿@model HospitalIstatistikDashboardVm
+@{
+    ViewData["Title"] = "Hastane Takip";
+    int yil = Model.Yil;
+
+    string AyAdi(int ay) => ay switch
+    {
+        1 => "Ocak",
+        2 => "Şubat",
+        3 => "Mart",
+        4 => "Nisan",
+        5 => "Mayıs",
+        6 => "Haziran",
+        7 => "Temmuz",
+        8 => "Ağustos",
+        9 => "Eylül",
+        10 => "Ekim",
+        11 => "Kasım",
+        12 => "Aralık",
+        _ => ay.ToString()
+    };
+
+    string AyKisa(int ay) => ay switch
+    {
+        1 => "Oca",
+        2 => "Şub",
+        3 => "Mar",
+        4 => "Nis",
+        5 => "May",
+        6 => "Haz",
+        7 => "Tem",
+        8 => "Ağu",
+        9 => "Eyl",
+        10 => "Eki",
+        11 => "Kas",
+        12 => "Ara",
+        _ => ay.ToString()
+    };
+
+    var toplamHospital = Model.Hospitaller?.Count ?? 0;
+    var seciliAySayisi = Model.SeciliAylar?.Count ?? 0;
+
+    var simdi = DateTime.Now;
+    var gecmisAylar = Model.SeciliAylar
+        .Where(a => yil < simdi.Year || (yil == simdi.Year && a <= simdi.Month))
+        .ToList();
+
+    var beklenenHucre = (Model.Hospitaller?.Count ?? 0) * gecmisAylar.Count;
+    var geldiHucre = Model.Hospitaller?
+        .SelectMany(k => k.Aylar)
+        .Count(a => gecmisAylar.Contains(a.Ay) && a.GeldiMi) ?? 0;
+    var gelmediHucre = beklenenHucre - geldiHucre;
+    var doluluk = beklenenHucre > 0 ? Math.Round((double)geldiHucre / beklenenHucre * 100, 1) : 0;
+
+    var notluHucre = Model.Hospitaller?
+        .SelectMany(k => k.Aylar)
+        .Count(a => a != null && !string.IsNullOrWhiteSpace(a.Not)) ?? 0;
+
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/admin-expense.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/istatistik-takip.css" asp-append-version="true" />
+
+<div class="ad-wrapper kt-page">
+
+    <!-- ═══ BAŞLIK ═══ -->
+    <div class="kt-header">
+        <div class="kt-header-text">
+            <h1>📊 Hastane İstatistik Takip</h1>
+            <p>@yil yılı veri doluluk takibi</p>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- ═══ KPI ŞERİT ═══ -->
+    <div class="kt-kpi-row">
+        <div class="kt-kpi-item kt-kpi-primary">
+            <div class="kt-kpi-icon">🏥</div>
+            <div>
+                <div class="kt-kpi-label">Toplam Hastane</div>
+                <div class="kt-kpi-value">@toplamHospital</div>
+                <div class="kt-kpi-sub">@seciliAySayisi ay seçili</div>
+            </div>
+        </div>
+        <div class="kt-kpi-item kt-kpi-success">
+            <div class="kt-kpi-icon">✅</div>
+            <div>
+                <div class="kt-kpi-label">Doluluk</div>
+                <div class="kt-kpi-value">@doluluk.ToString("N1")<small>%</small></div>
+                <div class="kt-kpi-sub">@geldiHucre / @beklenenHucre</div>
+            </div>
+        </div>
+        <div class="kt-kpi-item kt-kpi-danger">
+            <div class="kt-kpi-icon">⚠️</div>
+            <div>
+                <div class="kt-kpi-label">Eksik Veri</div>
+                <div class="kt-kpi-value">@gelmediHucre</div>
+                <div class="kt-kpi-sub">geçmiş aylar</div>
+            </div>
+        </div>
+        <div class="kt-kpi-item kt-kpi-info">
+            <div class="kt-kpi-icon">📝</div>
+            <div>
+                <div class="kt-kpi-label">Notlu</div>
+                <div class="kt-kpi-value">@notluHucre</div>
+                <div class="kt-kpi-sub">açıklama</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ KONTROL PANELİ ═══ -->
+    <div class="kt-control-panel">
+        <form method="get" class="kt-controls">
+            <div class="kt-control-group">
+                <label class="kt-control-label">Yıl</label>
+                <select class="form-select form-select-sm kt-year-select" name="yil" onchange="this.form.submit()">
+                    @{
+                        var years = Enumerable.Range(DateTime.Now.Year - 3, 7).ToList();
+                        foreach (var y in years)
+                        {
+                            <option value="@y" selected="@(y == yil)">@y</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="kt-control-group kt-control-months">
+                <label class="kt-control-label">Aylar (@Model.SeciliAylar.Count)</label>
+                <div class="dropdown kt-month-dropdown">
+                    <button class="btn btn-sm kt-month-btn dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            data-bs-display="static"
+                            aria-expanded="false">
+                        <i class="fe fe-calendar"></i>
+                        <span id="ktMonthBtnText">@(Model.SeciliAylar.Count == 12 ? "Tümü" : $"{Model.SeciliAylar.Count} ay")</span>
+                    </button>
+
+                    <div class="dropdown-menu kt-month-menu">
+                        <div class="kt-month-menu-head">
+                            <div class="fw-semibold">Ay seç</div>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="kt-mini-btn" id="btnSelectAllMonths">Tümü</button>
+                                <button type="button" class="kt-mini-btn" id="btnClearMonths">Temizle</button>
+                            </div>
+                        </div>
+
+                        <div class="kt-month-grid">
+                            @for (int m = 1; m <= 12; m++)
+                            {
+                                var isChecked = Model.SeciliAylar.Contains(m);
+                                <label class="kt-month-item @(isChecked ? "active" : "")">
+                                    <input class="js-month" type="checkbox" name="aylar" value="@m" @(isChecked ? "checked" : "") />
+                                    <span>@AyKisa(m)</span>
+                                </label>
+                            }
+                        </div>
+
+                        <button type="submit" class="kt-apply-btn">
+                            <i class="fe fe-check"></i> Uygula
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-control-group kt-control-search">
+                <label class="kt-control-label">Hastane Ara</label>
+                <div class="kt-search-wrap">
+                    <i class="fe fe-search"></i>
+                    <input type="text" class="form-control form-control-sm" id="txtSearch" placeholder="Hastane adı..." />
+                </div>
+            </div>
+
+            <div class="kt-control-group">
+                <label class="kt-control-label">Filtre</label>
+                <div class="kt-filter-group">
+                    <button type="button" class="kt-filter-btn active" data-filter="all">Tümü</button>
+                    <button type="button" class="kt-filter-btn" data-filter="missing">Eksiği Var</button>
+                    <button type="button" class="kt-filter-btn" data-filter="complete">Tam</button>
+                </div>
+            </div>
+
+            <div class="kt-control-group kt-legend">
+                <label class="kt-control-label">Renk</label>
+                <div class="kt-legend-row">
+                    <span class="kt-legend-item"><span class="kt-legend-dot kt-dot-geldi"></span>Geldi</span>
+                    <span class="kt-legend-item"><span class="kt-legend-dot kt-dot-gelmedi"></span>Gelmedi</span>
+                    <span class="kt-legend-item"><span class="kt-legend-dot kt-dot-gelecek"></span>İlerde</span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ═══ MATRİX ═══ -->
+    <div class="kt-matrix-card">
+        <div class="matrix-wrap">
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        <th class="matrix-sticky-col">Hastane</th>
+                        <th class="matrix-date-col">İhale Tarihi</th>
+                        <th class="matrix-date-col">İhale No</th>
+
+                        @foreach (var ay in Model.SeciliAylar)
+                        {
+                            <th class="matrix-month-col">
+                                <div class="month-head">
+                                    <div class="month-head-short">@AyKisa(ay)</div>
+                                    <div class="month-head-num">@ay.ToString("D2")</div>
+                                </div>
+                            </th>
+                        }
+
+                        <th class="matrix-progress-col">Durum</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tblBody">
+                    @foreach (var hospital in Model.Hospitaller)
+                    {
+                        var hospitalAdi = hospital.HospitalAdi ?? "";
+                        var gecmisAylarHospital = hospital.Aylar.Where(a => Model.SeciliAylar.Contains(a.Ay) &&
+                            (yil < simdi.Year || (yil == simdi.Year && a.Ay <= simdi.Month))).ToList();
+                        var beklenenHospital = gecmisAylarHospital.Count;
+                        var gelmediSayiHospital = gecmisAylarHospital.Count(a => !a.GeldiMi);
+                        var dolulukHospital = beklenenHospital > 0
+                            ? (int)Math.Round((double)gecmisAylarHospital.Count(a => a.GeldiMi) / beklenenHospital * 100)
+                            : 100;
+
+                        var initials = string.Concat(hospitalAdi.Trim()
+                            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                            .Take(2).Select(x => x[0])).ToUpper();
+
+                        <tr data-hospital-id="@hospital.HospitalID"
+                            data-hospital-adi="@hospitalAdi.ToLowerInvariant()"
+                            data-gelmedi="@gelmediSayiHospital">
+                            <td class="matrix-sticky-col">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="kurum-avatar">@initials</div>
+                                    <div class="fw-semibold kurum-name">@hospitalAdi</div>
+                                </div>
+                            </td>
+                            <td class="matrix-date-col small">
+                                @(hospital.IhaleTarihi.HasValue ? hospital.IhaleTarihi.Value.ToString("dd.MM.yyyy") : "—")
+                            </td>
+                            <td class="matrix-date-col small">
+                                @(string.IsNullOrWhiteSpace(hospital.IhaleNumarasi) ? "—" : hospital.IhaleNumarasi)
+                            </td>
+
+                            @foreach (var ayCell in hospital.Aylar)
+                            {
+                                var cbId = $"g_{hospital.HospitalID}_{ayCell.Ay}";
+                                var isFuture = (yil > simdi.Year) || (yil == simdi.Year && ayCell.Ay > simdi.Month);
+                                var hasNote = !string.IsNullOrWhiteSpace(ayCell.Not);
+
+                                string cellClass = isFuture ? "cell-future"
+                                                  : ayCell.GeldiMi ? "cell-geldi"
+                                                  : "cell-gelmedi";
+                                <td class="matrix-month-col">
+                                    <div class="cell-wrap @cellClass">
+                                        <input type="checkbox"
+                                               id="@cbId"
+                                               class="cell-input js-geldi-toggle"
+                                               data-ay="@ayCell.Ay"
+                                        @(ayCell.GeldiMi ? "checked" : "")
+                                        @(isFuture ? "data-future=true" : "") />
+
+                                        <label class="cell-pill" for="@cbId"
+                                               title="@(isFuture ? "Bu ay henüz gelmedi" : (ayCell.GeldiMi ? "Geldi - tıklayarak değiştir" : "Gelmedi - tıklayarak değiştir"))">
+                                            <i class="cell-icon"></i>
+                                        </label>
+
+                                        <button type="button"
+                                                class="cell-note-btn js-note"
+                                                data-ay="@ayCell.Ay"
+                                                data-note="@(ayCell.Not ?? "")"
+                                                title="@(hasNote ? "Notu düzenle: " + ayCell.Not : "Not ekle")">
+                                            <i class="fe fe-edit-2"></i>
+                                            @if (hasNote)
+                                            {
+                                                <span class="note-indicator"></span>
+                                            }
+                                        </button>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(ayCell.UpdatedAtText))
+                                    {
+                                        <div class="cell-updated">@ayCell.UpdatedAtText</div>
+                                    }
+                                </td>
+                            }
+
+                            <td class="matrix-progress-col">
+                                <div class="kurum-progress" data-pct="@dolulukHospital">
+                                    <div class="kurum-progress-bar" style="width:@dolulukHospital%;"></div>
+                                    <span class="kurum-progress-text">@dolulukHospital%</span>
+                                </div>
+                                <span class="js-status saved-flash">✓</span>
+                            </td>
+                        </tr>
+                    }
+
+                    @if ((Model.Hospitaller?.Count ?? 0) == 0)
+                    {
+                        <tr>
+                            <td colspan="@(4 + Model.SeciliAylar.Count)" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="icon">🏥</div>
+                                    <div>Henüz aktif hastane yok.</div>
+                                    <a class="btn-grad-primary mt-3" asp-area="Istatistik" asp-controller="Hospital" asp-action="Create">
+                                        <i class="fe fe-plus"></i> Hastane Ekle
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+@Html.AntiForgeryToken()
+
+<!-- ═══ NOT MODAL ═══ -->
+<div class="modal fade" id="modalNote" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content hb-modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fe fe-edit-2 text-primary"></i> Not Düzenle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="noteHospitalId" />
+                <input type="hidden" id="noteYil" value="@Model.Yil" />
+                <input type="hidden" id="noteAy" />
+
+                <div class="hb-modal-hospital" id="noteTitle">
+                    <i class="fe fe-info"></i>
+                    <span>Yükleniyor...</span>
+                </div>
+
+                <textarea id="noteText" class="form-control form-control-sm" rows="6" maxlength="2000"
+                          placeholder="Bu ay ile ilgili açıklama, gecikme nedeni veya not..."></textarea>
+                <div class="text-muted small mt-1">Maks. 2000 karakter</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-sm btn-grad-primary" id="btnSaveNote">
+                    <i class="fe fe-save"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            function showRowSavedBadge(tr) {
+                const el = tr.querySelector('.js-status');
+                if (!el) return;
+                el.classList.add('show');
+                setTimeout(() => el.classList.remove('show'), 1200);
+            }
+
+            async function postJson(url, data) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': antiForgery
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'İşlem başarısız');
+                }
+                return await res.json();
+            }
+
+            const monthNames = ["", "Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+                                "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+            function refreshMonthUI() {
+                const months = Array.from(document.querySelectorAll('.js-month'));
+                const selected = months.filter(x => x.checked).map(x => parseInt(x.value));
+
+                const txt = document.getElementById('ktMonthBtnText');
+                if (txt) {
+                    if (selected.length === 12) txt.textContent = 'Tümü';
+                    else if (selected.length === 0) txt.textContent = 'Hiç seçilmedi';
+                    else txt.textContent = `${selected.length} ay`;
+                }
+
+                document.querySelectorAll('.kt-month-item').forEach(label => {
+                    const cb = label.querySelector('.js-month');
+                    if (cb) label.classList.toggle('active', cb.checked);
+                });
+            }
+
+            document.getElementById('btnSelectAllMonths')?.addEventListener('click', function () {
+                document.querySelectorAll('.js-month').forEach(x => x.checked = true);
+                refreshMonthUI();
+            });
+            document.getElementById('btnClearMonths')?.addEventListener('click', function () {
+                document.querySelectorAll('.js-month').forEach(x => x.checked = false);
+                refreshMonthUI();
+            });
+            document.querySelectorAll('.js-month').forEach(x => x.addEventListener('change', refreshMonthUI));
+            refreshMonthUI();
+
+            // ===== Filtreleme =====
+            const txtSearch = document.getElementById('txtSearch');
+            let currentFilter = 'all';
+
+            function applyFilters() {
+                const q = (txtSearch?.value || '').toLowerCase().trim();
+                document.querySelectorAll('#tblBody tr[data-hospital-id]').forEach(tr => {
+                    const ad = tr.getAttribute('data-hospital-adi') || '';
+                    const gelmedi = parseInt(tr.getAttribute('data-gelmedi') || '0');
+
+                    const matchSearch = !q || ad.includes(q);
+                    const matchFilter = currentFilter === 'all'
+                        || (currentFilter === 'missing' && gelmedi > 0)
+                        || (currentFilter === 'complete' && gelmedi === 0);
+
+                    tr.style.display = (matchSearch && matchFilter) ? '' : 'none';
+                });
+            }
+
+            txtSearch?.addEventListener('input', applyFilters);
+
+            document.querySelectorAll('.kt-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.kt-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.getAttribute('data-filter');
+                    applyFilters();
+                });
+            });
+
+            // ===== Toggle hücre =====
+            document.querySelectorAll('.js-geldi-toggle').forEach(cb => {
+                cb.addEventListener('change', async function () {
+                    const tr = cb.closest('tr');
+                    const hospitalId = parseInt(tr.getAttribute('data-hospital-id'));
+                    const ay = parseInt(cb.getAttribute('data-ay'));
+                    const geldiMi = cb.checked;
+                    const wrap = cb.closest('.cell-wrap');
+
+                    cb.disabled = true;
+                    try {
+                        const result = await postJson('@Url.Action("Toggle", "HospitalTakip", new { area = "Istatistik" })', {
+                            hospitalID: hospitalId, yil: @Model.Yil, ay, geldiMi
+                        });
+
+                        if (!result.ok) throw new Error(result.message || 'Kayıt başarısız');
+
+                        if (wrap && !wrap.classList.contains('cell-future')) {
+                            wrap.classList.toggle('cell-geldi', geldiMi);
+                            wrap.classList.toggle('cell-gelmedi', !geldiMi);
+                        }
+                        recalcRowMissing(tr);
+                        showRowSavedBadge(tr);
+                    } catch (e) {
+                        cb.checked = !geldiMi;
+                        alert('Kaydetme hatası: ' + e.message);
+                    } finally {
+                        cb.disabled = false;
+                    }
+                });
+            });
+
+            function recalcRowMissing(tr) {
+                const cells = tr.querySelectorAll('.cell-wrap:not(.cell-future)');
+                const gelmedi = Array.from(cells).filter(c => c.classList.contains('cell-gelmedi')).length;
+                tr.setAttribute('data-gelmedi', gelmedi);
+
+                const total = cells.length;
+                const pct = total > 0 ? Math.round((total - gelmedi) / total * 100) : 100;
+                const bar = tr.querySelector('.kurum-progress-bar');
+                const txt = tr.querySelector('.kurum-progress-text');
+                if (bar) bar.style.width = pct + '%';
+                if (txt) txt.textContent = pct + '%';
+            }
+
+            // ===== Not Modal =====
+            const noteModalEl = document.getElementById('modalNote');
+            const noteModal = noteModalEl ? new bootstrap.Modal(noteModalEl) : null;
+
+            document.querySelectorAll('.js-note').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const tr = btn.closest('tr');
+                    const hospitalId = parseInt(tr.getAttribute('data-hospital-id'));
+                    const hospitalAdi = tr.querySelector('.kurum-name')?.textContent || '';
+                    const ay = parseInt(btn.getAttribute('data-ay'));
+                    const note = btn.getAttribute('data-note') || '';
+
+                    document.getElementById('noteHospitalId').value = hospitalId;
+                    document.getElementById('noteAy').value = ay;
+                    document.getElementById('noteText').value = note;
+                    document.querySelector('#noteTitle span').innerText =
+                        `${hospitalAdi} · ${monthNames[ay]} ${@Model.Yil}`;
+                    noteModal.show();
+                });
+            });
+
+            document.getElementById('btnSaveNote')?.addEventListener('click', async function () {
+                const hospitalId = parseInt(document.getElementById('noteHospitalId').value);
+                const ay = parseInt(document.getElementById('noteAy').value);
+                const not = document.getElementById('noteText').value;
+
+                const btn = this;
+                btn.disabled = true;
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+
+                try {
+                    const result = await postJson('@Url.Action("UpdateNote", "HospitalTakip", new { area = "Istatistik" })', {
+                        hospitalID: hospitalId, yil: @Model.Yil, ay, not
+                    });
+
+                    if (!result.ok) throw new Error(result.message || 'Kayıt başarısız');
+
+                    const tr = document.querySelector(`tr[data-hospital-id="${hospitalId}"]`);
+                    const noteBtn = tr?.querySelector(`.js-note[data-ay="${ay}"]`);
+                    if (noteBtn) {
+                        noteBtn.setAttribute('data-note', not || '');
+                        const has = (not || '').trim().length > 0;
+
+                        let indicator = noteBtn.querySelector('.note-indicator');
+                        if (has && !indicator) {
+                            indicator = document.createElement('span');
+                            indicator.className = 'note-indicator';
+                            noteBtn.appendChild(indicator);
+                        }
+                        if (!has && indicator) indicator.remove();
+                        noteBtn.title = has ? ('Notu düzenle: ' + not) : 'Not ekle';
+                    }
+
+                    showRowSavedBadge(tr);
+                    noteModal.hide();
+                } catch (e) {
+                    alert('Not kaydetme hatası: ' + e.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                }
+            });
+
+        })();
+    </script>
+}

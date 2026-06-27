@@ -1221,6 +1221,16 @@ namespace CRMOzem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TestID"));
 
+                    b.Property<string>("GirisTipi")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Adet");
+
+                    b.Property<int?>("KutuBasinaAdet")
+                        .HasColumnType("int");
+
                     b.Property<string>("SutCode")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");

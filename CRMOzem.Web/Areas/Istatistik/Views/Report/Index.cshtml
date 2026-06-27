@@ -1,29 +1,667 @@
-﻿@model CRMOzem.Core.ViewModels.ReportFilterViewModel
+﻿@model CRMOzem.Core.ViewModels.KacAyYeterReportVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CRMOzem.Core.Models
+@using CRMOzem.Core.ViewModels
 
 @{
     ViewData["Title"] = "Raporlama";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
 }
 
-<div class="card shadow-sm">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fa fa-filter me-2"></i> Raporlama Filtreleri</h5>
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+
+<style>
+    .rp-page {
+        padding: 1rem 0;
+    }
+
+    .rp-header {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: #fff;
+        padding: 1.75rem 1.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 28px rgba(14,165,233,.25);
+    }
+
+        .rp-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .rp-header p {
+            margin: .4rem 0 0;
+            opacity: .92;
+            font-size: .92rem;
+        }
+
+    .rp-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .rp-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    @@media (max-width: 992px) {
+        .rp-kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .rp-kpi-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .rp-kpi {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        padding: 1rem 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        transition: transform .2s, box-shadow .2s;
+    }
+
+        .rp-kpi:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+        }
+
+    .rp-kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .rp-kpi-primary .rp-kpi-icon {
+        background: linear-gradient(135deg,#0ea5e9,#0284c7);
+        color: #fff;
+    }
+
+    .rp-kpi-danger .rp-kpi-icon {
+        background: linear-gradient(135deg,#ef4444,#dc2626);
+        color: #fff;
+    }
+
+    .rp-kpi-warning .rp-kpi-icon {
+        background: linear-gradient(135deg,#f59e0b,#d97706);
+        color: #fff;
+    }
+
+    .rp-kpi-success .rp-kpi-icon {
+        background: linear-gradient(135deg,#10b981,#059669);
+        color: #fff;
+    }
+
+    .rp-kpi-label {
+        color: #64748b;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .rp-kpi-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.1;
+    }
+
+    .rp-table-wrap {
+        background: rgba(255,255,255,.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .rp-table {
+        width: 100%;
+        margin: 0;
+        font-size: .88rem;
+    }
+
+        .rp-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            color: #475569;
+            padding: .75rem 1rem;
+            z-index: 1;
+        }
+
+        .rp-table tbody td {
+            padding: .65rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .rp-table tbody tr:hover {
+            background: rgba(14,165,233,.04);
+        }
+
+    .rp-row-kritik {
+        background: rgba(239,68,68,.06);
+    }
+
+    .rp-row-uyari {
+        background: rgba(245,158,11,.06);
+    }
+
+    .rp-row-iyi {
+        background: rgba(16,185,129,.04);
+    }
+
+    .rp-row-veriyok {
+        background: rgba(148,163,184,.04);
+        opacity: .8;
+    }
+
+    .rp-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .2rem .55rem;
+        font-size: .72rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .rp-badge-sut {
+        background: #eef1f4;
+        color: #475569;
+        font-family: ui-monospace, monospace;
+        letter-spacing: .03em;
+    }
+
+    .rp-badge-tip-adet {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        color: #fff;
+    }
+
+    .rp-badge-tip-kutu {
+        background: linear-gradient(135deg,#10b981,#059669);
+        color: #fff;
+    }
+
+    .rp-durum {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .25rem .65rem;
+        font-size: .76rem;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    .rp-durum-kritik {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid rgba(220,38,38,.3);
+    }
+
+    .rp-durum-uyari {
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid rgba(245,158,11,.3);
+    }
+
+    .rp-durum-iyi {
+        background: #f0fdf4;
+        color: #047857;
+        border: 1px solid rgba(16,185,129,.3);
+    }
+
+    .rp-durum-veriyok {
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px solid rgba(148,163,184,.3);
+    }
+
+    .rp-stok-positive {
+        color: #047857;
+        font-weight: 700;
+    }
+
+    .rp-stok-zero {
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .rp-stok-negative {
+        color: #b91c1c;
+        font-weight: 700;
+    }
+
+    .rp-kac-ay {
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .rp-btn-grad {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: #fff;
+        border: none;
+        padding: .55rem 1.2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        transition: transform .15s;
+    }
+
+        .rp-btn-grad:hover {
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+    .rp-btn-excel {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        border: none;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+        .rp-btn-excel:hover {
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+    .rp-btn-pdf {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+        border: none;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+        .rp-btn-pdf:hover {
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+    .rp-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+
+    .rp-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: .5;
+    }
+
+    .rp-search-wrap {
+        position: relative;
+    }
+
+        .rp-search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .rp-search-wrap input {
+            padding-left: 35px;
+        }
+
+    .rp-info-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .3rem .65rem;
+        font-size: .8rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,.7);
+        border: 1px solid rgba(0,0,0,.06);
+        color: #334155;
+        font-weight: 500;
+    }
+
+        .rp-info-pill strong {
+            color: #1e293b;
+            font-weight: 700;
+        }
+</style>
+
+<div class="rp-page">
+
+    <!-- ═══ BAŞLIK ═══ -->
+    <div class="rp-header">
+        <h1>📊 Raporlama</h1>
+        <p>Hastane bazlı stok, tüketim ve kalan ay analizi — tüm testler tek tabloda.</p>
     </div>
-    <div class="card-body">
-        <form asp-action="Index" method="post" class="row g-3">
-            @Html.AntiForgeryToken()
-            <div class="col-md-6">
-                <label class="form-label">Hastane</label>
-                <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
-                <span asp-validation-for="HospitalID" class="text-danger"></span>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning">@TempData["Warning"]</div>
+    }
+
+    <!-- ═══ HASTANE SEÇİMİ ═══ -->
+    <div class="rp-card">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-8 col-lg-6">
+                <label class="form-label fw-semibold">Hastane</label>
+                <select name="hospitalId" class="form-select" onchange="this.form.submit()" required>
+                    <option value="">— Hastane seçiniz —</option>
+                    @foreach (var h in hospitals)
+                    {
+                        <option value="@h.Value" selected="@h.Selected">@h.Text</option>
+                    }
+                </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Ay Seç</label>
-                <input asp-for="StartDate" type="month" class="form-control" />
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Getir</button>
+            <div class="col-12 col-md-4 col-lg-6">
+                <small class="text-muted">Hastane seçildiğinde rapor otomatik yüklenir.</small>
             </div>
         </form>
     </div>
+
+    @if (Model == null)
+    {
+        <div class="rp-card text-center py-5">
+            <div class="rp-empty-icon">📋</div>
+            <h5 class="text-muted">Devam etmek için hastane seçiniz</h5>
+            <small class="text-muted">Şablona göre o hastanenin tüm test analizleri görünecek.</small>
+        </div>
+        return;
+    }
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="rp-card text-center py-5">
+            <div class="rp-empty-icon">⚠️</div>
+            <h5 class="text-muted">Bu hastanede henüz aktif test yok</h5>
+            <small class="text-muted">
+                Önce <a asp-action="Index" asp-controller="HospitalTestSet">Hastane Test Seti</a> ekranından
+                bu hastane için testleri aktif edin.
+            </small>
+        </div>
+        return;
+    }
+
+    <!-- ═══ KPI ŞERİT ═══ -->
+    <div class="rp-kpi-row">
+        <div class="rp-kpi rp-kpi-primary">
+            <div class="rp-kpi-icon">🧪</div>
+            <div>
+                <div class="rp-kpi-label">Toplam Test</div>
+                <div class="rp-kpi-value">@Model.ToplamTest</div>
+            </div>
+        </div>
+        <div class="rp-kpi rp-kpi-danger">
+            <div class="rp-kpi-icon">🚨</div>
+            <div>
+                <div class="rp-kpi-label">Kritik</div>
+                <div class="rp-kpi-value">@Model.KritikSayi</div>
+            </div>
+        </div>
+        <div class="rp-kpi rp-kpi-warning">
+            <div class="rp-kpi-icon">⚠️</div>
+            <div>
+                <div class="rp-kpi-label">Uyarı</div>
+                <div class="rp-kpi-value">@Model.UyariSayi</div>
+            </div>
+        </div>
+        <div class="rp-kpi rp-kpi-success">
+            <div class="rp-kpi-icon">✅</div>
+            <div>
+                <div class="rp-kpi-label">İyi Durumda</div>
+                <div class="rp-kpi-value">@Model.IyiSayi</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ AKSİYONLAR + FİLTRELER ═══ -->
+    <div class="rp-card">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div class="d-flex flex-wrap gap-2">
+                <span class="rp-info-pill">
+                    <i class="fe fe-home"></i> <strong>@Model.HospitalName</strong>
+                </span>
+                <span class="rp-info-pill">
+                    <i class="fe fe-calendar"></i> Referans: <strong>@Model.ReferenceMonthLabel</strong>
+                </span>
+                @if (Model.VeriYokSayi > 0)
+                {
+                    <span class="rp-info-pill" style="background: rgba(148,163,184,.15);">
+                        <i class="fe fe-info"></i> Veri Yok: <strong>@Model.VeriYokSayi</strong>
+                    </span>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-action="ExportExcel" asp-route-hospitalId="@Model.HospitalID" class="rp-btn-excel">
+                    <i class="fe fe-download"></i> Excel
+                </a>
+                <a asp-action="ExportPdf" asp-route-hospitalId="@Model.HospitalID" class="rp-btn-pdf">
+                    <i class="fe fe-file-text"></i> PDF
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-3 row g-2">
+            <div class="col-12 col-md-6">
+                <div class="rp-search-wrap">
+                    <i class="fe fe-search"></i>
+                    <input id="q" class="form-control" placeholder="Test adı veya SUT kodu ara…">
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <select id="filterDurum" class="form-select">
+                    <option value="all">Tüm Durumlar</option>
+                    <option value="kritik">🔴 Sadece Kritik</option>
+                    <option value="uyari">🟡 Sadece Uyarı</option>
+                    <option value="iyi">🟢 Sadece İyi</option>
+                    <option value="veriyok">⚪ Veri Yok</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <select id="filterTip" class="form-select">
+                    <option value="all">Tüm Tipler</option>
+                    <option value="adet">Sadece Adet</option>
+                    <option value="kutu">Sadece Kutu</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TABLO ═══ -->
+    <div class="rp-table-wrap">
+        <div class="table-responsive">
+            <table class="rp-table" id="tbl">
+                <thead>
+                    <tr>
+                        <th>Test Adı</th>
+                        <th style="width:110px;">SUT</th>
+                        <th style="width:80px;">Tip</th>
+                        <th class="text-end" style="width:120px;">Toplam Gönderilen</th>
+                        <th class="text-end" style="width:120px;">Toplam Kullanılan</th>
+                        <th class="text-end" style="width:110px;">Stok</th>
+                        <th class="text-end" style="width:110px;">Geçen Ay Tüketim</th>
+                        <th class="text-center" style="width:110px;">Kaç Ay Yeter</th>
+                        <th class="text-center" style="width:120px;">Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        var rowClass = r.Durum switch
+                        {
+                            StokDurum.Kritik => "rp-row-kritik",
+                            StokDurum.Uyari => "rp-row-uyari",
+                            StokDurum.Iyi => "rp-row-iyi",
+                            _ => "rp-row-veriyok"
+                        };
+                        var tipClass = r.GirisTipi == TestGirisTipi.Kutu ? "rp-badge-tip-kutu" : "rp-badge-tip-adet";
+                        var stokClass = r.Stok > 0 ? "rp-stok-positive" : (r.Stok == 0 ? "rp-stok-zero" : "rp-stok-negative");
+                        var durumClass = r.Durum switch
+                        {
+                            StokDurum.Kritik => "rp-durum-kritik",
+                            StokDurum.Uyari => "rp-durum-uyari",
+                            StokDurum.Iyi => "rp-durum-iyi",
+                            _ => "rp-durum-veriyok"
+                        };
+                        var durumIcon = r.Durum switch
+                        {
+                            StokDurum.Kritik => "🔴",
+                            StokDurum.Uyari => "🟡",
+                            StokDurum.Iyi => "🟢",
+                            _ => "⚪"
+                        };
+
+                        <tr class="@rowClass"
+                            data-testname="@((r.TestName ?? "").ToLowerInvariant())"
+                            data-sutcode="@((r.SutCode ?? "").ToLowerInvariant())"
+                            data-tip="@r.GirisTipi.ToString().ToLowerInvariant()"
+                            data-durum="@r.Durum.ToString().ToLowerInvariant()">
+
+                            <td class="fw-semibold">@r.TestName</td>
+
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(r.SutCode))
+                                {
+                                    <span class="rp-badge rp-badge-sut">@r.SutCode</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+
+                            <td><span class="rp-badge @tipClass">@r.GirisTipi</span></td>
+
+                            <td class="text-end">@r.ToplamGonderilen.ToString("N0")</td>
+
+                            <td class="text-end">@r.ToplamKullanilan.ToString("N0")</td>
+
+                            <td class="text-end">
+                                <span class="@stokClass">@r.Stok.ToString("N0")</span>
+                                @if (r.StokKutu.HasValue && r.Stok > 0)
+                                {
+                                    <small class="text-muted d-block" style="font-size:.7rem;">
+                                        ≈ @r.StokKutu.Value.ToString("N1") kutu
+                                    </small>
+                                }
+                            </td>
+
+                            <td class="text-end">
+                                @if (r.GecenAyTuketim > 0)
+                                {
+                                    @r.GecenAyTuketim.ToString("N0")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                @if (r.KacAyYeter.HasValue)
+                                {
+                                    <span class="rp-kac-ay">@r.KacAyYeter.Value.ToString("N1")</span>
+                                    <small class="text-muted d-block" style="font-size:.7rem;">ay</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <span class="rp-durum @durumClass">@durumIcon @r.DurumText</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const trTR = 'tr-TR';
+            const q = document.getElementById('q');
+            const filterDurum = document.getElementById('filterDurum');
+            const filterTip = document.getElementById('filterTip');
+            const rows = Array.from(document.querySelectorAll('#tbl tbody tr'));
+
+            function applyFilter() {
+                const query = (q.value || '').trim().toLocaleLowerCase(trTR);
+                const dur = filterDurum.value;
+                const tip = filterTip.value;
+
+                rows.forEach(r => {
+                    const tn = r.getAttribute('data-testname') || '';
+                    const sc = r.getAttribute('data-sutcode') || '';
+                    const rTip = r.getAttribute('data-tip') || '';
+                    const rDur = r.getAttribute('data-durum') || '';
+
+                    const matchQ = !query || tn.includes(query) || sc.includes(query);
+                    const matchDur = dur === 'all' || rDur === dur;
+                    const matchTip = tip === 'all' || rTip === tip;
+
+                    r.style.display = (matchQ && matchDur && matchTip) ? '' : 'none';
+                });
+            }
+
+            let t = null;
+            q.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(applyFilter, 150);
+            });
+            filterDurum.addEventListener('change', applyFilter);
+            filterTip.addEventListener('change', applyFilter);
+        })();
+    </script>
+}

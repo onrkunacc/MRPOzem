@@ -302,7 +302,6 @@ namespace CRMOzem.DataAccess.Context
 
             builder.Entity<PersonelGider>().ToTable("PersonelGiderler", "ozem");
 
-            builder.Entity<Test>().ToTable("Tests", "ozem");
             builder.Entity<TestTemplate>().ToTable("TestTemplates", "ozem");
             builder.Entity<TestSutPoint>().ToTable("TestSutPoints", "ozem");
 
@@ -334,6 +333,15 @@ namespace CRMOzem.DataAccess.Context
             });
 
             builder.Entity<HospitalBirim>().ToTable("HospitalBirimler", "ozem");
+
+            builder.Entity<Test>(e =>
+            {
+                e.ToTable("Tests", "ozem");
+                e.Property(x => x.GirisTipi)
+                 .HasConversion<string>()  // "Adet" / "Kutu" string olarak saklanır, okunaklı
+                 .HasMaxLength(20)
+                 .HasDefaultValue(TestGirisTipi.Adet);
+            });
 
 
         }

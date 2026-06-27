@@ -1,6 +1,7 @@
 ﻿@model IEnumerable<CRMOzem.Core.ViewModels.TestViewModel>
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using CRMOzem.Core.Models
 
 @{
     ViewData["Title"] = "Test Listesi";
@@ -10,7 +11,9 @@
     {
         testID = m.TestID,
         testName = m.TestName ?? "",
-        sutCode = m.SutCode ?? ""
+        sutCode = m.SutCode ?? "",
+        girisTipi = m.GirisTipi.ToString(),    
+        kutuBasinaAdet = m.KutuBasinaAdet
     });
 
     var json = JsonSerializer.Serialize(flat, new JsonSerializerOptions
@@ -43,10 +46,35 @@
         color: #495057
     }
 
-    .code-badge{
+    .code-badge {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
         font-weight: 600;
         letter-spacing: .2px;
+    }
+
+    .badge-tip-adet {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #fff;
+        border: none;
+    }
+
+    .badge-tip-kutu {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        border: none;
+    }
+
+    .kba-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .15rem .5rem;
+        font-size: .78rem;
+        border-radius: 999px;
+        background: rgba(16,185,129,.08);
+        color: #047857;
+        border: 1px solid rgba(16,185,129,.2);
+        font-weight: 600;
     }
 </style>
 
@@ -62,10 +90,33 @@
     </div>
 
     <div class="card-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
         <div class="row g-2 align-items-end mb-3">
             <div class="col-12 col-md-6 col-lg-4">
                 <label class="form-label mb-1">Ara</label>
                 <input type="text" id="q" class="form-control form-control-sm" placeholder="Test adı veya SUT kodu ile ara">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label mb-1">Giriş Tipi</label>
+                <select id="tipFilter" class="form-select form-select-sm">
+                    <option value="">Tümü</option>
+                    <option value="Adet">Adet</option>
+                    <option value="Kutu">Kutu</option>
+                </select>
             </div>
             <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label mb-1">Sayfa Boyutu</label>
@@ -83,12 +134,14 @@
                 <thead class="table-light">
                     <tr>
                         <th>Test Adı</th>
-                        <th style="width:160px;">SUT Kodu</th>
-                        <th class="text-end">İşlemler</th>
+                        <th style="width:140px;">SUT Kodu</th>
+                        <th style="width:110px;">Giriş Tipi</th>
+                        <th style="width:130px;">Kutu Adet</th>
+                        <th class="text-end" style="width:140px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td colspan="3" class="text-center text-muted py-4">Yükleniyor…</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-4">Yükleniyor…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -109,14 +162,20 @@
 </div>
 
 <script>
-    (function(){
-        const trTR='tr-TR';
+    (function () {
+        const trTR = 'tr-TR';
         const raw = @Html.Raw(json);
 
-        const state = { q:'', page:1, pageSize: parseInt(document.getElementById('pageSize').value, 10) || 10 };
+        const state = {
+            q: '',
+            tip: '',
+            page: 1,
+            pageSize: parseInt(document.getElementById('pageSize').value, 10) || 10
+        };
 
         const els = {
             q: document.getElementById('q'),
+            tipFilter: document.getElementById('tipFilter'),
             pageSize: document.getElementById('pageSize'),
             tbody: document.querySelector('#dataTable tbody'),
             pager: document.getElementById('pager'),
@@ -124,67 +183,84 @@
             totalBadge: document.getElementById('totalBadge')
         };
 
-        let t=null;
-        els.q.addEventListener('input', ()=>{ 
-            clearTimeout(t); 
-            t=setTimeout(()=>{ 
-                state.q=(els.q.value||'').trim(); 
-                state.page=1; 
-                render(); 
-            }, 200); 
+        let t = null;
+        els.q.addEventListener('input', () => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+                state.q = (els.q.value || '').trim();
+                state.page = 1;
+                render();
+            }, 200);
         });
 
-        els.pageSize.addEventListener('change', ()=>{ 
-            state.pageSize=parseInt(els.pageSize.value,10)||10; 
-            state.page=1; 
-            render(); 
+        els.tipFilter.addEventListener('change', () => {
+            state.tip = els.tipFilter.value;
+            state.page = 1;
+            render();
         });
 
-        function filterData(data){
+        els.pageSize.addEventListener('change', () => {
+            state.pageSize = parseInt(els.pageSize.value, 10) || 10;
+            state.page = 1;
+            render();
+        });
+
+        function filterData(data) {
             const q = state.q.toLocaleLowerCase(trTR);
-            if(!q) return data;
-            return data.filter(x =>
-                (x.testName||'').toLocaleLowerCase(trTR).includes(q) ||
-                (x.sutCode||'').toLocaleLowerCase(trTR).includes(q)
-            );
+            return data.filter(x => {
+                const matchQ = !q
+                    || (x.testName || '').toLocaleLowerCase(trTR).includes(q)
+                    || (x.sutCode || '').toLocaleLowerCase(trTR).includes(q);
+                const matchTip = !state.tip || x.girisTipi === state.tip;
+                return matchQ && matchTip;
+            });
         }
 
-        function paginate(data){
+        function paginate(data) {
             const total = data.length;
             const size = state.pageSize;
-            const totalPages = Math.max(1, Math.ceil(total/size));
-            if(state.page > totalPages) state.page = totalPages;
-            const start = (state.page-1)*size;
-            const items = data.slice(start, start+size);
-            return { items, total, totalPages, start, end: Math.min(start+size, total) };
+            const totalPages = Math.max(1, Math.ceil(total / size));
+            if (state.page > totalPages) state.page = totalPages;
+            const start = (state.page - 1) * size;
+            const items = data.slice(start, start + size);
+            return { items, total, totalPages, start, end: Math.min(start + size, total) };
         }
 
-        function render(){
+        function render() {
             const filtered = filterData(raw);
-            const {items,total,totalPages,start,end} = paginate(filtered);
+            const { items, total, totalPages, start, end } = paginate(filtered);
 
             els.totalBadge.textContent = `Toplam: ${total}`;
-            els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages} (${total ? (start+1) : 0} - ${end} / ${total})`;
+            els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages} (${total ? (start + 1) : 0} - ${end} / ${total})`;
 
             const fr = document.createDocumentFragment();
 
-            if(items.length===0){
-                const tr=document.createElement('tr');
-                tr.innerHTML=`<td colspan="3" class="text-center text-muted py-4">Kayıt bulunamadı.</td>`;
+            if (items.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="5" class="text-center text-muted py-4">Kayıt bulunamadı.</td>`;
                 fr.appendChild(tr);
             } else {
-                const token=(document.querySelector('#af input[name="__RequestVerificationToken"]')||{}).value||'';
-                items.forEach(x=>{
-                    const tr=document.createElement('tr');
+                const token = (document.querySelector('#af input[name="__RequestVerificationToken"]') || {}).value || '';
+                items.forEach(x => {
+                    const tr = document.createElement('tr');
 
-                    const sut = (x.sutCode||'').trim();
+                    const sut = (x.sutCode || '').trim();
                     const sutHtml = sut
                         ? `<span class="badge badge-muted code-badge">${escapeHtml(sut)}</span>`
                         : `<span class="text-muted">-</span>`;
 
+                    const tipClass = x.girisTipi === 'Kutu' ? 'badge-tip-kutu' : 'badge-tip-adet';
+                    const tipHtml = `<span class="badge ${tipClass}">${escapeHtml(x.girisTipi)}</span>`;
+
+                    const kbaHtml = (x.girisTipi === 'Kutu' && x.kutuBasinaAdet)
+                        ? `<span class="kba-pill"><i class="fe fe-package"></i> ${x.kutuBasinaAdet} adet</span>`
+                        : `<span class="text-muted">-</span>`;
+
                     tr.innerHTML = `
-                        <td>${escapeHtml(x.testName)}</td>
+                        <td class="fw-semibold">${escapeHtml(x.testName)}</td>
                         <td>${sutHtml}</td>
+                        <td>${tipHtml}</td>
+                        <td>${kbaHtml}</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", "Test", new { area = "Istatistik" })/${x.testID}">
                                 <i class="fa fa-edit"></i>
@@ -200,38 +276,38 @@
                 });
             }
 
-            els.tbody.innerHTML='';
+            els.tbody.innerHTML = '';
             els.tbody.appendChild(fr);
             renderPager(totalPages);
         }
 
-        function renderPager(totalPages){
-            const ul = els.pager; ul.innerHTML='';
+        function renderPager(totalPages) {
+            const ul = els.pager; ul.innerHTML = '';
             const p = state.page;
 
-            const makeItem = (label, page, disabled=false, active=false)=>{
-                const li=document.createElement('li');
-                li.className=`page-item ${disabled?'disabled':''} ${active?'active':''}`;
-                const a=document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent=label;
-                if(!disabled && !active){
-                    a.addEventListener('click', e=>{ e.preventDefault(); state.page=page; render(); });
+            const makeItem = (label, page, disabled = false, active = false) => {
+                const li = document.createElement('li');
+                li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                const a = document.createElement('a'); a.className = 'page-link'; a.href = '#'; a.textContent = label;
+                if (!disabled && !active) {
+                    a.addEventListener('click', e => { e.preventDefault(); state.page = page; render(); });
                 }
                 li.appendChild(a); return li;
             };
 
-            ul.appendChild(makeItem('«',1,p<=1));
-            ul.appendChild(makeItem('Önceki',Math.max(1,p-1),p<=1));
+            ul.appendChild(makeItem('«', 1, p <= 1));
+            ul.appendChild(makeItem('Önceki', Math.max(1, p - 1), p <= 1));
 
-            const start=Math.max(1,p-2), end=Math.min(totalPages,p+2);
-            for(let i=start;i<=end;i++) ul.appendChild(makeItem(String(i), i, false, i===p));
+            const start = Math.max(1, p - 2), end = Math.min(totalPages, p + 2);
+            for (let i = start; i <= end; i++) ul.appendChild(makeItem(String(i), i, false, i === p));
 
-            ul.appendChild(makeItem('Sonraki',Math.min(totalPages,p+1),p>=totalPages));
-            ul.appendChild(makeItem('»', totalPages, p>=totalPages));
+            ul.appendChild(makeItem('Sonraki', Math.min(totalPages, p + 1), p >= totalPages));
+            ul.appendChild(makeItem('»', totalPages, p >= totalPages));
         }
 
-        function escapeHtml(s){
-            return String(s??'').replace(/[&<>"']/g,
-                m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g,
+                m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
         }
 
         render();

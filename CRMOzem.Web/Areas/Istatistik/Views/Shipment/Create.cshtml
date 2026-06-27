@@ -1,40 +1,752 @@
-﻿@model CRMOzem.Core.ViewModels.ShipmentViewModel
+﻿@model CRMOzem.Core.ViewModels.ShipmentTemplateFormVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CRMOzem.Core.Models
+
 @{
-    ViewData["Title"] = "Yeni Gönderim";
+    ViewData["Title"] = "Gönderim Girişi";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
+    var selectedMonth = ViewBag.SelectedMonth as string ?? DateTime.Now.ToString("yyyy-MM");
 }
 
-<div class="card shadow-sm">
-    <div class="card-header">
-        <h5><i class="fa fa-plus-circle me-2"></i> Yeni Gönderim</h5>
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+
+<style>
+    .sh-page {
+        padding: 1rem 0;
+    }
+
+    .sh-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        padding: 1.75rem 1.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 28px rgba(16,185,129,.25);
+    }
+
+        .sh-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .sh-header p {
+            margin: .4rem 0 0;
+            opacity: .92;
+            font-size: .92rem;
+        }
+
+    .sh-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .sh-warning-banner {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .sh-warning-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .sh-warning-content {
+        flex: 1;
+    }
+
+    .sh-warning-title {
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: .35rem;
+        font-size: .95rem;
+    }
+
+    .sh-warning-text {
+        color: #78350f;
+        font-size: .87rem;
+        margin: 0 0 .75rem;
+        line-height: 1.4;
+    }
+
+    .sh-mode-pills {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        margin-top: .5rem;
+    }
+
+    .sh-mode-pill {
+        background: rgba(255,255,255,.6);
+        border: 1.5px solid rgba(0,0,0,.08);
+        border-radius: 999px;
+        padding: .4rem .9rem;
+        cursor: pointer;
+        font-size: .85rem;
+        font-weight: 600;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+        .sh-mode-pill input {
+            display: none;
+        }
+
+        .sh-mode-pill.active {
+            background: #fff;
+            border-color: #f59e0b;
+            color: #92400e;
+            box-shadow: 0 2px 8px rgba(245,158,11,.25);
+        }
+
+    .sh-table-wrap {
+        background: rgba(255,255,255,.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .sh-table {
+        width: 100%;
+        margin: 0;
+        font-size: .9rem;
+    }
+
+        .sh-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            color: #475569;
+            padding: .75rem 1rem;
+            z-index: 1;
+        }
+
+        .sh-table tbody td {
+            padding: .65rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .sh-table tbody tr:hover {
+            background: rgba(16,185,129,.04);
+        }
+
+    .sh-row-filled {
+        background: rgba(16,185,129,.06);
+    }
+
+    .sh-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .2rem .55rem;
+        font-size: .72rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .sh-badge-sut {
+        background: #eef1f4;
+        color: #475569;
+        font-family: ui-monospace, monospace;
+        letter-spacing: .03em;
+    }
+
+    .sh-badge-tip-adet {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        color: #fff;
+    }
+
+    .sh-badge-tip-kutu {
+        background: linear-gradient(135deg,#10b981,#059669);
+        color: #fff;
+    }
+
+    .sh-amount-input {
+        max-width: 120px;
+        text-align: right;
+        font-weight: 700;
+        font-size: 1rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: .4rem .6rem;
+        background: #fff;
+    }
+
+        .sh-amount-input:focus {
+            border-color: #10b981;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+        }
+
+    .sh-existing-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .15rem .55rem;
+        font-size: .72rem;
+        border-radius: 999px;
+        background: rgba(245,158,11,.12);
+        color: #92400e;
+        border: 1px solid rgba(245,158,11,.3);
+        font-weight: 600;
+        margin-left: .5rem;
+    }
+
+    .sh-kutu-info {
+        font-size: .78rem;
+        color: #64748b;
+        margin-top: .25rem;
+        font-style: italic;
+    }
+
+        .sh-kutu-info strong {
+            color: #059669;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+    .sh-summary-bar {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255,255,255,.95);
+        backdrop-filter: blur(12px);
+        border-top: 2px solid #10b981;
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .75rem;
+        margin-top: 1.5rem;
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,.06);
+    }
+
+    .sh-summary-info {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        font-size: .9rem;
+        color: #334155;
+    }
+
+        .sh-summary-info strong {
+            color: #059669;
+            font-size: 1.1rem;
+        }
+
+    .sh-btn-grad {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        border: none;
+        padding: .6rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: .95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        transition: transform .15s, box-shadow .15s;
+        cursor: pointer;
+    }
+
+        .sh-btn-grad:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16,185,129,.35);
+            color: #fff;
+        }
+
+        .sh-btn-grad:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .sh-btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1.5px solid #e2e8f0;
+        padding: .55rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .sh-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+
+    .sh-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: .5;
+    }
+
+    .sh-search-wrap {
+        position: relative;
+    }
+
+        .sh-search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .sh-search-wrap input {
+            padding-left: 35px;
+        }
+
+    .sh-quick-btn {
+        background: transparent;
+        border: 1px dashed #cbd5e1;
+        color: #64748b;
+        padding: .25rem .55rem;
+        border-radius: 6px;
+        font-size: .72rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+        .sh-quick-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+
+    @@media (max-width: 768px) {
+        .sh-summary-info {
+            font-size: .8rem;
+            gap: .75rem;
+        }
+
+        .sh-amount-input {
+            max-width: 90px;
+            font-size: .9rem;
+        }
+    }
+</style>
+
+<div class="sh-page">
+
+    <!-- ═══ BAŞLIK ═══ -->
+    <div class="sh-header">
+        <h1>📦 Gönderim Girişi</h1>
+        <p>Hastane şablonuna göre toplu gönderim girişi — sadece o hastane için aktif testler listelenir.</p>
     </div>
-    <div class="card-body">
-        <form asp-action="Create" method="post" class="row g-3">
-            @Html.AntiForgeryToken()
-            <div class="col-md-6">
-                <label class="form-label">Hastane</label>
-                <select asp-for="HospitalID" asp-items="ViewBag.Hospitals" class="form-select"></select>
-                <span asp-validation-for="HospitalID" class="text-danger"></span>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- ═══ HASTANE + AY SEÇİMİ ═══ -->
+    <div class="sh-card">
+        <form method="get" id="filterForm" class="row g-2 align-items-end">
+            <div class="col-12 col-md-6 col-lg-5">
+                <label class="form-label fw-semibold">Hastane</label>
+                <select name="hospitalId" class="form-select" onchange="this.form.submit()" required>
+                    <option value="">— Hastane seçiniz —</option>
+                    @foreach (var h in hospitals)
+                    {
+                        <option value="@h.Value" selected="@h.Selected">@h.Text</option>
+                    }
+                </select>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Test</label>
-                <select asp-for="TestID" asp-items="ViewBag.Tests" class="form-select"></select>
-                <span asp-validation-for="TestID" class="text-danger"></span>
+            <div class="col-12 col-md-4 col-lg-3">
+                <label class="form-label fw-semibold">Ay</label>
+                <input type="month" name="month" class="form-control" value="@selectedMonth"
+                       onchange="this.form.submit()" />
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Ay</label>
-                <input asp-for="Month" type="month" class="form-control" />
-                <span asp-validation-for="Month" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Test Sayısı</label>
-                <input asp-for="SentCount" type="number" min="0" class="form-control" />
-                <span asp-validation-for="SentCount" class="text-danger"></span>
-            </div>
-            <div class="col-12 text-end">
-                <a asp-action="Index" class="btn btn-secondary">Geri</a>
-                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Kaydet</button>
+            <div class="col-12 col-md-2 col-lg-4">
+                <small class="text-muted">Hastane ve ay seçildiğinde liste yüklenir.</small>
             </div>
         </form>
     </div>
+
+    @if (Model == null)
+    {
+        <div class="sh-card text-center py-5">
+            <div class="sh-empty-icon">📋</div>
+            <h5 class="text-muted">Devam etmek için hastane ve ay seçiniz</h5>
+            <small class="text-muted">Şablona göre o hastanenin aktif testleri listelenecek.</small>
+        </div>
+        return;
+    }
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="sh-card text-center py-5">
+            <div class="sh-empty-icon">⚠️</div>
+            <h5 class="text-muted">Bu hastanede henüz aktif test yok</h5>
+            <small class="text-muted">
+                Önce <a asp-action="Index" asp-controller="HospitalTestSet">Hastane Test Seti</a> ekranından
+                bu hastane için testleri aktif edin.
+            </small>
+        </div>
+        return;
+    }
+
+    <!-- ═══ MEVCUT VERİ UYARISI ═══ -->
+    @if (Model.HasExistingData)
+    {
+        <div class="sh-warning-banner">
+            <div class="sh-warning-icon">⚠️</div>
+            <div class="sh-warning-content">
+                <div class="sh-warning-title">
+                    @Model.MonthLabel için bu hastaneye ait @Model.ExistingTestCount test kaydı zaten var
+                </div>
+                <p class="sh-warning-text">
+                    Toplam @Model.ExistingTotalAmount adet kayıtlı. Aynı testler için yeniden giriş yaparsanız ne yapılsın?
+                </p>
+                <div class="sh-mode-pills" role="radiogroup">
+                    <label class="sh-mode-pill active">
+                        <input type="radio" name="conflictMode" value="add" checked />
+                        <i class="fe fe-plus-circle"></i> Üzerine Ekle
+                    </label>
+                    <label class="sh-mode-pill">
+                        <input type="radio" name="conflictMode" value="overwrite" />
+                        <i class="fe fe-refresh-cw"></i> Yeniden Yaz
+                    </label>
+                    <label class="sh-mode-pill">
+                        <input type="radio" name="conflictMode" value="skip" />
+                        <i class="fe fe-skip-forward"></i> Atla
+                    </label>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ═══ GÖNDERİM FORMU ═══ -->
+    <form method="post" asp-action="Create" id="shipmentForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="HospitalID" value="@Model.HospitalID" />
+        <input type="hidden" name="Month" value="@Model.Month.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="ConflictMode" id="hiddenConflictMode" value="add" />
+
+        <!-- Toolbar -->
+        <div class="sh-card" style="padding: 1rem;">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-6">
+                    <label class="form-label mb-1 small fw-semibold">Test Ara</label>
+                    <div class="sh-search-wrap">
+                        <i class="fe fe-search"></i>
+                        <input id="q" class="form-control" placeholder="Test adı veya SUT kodu…">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label mb-1 small fw-semibold">Filtre</label>
+                    <select id="filterMode" class="form-select">
+                        <option value="all">Tümü</option>
+                        <option value="adet">Sadece Adet</option>
+                        <option value="kutu">Sadece Kutu</option>
+                        <option value="filled">Sadece girilmiş</option>
+                        <option value="empty">Sadece boş</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-3 text-end">
+                    <button type="button" class="sh-btn-secondary" id="btnClearAll" title="Tüm girişleri temizle">
+                        <i class="fe fe-x-circle"></i> Tümünü Temizle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="sh-table-wrap">
+            <div class="table-responsive">
+                <table class="sh-table" id="tbl">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Test Adı</th>
+                            <th style="width:120px;">SUT</th>
+                            <th style="width:90px;">Tip</th>
+                            <th style="width:200px;">Adet (Bu Gönderim)</th>
+                            <th style="width:180px;">Bilgi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Rows.Count; i++)
+                        {
+                            var r = Model.Rows[i];
+                            var tipText = r.GirisTipi.ToString();
+                            var tipClass = r.GirisTipi == TestGirisTipi.Kutu ? "sh-badge-tip-kutu" : "sh-badge-tip-adet";
+
+                            <tr data-testname="@((r.TestName ?? "").ToLowerInvariant())"
+                                data-sutcode="@((r.SutCode ?? "").ToLowerInvariant())"
+                                data-tip="@tipText.ToLowerInvariant()"
+                                data-kba="@(r.KutuBasinaAdet ?? 0)"
+                                data-mevcut="@r.MevcutAdet">
+
+                                <td class="text-muted small">@(i + 1)</td>
+
+                                <td class="fw-semibold">
+                                    @r.TestName
+                                    @if (r.MevcutAdet > 0)
+                                    {
+                                        <span class="sh-existing-tag" title="@Model.MonthLabel mevcut kayıt">
+                                            <i class="fe fe-database"></i> @r.MevcutAdet
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(r.SutCode))
+                                    {
+                                        <span class="sh-badge sh-badge-sut">@r.SutCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td><span class="sh-badge @tipClass">@tipText</span></td>
+
+                                <td>
+                                    <input type="hidden" name="Rows[@i].TestID" value="@r.TestID" />
+                                    <input type="number" min="0" class="sh-amount-input js-amount"
+                                           name="Rows[@i].Amount" value="" placeholder="0"
+                                           data-row="@i" />
+                                </td>
+
+                                <td>
+                                    @if (r.GirisTipi == TestGirisTipi.Kutu && r.KutuBasinaAdet.HasValue && r.KutuBasinaAdet.Value > 0)
+                                    {
+                                        <div class="sh-kutu-info" id="kutu-info-@i">
+                                            <i class="fe fe-info"></i>
+                                            <span class="js-kutu-text">@r.KutuBasinaAdet adet/kutu</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="sh-summary-bar">
+            <div class="sh-summary-info">
+                <span>
+                    <i class="fe fe-list"></i>
+                    Girilen Test: <strong id="filledCount">0</strong> / @Model.Rows.Count
+                </span>
+                <span>
+                    <i class="fe fe-package"></i>
+                    Toplam Adet: <strong id="totalAmount">0</strong>
+                </span>
+                <span>
+                    <i class="fe fe-calendar"></i>
+                    Ay: <strong>@Model.MonthLabel</strong>
+                </span>
+            </div>
+            <div>
+                <a asp-action="Index" class="sh-btn-secondary">
+                    <i class="fe fe-arrow-left"></i> Vazgeç
+                </a>
+                <button type="submit" class="sh-btn-grad" id="btnSubmit" disabled>
+                    <i class="fe fe-save"></i> Gönderimi Kaydet
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const trTR = 'tr-TR';
+
+            const els = {
+                q: document.getElementById('q'),
+                filterMode: document.getElementById('filterMode'),
+                filledCount: document.getElementById('filledCount'),
+                totalAmount: document.getElementById('totalAmount'),
+                btnSubmit: document.getElementById('btnSubmit'),
+                btnClearAll: document.getElementById('btnClearAll'),
+                form: document.getElementById('shipmentForm'),
+                hiddenConflictMode: document.getElementById('hiddenConflictMode')
+            };
+
+            const table = document.getElementById('tbl');
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+            // ═══ Conflict mode (üzerine ekle / yeniden yaz / atla) ═══
+            const modePills = document.querySelectorAll('.sh-mode-pill');
+            modePills.forEach(label => {
+                const input = label.querySelector('input[type="radio"]');
+                if (!input) return;
+                input.addEventListener('change', () => {
+                    modePills.forEach(p => p.classList.remove('active'));
+                    if (input.checked) {
+                        label.classList.add('active');
+                        els.hiddenConflictMode.value = input.value;
+                    }
+                });
+            });
+
+            // ═══ Filtreleme ═══
+            function applyFilter() {
+                const query = (els.q.value || '').trim().toLocaleLowerCase(trTR);
+                const mode = els.filterMode.value;
+
+                rows.forEach(r => {
+                    const tn = r.getAttribute('data-testname') || '';
+                    const sc = r.getAttribute('data-sutcode') || '';
+                    const tip = r.getAttribute('data-tip') || '';
+                    const input = r.querySelector('.js-amount');
+                    const val = parseInt(input?.value || '0');
+                    const hasValue = val > 0;
+
+                    const matchQ = !query || tn.includes(query) || sc.includes(query);
+
+                    let matchMode = true;
+                    switch (mode) {
+                        case 'adet': matchMode = tip === 'adet'; break;
+                        case 'kutu': matchMode = tip === 'kutu'; break;
+                        case 'filled': matchMode = hasValue; break;
+                        case 'empty': matchMode = !hasValue; break;
+                    }
+
+                    r.style.display = (matchQ && matchMode) ? '' : 'none';
+                });
+            }
+
+            // ═══ Kutu hesaplama + Özet ═══
+            function updateRow(tr) {
+                const input = tr.querySelector('.js-amount');
+                const val = parseInt(input.value) || 0;
+                const tip = tr.getAttribute('data-tip');
+                const kba = parseInt(tr.getAttribute('data-kba')) || 0;
+
+                tr.classList.toggle('sh-row-filled', val > 0);
+
+                // Kutu bilgisi güncelle (sadece Kutu tipi için)
+                if (tip === 'kutu' && kba > 0) {
+                    const infoSpan = tr.querySelector('.js-kutu-text');
+                    if (infoSpan) {
+                        if (val > 0) {
+                            const kutuSayisi = (val / kba).toFixed(2);
+                            const tamKutu = Math.floor(val / kba);
+                            const kalan = val % kba;
+                            if (kalan === 0) {
+                                infoSpan.innerHTML = `≈ <strong>${tamKutu} kutu</strong> (${kba}/kutu)`;
+                            } else {
+                                infoSpan.innerHTML = `≈ <strong>${kutuSayisi} kutu</strong> (${tamKutu} tam + ${kalan} adet)`;
+                            }
+                        } else {
+                            infoSpan.textContent = `${kba} adet/kutu`;
+                        }
+                    }
+                }
+            }
+
+            function updateSummary() {
+                let filled = 0;
+                let total = 0;
+
+                rows.forEach(tr => {
+                    const input = tr.querySelector('.js-amount');
+                    const val = parseInt(input?.value) || 0;
+                    if (val > 0) {
+                        filled++;
+                        total += val;
+                    }
+                });
+
+                els.filledCount.textContent = filled;
+                els.totalAmount.textContent = total.toLocaleString('tr-TR');
+                els.btnSubmit.disabled = filled === 0;
+            }
+
+            // ═══ Input event'leri ═══
+            rows.forEach(tr => {
+                const input = tr.querySelector('.js-amount');
+                if (input) {
+                    input.addEventListener('input', () => {
+                        updateRow(tr);
+                        updateSummary();
+                    });
+                }
+            });
+
+            // ═══ Tümünü Temizle ═══
+            els.btnClearAll?.addEventListener('click', () => {
+                if (!confirm('Tüm girişleri temizlemek istediğinize emin misiniz?')) return;
+                rows.forEach(tr => {
+                    const input = tr.querySelector('.js-amount');
+                    if (input) input.value = '';
+                    updateRow(tr);
+                });
+                updateSummary();
+            });
+
+            // ═══ Search + Filter ═══
+            let t = null;
+            els.q.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(applyFilter, 150);
+            });
+            els.filterMode.addEventListener('change', applyFilter);
+
+            // ═══ Sayfa kaybetme uyarısı ═══
+            window.addEventListener('beforeunload', e => {
+                const filled = parseInt(els.filledCount.textContent) || 0;
+                if (filled > 0 && !els.form.dataset.submitted) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+
+            els.form.addEventListener('submit', () => {
+                els.form.dataset.submitted = '1';
+                els.btnSubmit.disabled = true;
+                els.btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+            });
+
+            // ═══ Initial ═══
+            updateSummary();
+            applyFilter();
+        })();
+    </script>
+}

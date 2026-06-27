@@ -52,6 +52,11 @@ builder.Services.AddScoped<ISutPointService, SutPointService>();
 builder.Services.AddScoped<IIhaleService, IhaleService>();
 builder.Services.AddScoped<IIhaleExportService, IhaleExportService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddScoped<IHospitalIstatistikService, HospitalIstatistikService>();
+builder.Services.AddScoped<IShipmentTemplateService, ShipmentTemplateService>();
+builder.Services.AddScoped<IUsageTemplateService, UsageTemplateService>();
+builder.Services.AddScoped<IKacAyYeterService, KacAyYeterService>();
+
 builder.Services.AddMemoryCache();
 
 // Kimlik doğrulama ayarları

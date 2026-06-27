@@ -1,4 +1,5 @@
 ﻿using CRMOzem.Business.Interfaces;
+using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -60,18 +61,46 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             await _service.SetAllActiveAsync(hospitalId, isActive);
             return RedirectToAction(nameof(Index), new { hospitalId });
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Save(int hospitalId, int[] testId, bool[] isActive)
+        public async Task<IActionResult> Save(HospitalTestSetSaveVm model)
         {
-            // testId[] ve isActive[] aynı sırada gelecek şekilde view’de name’leri ayarlayacağız
-            var dict = new Dictionary<int, bool>();
-            for (int i = 0; i < testId.Length; i++)
-                dict[testId[i]] = isActive[i];
 
-            await _service.UpdateActiveFlagsAsync(hospitalId, dict);
-            return RedirectToAction(nameof(Index), new { hospitalId });
+            if (model?.Rows != null)
+            {
+                foreach (var r in model.Rows)
+                    Console.WriteLine($"  -> TestId={r.TestId}, IsActive={r.IsActive}");
+            }
+
+            try
+            {
+                if (model == null || model.Rows == null || model.Rows.Count == 0)
+                {
+                    TempData["Error"] = "Kaydedilecek veri bulunamadı.";
+                    return RedirectToAction(nameof(Index), new { hospitalId = model?.HospitalId });
+                }
+
+                var dict = model.Rows
+                    .GroupBy(r => r.TestId)
+                    .ToDictionary(g => g.Key, g => g.First().IsActive);
+
+                Console.WriteLine($"Dict sayısı: {dict.Count}");
+                foreach (var kv in dict)
+                    Console.WriteLine($"  Dict: TestId={kv.Key}, IsActive={kv.Value}");
+
+                await _service.UpdateActiveFlagsAsync(model.HospitalId, dict);
+
+                Console.WriteLine($"==== SAVE END ====");
+
+                TempData["SuccessMessage"] = "Test seti güncellendi.";
+                return RedirectToAction(nameof(Index), new { hospitalId = model.HospitalId });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"HATA: {ex.Message}");
+                TempData["Error"] = "Kayıt sırasında hata: " + ex.Message;
+                return RedirectToAction(nameof(Index), new { hospitalId = model?.HospitalId });
+            }
         }
     }
 }

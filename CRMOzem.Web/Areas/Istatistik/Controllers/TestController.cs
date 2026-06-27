@@ -21,18 +21,28 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
-            var tests = await _context.Tests.AsNoTracking()
-                .OrderBy(x => x.TestName)
-                .ToListAsync(ct);
-
-            var viewModel = tests.Select(t => new TestViewModel
+            try
             {
-                TestID = t.TestID,
-                TestName = t.TestName,
-                SutCode = t.SutCode
-            }).ToList();
+                var tests = await _context.Tests.AsNoTracking()
+                    .OrderBy(x => x.TestName)
+                    .ToListAsync(ct);
 
-            return View(viewModel);
+                var viewModel = tests.Select(t => new TestViewModel
+                {
+                    TestID = t.TestID,
+                    TestName = t.TestName,
+                    SutCode = t.SutCode,
+                    GirisTipi = t.GirisTipi,
+                    KutuBasinaAdet = t.KutuBasinaAdet
+                }).ToList();
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Test listesi yüklenemedi: " + ex.Message;
+                return View(new List<TestViewModel>());
+            }
         }
 
         [HttpGet]
@@ -42,6 +52,13 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TestCreateViewModel model, CancellationToken ct)
         {
+            // GirisTipi=Kutu ise KutuBasinaAdet zorunlu
+            if (model.GirisTipi == TestGirisTipi.Kutu && !model.KutuBasinaAdet.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.KutuBasinaAdet),
+                    "Giriş tipi Kutu seçildiğinde kutu başına adet girilmelidir.");
+            }
+
             if (!ModelState.IsValid) return View(model);
 
             try
@@ -51,14 +68,16 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
                 if (exists)
                 {
-                    ModelState.AddModelError("TestName", "Bu test adı zaten kayıtlı.");
+                    ModelState.AddModelError(nameof(model.TestName), "Bu test adı zaten kayıtlı.");
                     return View(model);
                 }
 
                 _context.Tests.Add(new Test
                 {
                     TestName = model.TestName.Trim(),
-                    SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim()
+                    SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim(),
+                    GirisTipi = model.GirisTipi,
+                    KutuBasinaAdet = model.GirisTipi == TestGirisTipi.Kutu ? model.KutuBasinaAdet : null
                 });
 
                 await _context.SaveChangesAsync(ct);
@@ -68,7 +87,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Hata: {ex.Message}");
+                ModelState.AddModelError("", "Hata: " + ex.Message);
                 return View(model);
             }
         }
@@ -76,25 +95,41 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
-            var test = await _context.Tests.FindAsync(new object?[] { id }, ct);
-            if (test == null)
+            try
             {
-                TempData["Error"] = "Test bulunamadı.";
+                var test = await _context.Tests.FindAsync(new object?[] { id }, ct);
+                if (test == null)
+                {
+                    TempData["Error"] = "Test bulunamadı.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                return View(new TestEditViewModel
+                {
+                    TestID = test.TestID,
+                    TestName = test.TestName,
+                    SutCode = test.SutCode,
+                    GirisTipi = test.GirisTipi,
+                    KutuBasinaAdet = test.KutuBasinaAdet
+                });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Yükleme hatası: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
-
-            return View(new TestEditViewModel
-            {
-                TestID = test.TestID,
-                TestName = test.TestName,
-                SutCode = test.SutCode
-            });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(TestEditViewModel model, CancellationToken ct)
         {
+            if (model.GirisTipi == TestGirisTipi.Kutu && !model.KutuBasinaAdet.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.KutuBasinaAdet),
+                    "Giriş tipi Kutu seçildiğinde kutu başına adet girilmelidir.");
+            }
+
             if (!ModelState.IsValid) return View(model);
 
             try
@@ -106,9 +141,10 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // İstersen burada isim duplicate kontrolü de ekleyebiliriz.
                 test.TestName = model.TestName.Trim();
                 test.SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim();
+                test.GirisTipi = model.GirisTipi;
+                test.KutuBasinaAdet = model.GirisTipi == TestGirisTipi.Kutu ? model.KutuBasinaAdet : null;
 
                 await _context.SaveChangesAsync(ct);
 
@@ -117,7 +153,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Hata: {ex.Message}");
+                ModelState.AddModelError("", "Hata: " + ex.Message);
                 return View(model);
             }
         }
@@ -143,12 +179,12 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata: {ex.Message}";
+                TempData["Error"] = "Silme hatası: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
 
-        // Upload tarafı için (opsiyonel sutCode destekli)
+        // Upload tarafı (otomatik test ekleme — varsayılan Adet, KutuBasinaAdet null)
         [HttpPost]
         public async Task<IActionResult> CreateFromUpload(string testName, string? sutCode, CancellationToken ct)
         {
@@ -166,7 +202,8 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 var test = new Test
                 {
                     TestName = testName.Trim(),
-                    SutCode = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim()
+                    SutCode = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim(),
+                    GirisTipi = TestGirisTipi.Adet  // upload'tan eklenen default Adet
                 };
 
                 _context.Tests.Add(test);
@@ -190,7 +227,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 if (test == null)
                     return Json(new { success = false, message = "Test bulunamadı." });
 
-                // normalize
                 var normalized = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim();
 
                 test.SutCode = normalized;

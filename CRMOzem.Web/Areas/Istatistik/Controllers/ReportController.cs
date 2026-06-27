@@ -10,7 +10,6 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Globalization;
-using X.PagedList.Extensions;
 
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
@@ -21,311 +20,253 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         private readonly IStatisticsService _statisticsService;
         private readonly ApplicationDbContext _context;
         private readonly ISutComparisonService _sutService;
+        private readonly IKacAyYeterService _kayService;
 
-        public ReportController(IStatisticsService statisticsService, ApplicationDbContext context, ISutComparisonService sutService)
+        public ReportController(
+            IStatisticsService statisticsService,
+            ApplicationDbContext context,
+            ISutComparisonService sutService,
+            IKacAyYeterService kayService)
         {
             _statisticsService = statisticsService;
             _context = context;
             _sutService = sutService;
+            _kayService = kayService;
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // ANA RAPOR — Hastane bazlı kapsamlı analiz
+        // ═══════════════════════════════════════════════════════════
         [HttpGet]
-        public async Task<IActionResult> Index(CancellationToken ct)
-        {
-            ViewBag.Hospitals = new SelectList(
-                await _context.Hospitals
-                    .AsNoTracking()
-                    .OrderBy(x => x.HospitalName)
-                    .ToListAsync(ct),
-                "HospitalID",
-                "HospitalName"
-            );
-
-            return View(new ReportFilterViewModel());
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(ReportFilterViewModel model, CancellationToken ct = default)
-        {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Hospitals = new SelectList(
-                    await _context.Hospitals
-                        .AsNoTracking()
-                        .OrderBy(x => x.HospitalName)
-                        .ToListAsync(ct),
-                    "HospitalID",
-                    "HospitalName",
-                    model.HospitalID
-                );
-
-                return View(model);
-            }
-
-            // POST → GET: aynı filtreyi Result için query string'e taşı.
-            return RedirectToAction("Result", new
-            {
-                hospitalId = model.HospitalID,
-                startDate = model.StartDate?.ToString("yyyy-MM-dd"),
-                endDate = model.EndDate?.ToString("yyyy-MM-dd")
-            });
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Result(
-            int hospitalId,
-            DateTime? startDate,
-            DateTime? endDate,
-            int page = 1,
-            CancellationToken ct = default)
+        public async Task<IActionResult> Index(int? hospitalId, CancellationToken ct)
         {
             try
             {
-                var data = await GetReportDataAsync(hospitalId, startDate, endDate, ct);
+                await LoadHospitalsAsync(hospitalId);
 
-                var pagedList = data.ToPagedList(page, 10);
+                if (hospitalId == null || hospitalId <= 0)
+                    return View(model: null);
 
-                ViewBag.HospitalID = hospitalId;
-                ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
-                ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
-
-                return View(pagedList);
+                var vm = await _kayService.BuildAsync(hospitalId.Value, ct);
+                return View(vm);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Hata: {ex.Message}";
-                return RedirectToAction("Index");
+                TempData["Error"] = "Rapor yüklenemedi: " + ex.Message;
+                await LoadHospitalsAsync(hospitalId);
+                return View(model: null);
             }
         }
 
-        // EXCEL EXPORT
         [HttpGet]
-        public async Task<IActionResult> ExportExcel(
-            int hospitalId,
-            DateTime? startDate,
-            DateTime? endDate,
-            CancellationToken ct = default)
+        public async Task<IActionResult> ExportExcel(int hospitalId, CancellationToken ct)
         {
-            var data = await GetReportDataAsync(hospitalId, startDate, endDate, ct);
-
-            if (!data.Any())
+            try
             {
-                TempData["Warning"] = "Seçili filtrelere göre kayıt bulunamadı.";
-                return RedirectToAction("Result", new
+                var vm = await _kayService.BuildAsync(hospitalId, ct);
+
+                if (vm.Rows.Count == 0)
                 {
-                    hospitalId,
-                    startDate = startDate?.ToString("yyyy-MM-dd"),
-                    endDate = endDate?.ToString("yyyy-MM-dd")
-                });
+                    TempData["Warning"] = "Bu hastane için aktif test bulunamadı.";
+                    return RedirectToAction(nameof(Index), new { hospitalId });
+                }
+
+                using var wb = new XLWorkbook();
+                var ws = wb.Worksheets.Add("Rapor");
+                var culture = new CultureInfo("tr-TR");
+
+                // Başlık
+                ws.Cell("A1").Value = $"{vm.HospitalName} — Stok ve Tüketim Raporu";
+                ws.Cell("A1").Style.Font.Bold = true;
+                ws.Cell("A1").Style.Font.FontSize = 14;
+                ws.Range("A1:I1").Merge();
+
+                ws.Cell("A2").Value = $"Rapor Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm}  •  Referans Ay: {vm.ReferenceMonthLabel}";
+                ws.Cell("A2").Style.Font.Italic = true;
+                ws.Cell("A2").Style.Font.FontColor = XLColor.Gray;
+                ws.Range("A2:I2").Merge();
+
+                // Tablo başlıkları
+                var headers = new[] {
+                    "Test Adı", "SUT Kodu", "Tip", "Toplam Gönderilen",
+                    "Toplam Kullanılan", "Stok", $"Geçen Ay Tüketim",
+                    "Kaç Ay Yeter", "Durum"
+                };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = ws.Cell(4, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromArgb(241, 245, 249);
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+
+                // Satırlar
+                int row = 5;
+                foreach (var r in vm.Rows)
+                {
+                    ws.Cell(row, 1).Value = r.TestName;
+                    ws.Cell(row, 2).Value = r.SutCode ?? "-";
+                    ws.Cell(row, 3).Value = r.GirisTipi.ToString();
+                    ws.Cell(row, 4).Value = r.ToplamGonderilen;
+                    ws.Cell(row, 5).Value = r.ToplamKullanilan;
+                    ws.Cell(row, 6).Value = r.Stok;
+                    ws.Cell(row, 7).Value = r.GecenAyTuketim;
+                    ws.Cell(row, 8).Value = r.KacAyYeter.HasValue ? r.KacAyYeter.Value.ToString("N1", culture) : "—";
+                    ws.Cell(row, 9).Value = r.DurumText;
+
+                    var bgColor = r.Durum switch
+                    {
+                        StokDurum.Kritik => XLColor.FromArgb(254, 226, 226),
+                        StokDurum.Uyari => XLColor.FromArgb(254, 243, 199),
+                        StokDurum.Iyi => XLColor.FromArgb(209, 250, 229),
+                        _ => XLColor.FromArgb(243, 244, 246)
+                    };
+
+                    ws.Range(row, 1, row, 9).Style.Fill.BackgroundColor = bgColor;
+                    ws.Range(row, 1, row, 9).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    ws.Range(row, 1, row, 9).Style.Border.BottomBorderColor = XLColor.FromArgb(229, 231, 235);
+
+                    ws.Cell(row, 9).Style.Font.Bold = true;
+                    ws.Range(row, 4, row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+                    row++;
+                }
+
+                ws.Columns().AdjustToContents();
+                ws.Column(1).Width = Math.Min(40, ws.Column(1).Width);
+
+                using var stream = new MemoryStream();
+                wb.SaveAs(stream);
+                stream.Position = 0;
+
+                var fileName = $"Rapor_{vm.HospitalName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                return File(stream.ToArray(), contentType, fileName);
             }
-
-            using var wb = new XLWorkbook();
-            var ws = wb.Worksheets.Add("Rapor");
-
-            // Başlık satırı
-            ws.Cell("A1").Value = "Hastane";
-            ws.Cell("B1").Value = "Ay";
-            ws.Cell("C1").Value = "Test Adı";
-            ws.Cell("D1").Value = "Gönderilen";
-            ws.Cell("E1").Value = "Kullanılan";
-            ws.Cell("F1").Value = "Kalan";
-
-            var headerRange = ws.Range("A1:F1");
-            headerRange.Style.Font.Bold = true;
-            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
-            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-
-            // Veri satırları
-            var row = 2;
-            var culture = new CultureInfo("tr-TR");
-            foreach (var item in data)
+            catch (Exception ex)
             {
-                ws.Cell(row, 1).Value = item.HospitalName;
-                ws.Cell(row, 2).Value = item.Month.ToString("MMMM yyyy", culture);
-                ws.Cell(row, 3).Value = item.TestName;
-                ws.Cell(row, 4).Value = item.TotalSent;
-                ws.Cell(row, 5).Value = item.TotalUsed;
-                ws.Cell(row, 6).Value = item.Remaining;
-                row++;
+                TempData["Error"] = "Excel oluşturulamadı: " + ex.Message;
+                return RedirectToAction(nameof(Index), new { hospitalId });
             }
-
-            // Toplam satırı
-            ws.Cell(row, 3).Value = "Toplam";
-            ws.Cell(row, 3).Style.Font.Bold = true;
-            ws.Cell(row, 4).FormulaA1 = $"SUM(D2:D{row - 1})";
-            ws.Cell(row, 5).FormulaA1 = $"SUM(E2:E{row - 1})";
-            ws.Cell(row, 6).FormulaA1 = $"SUM(F2:F{row - 1})";
-            ws.Range(row, 3, row, 6).Style.Font.Bold = true;
-            ws.Range(row, 3, row, 6).Style.Border.TopBorder = XLBorderStyleValues.Thin;
-
-            ws.Columns().AdjustToContents();
-
-            using var stream = new MemoryStream();
-            wb.SaveAs(stream);
-            stream.Position = 0;
-
-            var fileName = $"Rapor_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            return File(stream.ToArray(), contentType, fileName);
         }
 
-        // PDF EXPORT
         [HttpGet]
-        public async Task<IActionResult> ExportPdf(
-            int hospitalId,
-            DateTime? startDate,
-            DateTime? endDate,
-            CancellationToken ct = default)
+        public async Task<IActionResult> ExportPdf(int hospitalId, CancellationToken ct)
         {
-            var data = await GetReportDataAsync(hospitalId, startDate, endDate, ct);
-
-            if (!data.Any())
+            try
             {
-                TempData["Warning"] = "Seçili filtrelere göre kayıt bulunamadı.";
-                return RedirectToAction("Result", new
+                var vm = await _kayService.BuildAsync(hospitalId, ct);
+
+                if (vm.Rows.Count == 0)
                 {
-                    hospitalId,
-                    startDate = startDate?.ToString("yyyy-MM-dd"),
-                    endDate = endDate?.ToString("yyyy-MM-dd")
+                    TempData["Warning"] = "Bu hastane için aktif test bulunamadı.";
+                    return RedirectToAction(nameof(Index), new { hospitalId });
+                }
+
+                QuestPDF.Settings.License = LicenseType.Community;
+                var culture = new CultureInfo("tr-TR");
+
+                var document = Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Margin(25);
+                        page.Size(PageSizes.A4.Landscape());
+                        page.PageColor(Colors.White);
+
+                        page.Header().Column(col =>
+                        {
+                            col.Item().Text("Stok ve Tüketim Raporu").FontSize(16).SemiBold();
+                            col.Item().Text(vm.HospitalName).FontSize(11).FontColor(Colors.Grey.Medium);
+                            col.Item().Text($"Referans Ay: {vm.ReferenceMonthLabel}  •  Toplam: {vm.ToplamTest} test  •  Kritik: {vm.KritikSayi}")
+                                .FontSize(9).FontColor(Colors.Grey.Medium);
+                        });
+
+                        page.Content().PaddingTop(10).Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(1);
+                                columns.RelativeColumn(1.4f);
+                                columns.RelativeColumn(1.4f);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(1);
+                            });
+
+                            table.Header(header =>
+                            {
+                                string[] h = { "Test", "SUT", "Tip", "Gönderilen", "Kullanılan", "Stok", "Geçen Ay", "Kaç Ay", "Durum" };
+                                foreach (var t in h)
+                                {
+                                    header.Cell().Element(HeaderCellStyle).AlignCenter().Text(t).FontSize(8.5f);
+                                }
+                            });
+
+                            foreach (var r in vm.Rows)
+                            {
+                                var bg = r.Durum switch
+                                {
+                                    StokDurum.Kritik => Colors.Red.Lighten4,
+                                    StokDurum.Uyari => Colors.Yellow.Lighten3,
+                                    StokDurum.Iyi => Colors.Green.Lighten4,
+                                    _ => Colors.Grey.Lighten4
+                                };
+
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).Text(r.TestName).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).Text(r.SutCode ?? "-").FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).Text(r.GirisTipi.ToString()).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignRight().Text(r.ToplamGonderilen.ToString("N0", culture)).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignRight().Text(r.ToplamKullanilan.ToString("N0", culture)).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignRight().Text(r.Stok.ToString("N0", culture)).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignRight().Text(r.GecenAyTuketim.ToString("N0", culture)).FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignRight().Text(r.KacAyYeter.HasValue ? r.KacAyYeter.Value.ToString("N1", culture) : "—").FontSize(8);
+                                table.Cell().Element(c => DataCellStyle(c).Background(bg)).AlignCenter().Text(r.DurumText).FontSize(8).SemiBold();
+                            }
+                        });
+
+                        page.Footer().AlignCenter().Text(x =>
+                        {
+                            x.Span($"Rapor Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm} — Sayfa ").FontSize(8);
+                            x.CurrentPageNumber().FontSize(8);
+                            x.Span(" / ").FontSize(8);
+                            x.TotalPages().FontSize(8);
+                        });
+                    });
                 });
+
+                var pdfBytes = document.GeneratePdf();
+                var pdfName = $"Rapor_{vm.HospitalName}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+                return File(pdfBytes, "application/pdf", pdfName);
+
+                static IContainer HeaderCellStyle(IContainer container)
+                    => container.DefaultTextStyle(x => x.SemiBold())
+                        .PaddingVertical(4).PaddingHorizontal(3)
+                        .Background(Colors.Grey.Lighten3)
+                        .BorderBottom(1).BorderColor(Colors.Grey.Medium);
+
+                static IContainer DataCellStyle(IContainer container)
+                    => container.PaddingVertical(3).PaddingHorizontal(3)
+                        .BorderBottom(0.3f).BorderColor(Colors.Grey.Lighten2);
             }
-
-            QuestPDF.Settings.License = LicenseType.Community; // Lisans zorunlu ayar.
-
-            var culture = new CultureInfo("tr-TR");
-            var hospitalName = data.First().HospitalName;
-
-            var document = Document.Create(container =>
+            catch (Exception ex)
             {
-                container.Page(page =>
-                {
-                    page.Margin(30);
-                    page.Size(PageSizes.A4);
-                    page.PageColor(Colors.White);
-
-                    page.Header().Row(row =>
-                    {
-                        row.RelativeItem().Column(col =>
-                        {
-                            col.Item().Text("Test Raporu").FontSize(16).SemiBold();
-                            col.Item().Text(hospitalName).FontSize(10).FontColor(Colors.Grey.Medium);
-                            col.Item().Text(text =>
-                            {
-                                text.Span("Tarih Aralığı: ")
-                                    .SemiBold()
-                                    .FontSize(9);
-
-                                text.Span($"{startDate?.ToString("dd.MM.yyyy") ?? "-"} - {endDate?.ToString("dd.MM.yyyy") ?? "-"}")
-                                    .FontSize(9);
-                            });
-                        });
-                        row.ConstantItem(60).AlignRight().Text(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(8);
-                    });
-
-                    page.Content().Table(table =>
-                    {
-                        table.ColumnsDefinition(columns =>
-                        {
-                            columns.RelativeColumn(2); // Ay
-                            columns.RelativeColumn(4); // Test Adı
-                            columns.RelativeColumn(2); // Gönderilen
-                            columns.RelativeColumn(2); // Kullanılan
-                            columns.RelativeColumn(2); // Kalan
-                        });
-
-                        // Header
-                        table.Header(header =>
-                        {
-                            header.Cell().Element(HeaderCellStyle).Text("Ay");
-                            header.Cell().Element(HeaderCellStyle).Text("Test Adı");
-                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Gönderilen");
-                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Kullanılan");
-                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Kalan");
-                        });
-
-                        // Rows
-                        foreach (var item in data)
-                        {
-                            table.Cell().Element(DataCellStyle).Text(item.Month.ToString("MMMM yyyy", culture));
-                            table.Cell().Element(DataCellStyle).Text(item.TestName);
-                            table.Cell().Element(DataCellStyle).AlignRight().Text(item.TotalSent.ToString("N0", culture));
-                            table.Cell().Element(DataCellStyle).AlignRight().Text(item.TotalUsed.ToString("N0", culture));
-                            table.Cell().Element(container =>
-                            {
-                                var color = item.Remaining < 0 ? Colors.Red.Medium : Colors.Green.Medium;
-                                DataCellStyle(container).AlignRight().Text(item.Remaining.ToString("N0", culture)).FontColor(color);
-                            });
-                        }
-
-                        // Footer / totals
-                        var totalSent = data.Sum(x => x.TotalSent);
-                        var totalUsed = data.Sum(x => x.TotalUsed);
-                        var totalRemaining = data.Sum(x => x.Remaining);
-
-                        table.Cell().ColumnSpan(2).Element(FooterCellStyle).Text("Toplam");
-                        table.Cell().Element(FooterCellStyle).AlignRight().Text(totalSent.ToString("N0", culture));
-                        table.Cell().Element(FooterCellStyle).AlignRight().Text(totalUsed.ToString("N0", culture));
-                        table.Cell().Element(container =>
-                        {
-                            var color = totalRemaining < 0 ? Colors.Red.Medium : Colors.Green.Medium;
-                            FooterCellStyle(container).AlignRight().Text(totalRemaining.ToString("N0", culture)).FontColor(color);
-                        });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Sayfa ").FontSize(9);
-                        x.CurrentPageNumber().FontSize(9);
-                        x.Span(" / ").FontSize(9);
-                        x.TotalPages().FontSize(9);
-                    });
-                });
-            });
-
-            var pdfBytes = document.GeneratePdf();
-            var pdfName = $"Rapor_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
-            return File(pdfBytes, "application/pdf", pdfName);
-
-            static IContainer HeaderCellStyle(IContainer container)
-                => container.DefaultTextStyle(x => x.SemiBold())
-                    .PaddingVertical(4)
-                    .PaddingHorizontal(3)
-                    .Background(Colors.Grey.Lighten3)
-                    .BorderBottom(1)
-                    .BorderColor(Colors.Grey.Lighten1);
-
-            static IContainer DataCellStyle(IContainer container)
-                => container.PaddingVertical(3)
-                    .PaddingHorizontal(3)
-                    .BorderBottom(0.5f)
-                    .BorderColor(Colors.Grey.Lighten3);
-
-            static IContainer FooterCellStyle(IContainer container)
-                => container.PaddingVertical(4)
-                    .PaddingHorizontal(3)
-                    .BorderTop(1)
-                    .BorderColor(Colors.Grey.Lighten1)
-                    .DefaultTextStyle(x => x.SemiBold());
-        }
-        private async Task LoadHospitalsAsync(int? selectedHospitalId)
-        {
-            ViewBag.Hospitals = await _context.Hospitals.AsNoTracking()
-                .OrderBy(x => x.HospitalName)
-                .Select(x => new SelectListItem
-                {
-                    Value = x.HospitalID.ToString(),
-                    Text = x.HospitalName,
-                    Selected = selectedHospitalId.HasValue && x.HospitalID == selectedHospitalId.Value
-                })
-                .ToListAsync();
+                TempData["Error"] = "PDF oluşturulamadı: " + ex.Message;
+                return RedirectToAction(nameof(Index), new { hospitalId });
+            }
         }
 
-        // /Istatistik/Report/SutKarsilastirma
+        // ═══════════════════════════════════════════════════════════
+        // SUT KARŞILAŞTIRMA — DEĞİŞMEDİ
+        // ═══════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> SutKarsilastirma(int? hospitalId, int? year, int? month, int? ihaleYear, int? currentYear)
         {
-            // 1) Parametre yoksa seçim ekranı göster
             if (!hospitalId.HasValue || hospitalId.Value <= 0)
             {
                 await LoadHospitalsAsync(null);
@@ -336,13 +277,11 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 return View("SutKarsilastirmaSelect");
             }
 
-            // 2) Parametreleri defaultla
             int y = year ?? DateTime.Now.Year;
             int m = month ?? DateTime.Now.Month;
             int ihY = ihaleYear ?? (DateTime.Now.Year - 1);
             int curY = currentYear ?? DateTime.Now.Year;
 
-            // 3) Hastane gerçekten var mı? (daha iyi hata mesajı)
             var exists = await _context.Hospitals.AsNoTracking().AnyAsync(x => x.HospitalID == hospitalId.Value);
             if (!exists)
             {
@@ -355,37 +294,24 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 return View("SutKarsilastirmaSelect");
             }
 
-            // 4) Raporu üret
             var vm = await _sutService.BuildMonthlyAsync(hospitalId.Value, y, m, ihY, curY);
             return View("SutKarsilastirma", vm);
         }
-        // Ortak veri üretici
-        private async Task<List<HospitalTestBalanceViewModel>> GetReportDataAsync(
-            int hospitalId,
-            DateTime? startDate,
-            DateTime? endDate,
-            CancellationToken ct)
+
+        // ═══════════════════════════════════════════════════════════
+        // Helper
+        // ═══════════════════════════════════════════════════════════
+        private async Task LoadHospitalsAsync(int? selectedHospitalId)
         {
-            if (hospitalId <= 0)
-                return new List<HospitalTestBalanceViewModel>();
-
-            var balance = await _statisticsService.GetHospitalTestBalanceAsync(
-                hospitalId,
-                startDate,
-                endDate,
-                ct
-            );
-
-            return balance.Select(b => new HospitalTestBalanceViewModel
-            {
-                HospitalID = b.HospitalID,
-                HospitalName = b.HospitalName,
-                TestID = b.TestID,
-                TestName = b.TestName,
-                TotalSent = b.TotalSent,
-                TotalUsed = b.TotalUsed,
-                Month = b.Month
-            }).ToList();
+            ViewBag.Hospitals = await _context.Hospitals.AsNoTracking()
+                .OrderBy(x => x.HospitalName)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.HospitalID.ToString(),
+                    Text = x.HospitalName,
+                    Selected = selectedHospitalId.HasValue && x.HospitalID == selectedHospitalId.Value
+                })
+                .ToListAsync();
         }
     }
 }

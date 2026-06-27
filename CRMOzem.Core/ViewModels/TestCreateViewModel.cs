@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using CRMOzem.Core.Models;
 
 namespace CRMOzem.Core.ViewModels
 {
@@ -14,6 +10,13 @@ namespace CRMOzem.Core.ViewModels
         public string TestName { get; set; }
 
         [StringLength(30)]
-        public string? SutCode { get; set; }   // ✅ eklendi
+        public string? SutCode { get; set; }
+
+        [Display(Name = "Giriş Tipi")]
+        public TestGirisTipi GirisTipi { get; set; } = TestGirisTipi.Adet;
+
+        [Display(Name = "Kutu Başına Adet")]
+        [Range(1, int.MaxValue, ErrorMessage = "Kutu başına adet 1'den büyük olmalı.")]
+        public int? KutuBasinaAdet { get; set; }
     }
 }

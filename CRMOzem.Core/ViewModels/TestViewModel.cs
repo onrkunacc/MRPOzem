@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using CRMOzem.Core.Models;
 
 namespace CRMOzem.Core.ViewModels
 {
@@ -11,7 +7,11 @@ namespace CRMOzem.Core.ViewModels
     {
         public int TestID { get; set; }
         public string TestName { get; set; }
+
         [StringLength(30)]
-        public string? SutCode { get; set; }   
+        public string? SutCode { get; set; }
+
+        public TestGirisTipi GirisTipi { get; set; }
+        public int? KutuBasinaAdet { get; set; }
     }
 }

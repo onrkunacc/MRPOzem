@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CRMOzem.Core.Models
 {
@@ -17,7 +12,16 @@ namespace CRMOzem.Core.Models
         public string TestName { get; set; }
 
         [StringLength(30)]
-        public string? SutCode { get; set; } 
+        public string? SutCode { get; set; }
+
+        // ── YENİ: Giriş tipi ve kutu bilgisi ──
+        public TestGirisTipi GirisTipi { get; set; } = TestGirisTipi.Adet;
+
+        /// <summary>
+        /// Sadece GirisTipi=Kutu için anlamlı.
+        /// Örn: Glukoz testi → 100 adet/kutu.
+        /// </summary>
+        public int? KutuBasinaAdet { get; set; }
 
         // İlişkiler
         public ICollection<TestTemplate> Templates { get; set; }

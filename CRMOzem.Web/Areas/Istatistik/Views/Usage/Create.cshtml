@@ -1,41 +1,668 @@
-﻿@model CRMOzem.Core.ViewModels.UsageCreateViewModel
+﻿@model CRMOzem.Core.ViewModels.UsageTemplateFormVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CRMOzem.Core.Models
 
 @{
-    ViewData["Title"] = "Yeni İstatistik Ekle";
+    ViewData["Title"] = "İstatistik Girişi";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
+    var selectedMonth = ViewBag.SelectedMonth as string ?? DateTime.Now.ToString("yyyy-MM");
 }
 
-<div class="card shadow-sm">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fa fa-plus-circle me-2"></i> Yeni İstatistik Ekle</h5>
+<link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+
+<style>
+    .us-page {
+        padding: 1rem 0;
+    }
+
+    .us-header {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #fff;
+        padding: 1.75rem 1.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 28px rgba(99,102,241,.25);
+    }
+
+        .us-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .us-header p {
+            margin: .4rem 0 0;
+            opacity: .92;
+            font-size: .92rem;
+        }
+
+    .us-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .us-warning-banner {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .us-warning-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .us-warning-title {
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: .35rem;
+        font-size: .95rem;
+    }
+
+    .us-warning-text {
+        color: #78350f;
+        font-size: .87rem;
+        margin: 0 0 .75rem;
+        line-height: 1.4;
+    }
+
+    .us-mode-pills {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        margin-top: .5rem;
+    }
+
+    .us-mode-pill {
+        background: rgba(255,255,255,.6);
+        border: 1.5px solid rgba(0,0,0,.08);
+        border-radius: 999px;
+        padding: .4rem .9rem;
+        cursor: pointer;
+        font-size: .85rem;
+        font-weight: 600;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+        .us-mode-pill input {
+            display: none;
+        }
+
+        .us-mode-pill.active {
+            background: #fff;
+            border-color: #f59e0b;
+            color: #92400e;
+            box-shadow: 0 2px 8px rgba(245,158,11,.25);
+        }
+
+    .us-table-wrap {
+        background: rgba(255,255,255,.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .us-table {
+        width: 100%;
+        margin: 0;
+        font-size: .9rem;
+    }
+
+        .us-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            color: #475569;
+            padding: .75rem 1rem;
+            z-index: 1;
+        }
+
+        .us-table tbody td {
+            padding: .65rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .us-table tbody tr:hover {
+            background: rgba(99,102,241,.04);
+        }
+
+    .us-row-filled {
+        background: rgba(99,102,241,.06);
+    }
+
+    .us-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .2rem .55rem;
+        font-size: .72rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .us-badge-sut {
+        background: #eef1f4;
+        color: #475569;
+        font-family: ui-monospace, monospace;
+        letter-spacing: .03em;
+    }
+
+    .us-badge-tip-adet {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        color: #fff;
+    }
+
+    .us-badge-tip-kutu {
+        background: linear-gradient(135deg,#10b981,#059669);
+        color: #fff;
+    }
+
+    .us-amount-input {
+        max-width: 120px;
+        text-align: right;
+        font-weight: 700;
+        font-size: 1rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: .4rem .6rem;
+        background: #fff;
+    }
+
+        .us-amount-input:focus {
+            border-color: #6366f1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+        }
+
+    .us-existing-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .15rem .55rem;
+        font-size: .72rem;
+        border-radius: 999px;
+        background: rgba(245,158,11,.12);
+        color: #92400e;
+        border: 1px solid rgba(245,158,11,.3);
+        font-weight: 600;
+        margin-left: .5rem;
+    }
+
+    .us-summary-bar {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255,255,255,.95);
+        backdrop-filter: blur(12px);
+        border-top: 2px solid #6366f1;
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .75rem;
+        margin-top: 1.5rem;
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,.06);
+    }
+
+    .us-summary-info {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        font-size: .9rem;
+        color: #334155;
+    }
+
+        .us-summary-info strong {
+            color: #4f46e5;
+            font-size: 1.1rem;
+        }
+
+    .us-btn-grad {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #fff;
+        border: none;
+        padding: .6rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: .95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        transition: transform .15s, box-shadow .15s;
+        cursor: pointer;
+    }
+
+        .us-btn-grad:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(99,102,241,.35);
+            color: #fff;
+        }
+
+        .us-btn-grad:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .us-btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1.5px solid #e2e8f0;
+        padding: .55rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .us-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+
+    .us-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: .5;
+    }
+
+    .us-search-wrap {
+        position: relative;
+    }
+
+        .us-search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .us-search-wrap input {
+            padding-left: 35px;
+        }
+
+    @@media (max-width: 768px) {
+        .us-summary-info {
+            font-size: .8rem;
+            gap: .75rem;
+        }
+
+        .us-amount-input {
+            max-width: 90px;
+            font-size: .9rem;
+        }
+    }
+</style>
+
+<div class="us-page">
+
+    <!-- ═══ BAŞLIK ═══ -->
+    <div class="us-header">
+        <h1>📊 İstatistik Girişi</h1>
+        <p>Hastane şablonuna göre toplu istatistik (tüketim) girişi — o hastane için aktif testler listelenir.</p>
     </div>
-    <div class="card-body">
-        <form asp-action="Create" method="post" class="row g-3">
-            @Html.AntiForgeryToken()
-            <div class="col-md-6">
-                <label class="form-label">Hastane</label>
-                <select asp-for="HospitalID" class="form-select" asp-items="ViewBag.Hospitals"></select>
-                <span asp-validation-for="HospitalID" class="text-danger"></span>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- ═══ HASTANE + AY SEÇİMİ ═══ -->
+    <div class="us-card">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-6 col-lg-5">
+                <label class="form-label fw-semibold">Hastane</label>
+                <select name="hospitalId" class="form-select" onchange="this.form.submit()" required>
+                    <option value="">— Hastane seçiniz —</option>
+                    @foreach (var h in hospitals)
+                    {
+                        <option value="@h.Value" selected="@h.Selected">@h.Text</option>
+                    }
+                </select>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Test</label>
-                <select asp-for="TestID" class="form-select" asp-items="ViewBag.Tests"></select>
-                <span asp-validation-for="TestID" class="text-danger"></span>
+            <div class="col-12 col-md-4 col-lg-3">
+                <label class="form-label fw-semibold">Ay</label>
+                <input type="month" name="month" class="form-control" value="@selectedMonth"
+                       onchange="this.form.submit()" />
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Ay</label>
-                <input asp-for="Month" type="month" class="form-control" />
-                <span asp-validation-for="Month" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Kullanılan Test Sayısı</label>
-                <input asp-for="TestCount" type="number" min="0" class="form-control" />
-                <span asp-validation-for="TestCount" class="text-danger"></span>
-            </div>
-            <div class="col-12 text-end">
-                <a asp-action="Index" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Geri</a>
-                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Kaydet</button>
+            <div class="col-12 col-md-2 col-lg-4">
+                <small class="text-muted">Hastane ve ay seçildiğinde liste yüklenir.</small>
             </div>
         </form>
     </div>
+
+    @if (Model == null)
+    {
+        <div class="us-card text-center py-5">
+            <div class="us-empty-icon">📋</div>
+            <h5 class="text-muted">Devam etmek için hastane ve ay seçiniz</h5>
+            <small class="text-muted">Şablona göre o hastanenin aktif testleri listelenecek.</small>
+        </div>
+        return;
+    }
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="us-card text-center py-5">
+            <div class="us-empty-icon">⚠️</div>
+            <h5 class="text-muted">Bu hastanede henüz aktif test yok</h5>
+            <small class="text-muted">
+                Önce <a asp-action="Index" asp-controller="HospitalTestSet">Hastane Test Seti</a> ekranından
+                bu hastane için testleri aktif edin.
+            </small>
+        </div>
+        return;
+    }
+
+    <!-- ═══ MEVCUT VERİ UYARISI ═══ -->
+    @if (Model.HasExistingData)
+    {
+        <div class="us-warning-banner">
+            <div class="us-warning-icon">⚠️</div>
+            <div class="us-warning-content">
+                <div class="us-warning-title">
+                    @Model.MonthLabel için bu hastaneye ait @Model.ExistingTestCount test kaydı zaten var
+                </div>
+                <p class="us-warning-text">
+                    Toplam @Model.ExistingTotalAmount adet kayıtlı. Aynı testler için yeniden giriş yaparsanız ne yapılsın?
+                </p>
+                <div class="us-mode-pills" role="radiogroup">
+                    <label class="us-mode-pill active">
+                        <input type="radio" name="conflictMode" value="add" checked />
+                        <i class="fe fe-plus-circle"></i> Üzerine Ekle
+                    </label>
+                    <label class="us-mode-pill">
+                        <input type="radio" name="conflictMode" value="overwrite" />
+                        <i class="fe fe-refresh-cw"></i> Yeniden Yaz
+                    </label>
+                    <label class="us-mode-pill">
+                        <input type="radio" name="conflictMode" value="skip" />
+                        <i class="fe fe-skip-forward"></i> Atla
+                    </label>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ═══ FORM ═══ -->
+    <form method="post" asp-action="Create" id="usageForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="HospitalID" value="@Model.HospitalID" />
+        <input type="hidden" name="Month" value="@Model.Month.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="ConflictMode" id="hiddenConflictMode" value="add" />
+
+        <!-- Toolbar -->
+        <div class="us-card" style="padding: 1rem;">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-6">
+                    <label class="form-label mb-1 small fw-semibold">Test Ara</label>
+                    <div class="us-search-wrap">
+                        <i class="fe fe-search"></i>
+                        <input id="q" class="form-control" placeholder="Test adı veya SUT kodu…">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label mb-1 small fw-semibold">Filtre</label>
+                    <select id="filterMode" class="form-select">
+                        <option value="all">Tümü</option>
+                        <option value="filled">Sadece girilmiş</option>
+                        <option value="empty">Sadece boş</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-3 text-end">
+                    <button type="button" class="us-btn-secondary" id="btnClearAll" title="Tüm girişleri temizle">
+                        <i class="fe fe-x-circle"></i> Tümünü Temizle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="us-table-wrap">
+            <div class="table-responsive">
+                <table class="us-table" id="tbl">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Test Adı</th>
+                            <th style="width:120px;">SUT</th>
+                            <th style="width:90px;">Tip</th>
+                            <th style="width:200px;">Kullanılan (Adet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Rows.Count; i++)
+                        {
+                            var r = Model.Rows[i];
+                            var tipText = r.GirisTipi.ToString();
+                            var tipClass = r.GirisTipi == TestGirisTipi.Kutu ? "us-badge-tip-kutu" : "us-badge-tip-adet";
+
+                            <tr data-testname="@((r.TestName ?? "").ToLowerInvariant())"
+                                data-sutcode="@((r.SutCode ?? "").ToLowerInvariant())"
+                                data-tip="@tipText.ToLowerInvariant()"
+                                data-mevcut="@r.MevcutAdet">
+
+                                <td class="text-muted small">@(i + 1)</td>
+
+                                <td class="fw-semibold">
+                                    @r.TestName
+                                    @if (r.MevcutAdet > 0)
+                                    {
+                                        <span class="us-existing-tag" title="@Model.MonthLabel mevcut kayıt">
+                                            <i class="fe fe-database"></i> @r.MevcutAdet
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(r.SutCode))
+                                    {
+                                        <span class="us-badge us-badge-sut">@r.SutCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td><span class="us-badge @tipClass">@tipText</span></td>
+
+                                <td>
+                                    <input type="hidden" name="Rows[@i].TestID" value="@r.TestID" />
+                                    <input type="number" min="0" class="us-amount-input js-amount"
+                                           name="Rows[@i].Amount" value="" placeholder="0" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="us-summary-bar">
+            <div class="us-summary-info">
+                <span>
+                    <i class="fe fe-list"></i>
+                    Girilen Test: <strong id="filledCount">0</strong> / @Model.Rows.Count
+                </span>
+                <span>
+                    <i class="fe fe-bar-chart-2"></i>
+                    Toplam Kullanım: <strong id="totalAmount">0</strong>
+                </span>
+                <span>
+                    <i class="fe fe-calendar"></i>
+                    Ay: <strong>@Model.MonthLabel</strong>
+                </span>
+            </div>
+            <div>
+                <a asp-action="Index" class="us-btn-secondary">
+                    <i class="fe fe-arrow-left"></i> Vazgeç
+                </a>
+                <button type="submit" class="us-btn-grad" id="btnSubmit" disabled>
+                    <i class="fe fe-save"></i> İstatistiği Kaydet
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const trTR = 'tr-TR';
+
+            const els = {
+                q: document.getElementById('q'),
+                filterMode: document.getElementById('filterMode'),
+                filledCount: document.getElementById('filledCount'),
+                totalAmount: document.getElementById('totalAmount'),
+                btnSubmit: document.getElementById('btnSubmit'),
+                btnClearAll: document.getElementById('btnClearAll'),
+                form: document.getElementById('usageForm'),
+                hiddenConflictMode: document.getElementById('hiddenConflictMode')
+            };
+
+            const table = document.getElementById('tbl');
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+            // Conflict mode
+            const modePills = document.querySelectorAll('.us-mode-pill');
+            modePills.forEach(label => {
+                const input = label.querySelector('input[type="radio"]');
+                if (!input) return;
+                input.addEventListener('change', () => {
+                    modePills.forEach(p => p.classList.remove('active'));
+                    if (input.checked) {
+                        label.classList.add('active');
+                        els.hiddenConflictMode.value = input.value;
+                    }
+                });
+            });
+
+            // Filtre
+            function applyFilter() {
+                const query = (els.q.value || '').trim().toLocaleLowerCase(trTR);
+                const mode = els.filterMode.value;
+
+                rows.forEach(r => {
+                    const tn = r.getAttribute('data-testname') || '';
+                    const sc = r.getAttribute('data-sutcode') || '';
+                    const input = r.querySelector('.js-amount');
+                    const val = parseInt(input?.value || '0');
+                    const hasValue = val > 0;
+
+                    const matchQ = !query || tn.includes(query) || sc.includes(query);
+
+                    let matchMode = true;
+                    switch (mode) {
+                        case 'filled': matchMode = hasValue; break;
+                        case 'empty': matchMode = !hasValue; break;
+                    }
+
+                    r.style.display = (matchQ && matchMode) ? '' : 'none';
+                });
+            }
+
+            // Row + summary
+            function updateRow(tr) {
+                const input = tr.querySelector('.js-amount');
+                const val = parseInt(input.value) || 0;
+                tr.classList.toggle('us-row-filled', val > 0);
+            }
+
+            function updateSummary() {
+                let filled = 0;
+                let total = 0;
+
+                rows.forEach(tr => {
+                    const input = tr.querySelector('.js-amount');
+                    const val = parseInt(input?.value) || 0;
+                    if (val > 0) {
+                        filled++;
+                        total += val;
+                    }
+                });
+
+                els.filledCount.textContent = filled;
+                els.totalAmount.textContent = total.toLocaleString('tr-TR');
+                els.btnSubmit.disabled = filled === 0;
+            }
+
+            rows.forEach(tr => {
+                const input = tr.querySelector('.js-amount');
+                if (input) {
+                    input.addEventListener('input', () => {
+                        updateRow(tr);
+                        updateSummary();
+                    });
+                }
+            });
+
+            els.btnClearAll?.addEventListener('click', () => {
+                if (!confirm('Tüm girişleri temizlemek istediğinize emin misiniz?')) return;
+                rows.forEach(tr => {
+                    const input = tr.querySelector('.js-amount');
+                    if (input) input.value = '';
+                    updateRow(tr);
+                });
+                updateSummary();
+            });
+
+            let t = null;
+            els.q.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(applyFilter, 150);
+            });
+            els.filterMode.addEventListener('change', applyFilter);
+
+            window.addEventListener('beforeunload', e => {
+                const filled = parseInt(els.filledCount.textContent) || 0;
+                if (filled > 0 && !els.form.dataset.submitted) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+
+            els.form.addEventListener('submit', () => {
+                els.form.dataset.submitted = '1';
+                els.btnSubmit.disabled = true;
+                els.btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+            });
+
+            updateSummary();
+            applyFilter();
+        })();
+    </script>
+}

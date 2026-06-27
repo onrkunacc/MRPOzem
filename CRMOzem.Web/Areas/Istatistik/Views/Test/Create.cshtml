@@ -1,4 +1,5 @@
 ﻿@model CRMOzem.Core.ViewModels.TestCreateViewModel
+@using CRMOzem.Core.Models
 
 @{
     ViewData["Title"] = "Yeni Test Ekle";
@@ -25,6 +26,42 @@
                 <span asp-validation-for="SutCode" class="text-danger"></span>
             </div>
 
+            <!-- Giriş Tipi -->
+            <div class="col-md-6">
+                <label class="form-label">Giriş Tipi</label>
+                <div class="d-flex gap-3 mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input giris-tipi-radio" type="radio" id="girisAdet"
+                               name="GirisTipi" value="@TestGirisTipi.Adet"
+                        @(Model.GirisTipi == TestGirisTipi.Adet ? "checked" : "") />
+                        <label class="form-check-label" for="girisAdet">
+                            <strong>Adet</strong>
+                            <small class="text-muted d-block">Birebir adet girilir (ör: 245)</small>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input giris-tipi-radio" type="radio" id="girisKutu"
+                               name="GirisTipi" value="@TestGirisTipi.Kutu"
+                        @(Model.GirisTipi == TestGirisTipi.Kutu ? "checked" : "") />
+                        <label class="form-check-label" for="girisKutu">
+                            <strong>Kutu</strong>
+                            <small class="text-muted d-block">Kutu sayısı girilir, adet hesaplanır</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6" id="kutuBasinaAdetWrap"
+                 style="@(Model.GirisTipi == TestGirisTipi.Kutu ? "" : "display:none;")">
+                <label class="form-label">Kutu Başına Adet</label>
+                <div class="input-group">
+                    <input asp-for="KutuBasinaAdet" type="number" min="1" class="form-control" placeholder="Örn: 100" />
+                    <span class="input-group-text">adet/kutu</span>
+                </div>
+                <small class="text-muted">Bir kutuda kaç adet test bulunduğunu girin.</small>
+                <span asp-validation-for="KutuBasinaAdet" class="text-danger d-block"></span>
+            </div>
+
             <div class="col-12 text-end">
                 <a asp-action="Index" class="btn btn-outline-secondary">
                     <i class="fa fa-arrow-left"></i> Geri
@@ -36,3 +73,26 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const radios = document.querySelectorAll('.giris-tipi-radio');
+            const wrap = document.getElementById('kutuBasinaAdetWrap');
+            const kbaInput = document.querySelector('input[name="KutuBasinaAdet"]');
+
+            function toggle() {
+                const selected = document.querySelector('.giris-tipi-radio:checked')?.value;
+                if (selected === '@TestGirisTipi.Kutu') {
+                    wrap.style.display = '';
+                } else {
+                    wrap.style.display = 'none';
+                    if (kbaInput) kbaInput.value = '';
+                }
+            }
+
+            radios.forEach(r => r.addEventListener('change', toggle));
+            toggle();
+        })();
+    </script>
+}
