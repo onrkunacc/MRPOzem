@@ -1,0 +1,386 @@
+@model KotaTakipIndexViewModel
+@{
+    ViewData["Title"] = "Kota Takip - Veri Girişi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var aylar = new[] { "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+
+    string EnumAdi(Enum deger)
+    {
+        var alan = deger.GetType().GetField(deger.ToString());
+        var ad = alan?.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
+            .Cast<System.ComponentModel.DataAnnotations.DisplayAttribute>()
+            .FirstOrDefault()?.Name;
+        return ad ?? deger.ToString();
+    }
+}
+
+<link rel="stylesheet" href="~/css/kota-takip.css" asp-append-version="true" />
+
+<div class="kt-page-header">
+    <div>
+        <span class="kt-eyebrow">Finans</span>
+        <h1>Kota Takip</h1>
+        <p>Gider ve gelirleri tek ekrandan girin; 3rd party faturaları toplam maliyete otomatik dâhil edilir.</p>
+    </div>
+    <a asp-area="Finans" asp-controller="KotaTakip" asp-action="Ozet"
+       asp-route-yil="@Model.SecilenYil" asp-route-ay="@Model.SecilenAy"
+       class="btn btn-primary">Özeti Görüntüle</a>
+</div>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<div class="kt-toolbar">
+    <form method="get" class="kt-filter-form">
+        <div>
+            <label for="yil">Yıl</label>
+            <input id="yil" name="yil" type="number" min="2020" max="2100" value="@Model.SecilenYil" class="form-control" />
+        </div>
+        <div>
+            <label for="ay">Ay</label>
+            <select id="ay" name="ay" class="form-control">
+                <option value="">Tüm aylar</option>
+                @for (var i = 1; i <= 12; i++)
+                {
+                    <option value="@i" selected="@(Model.SecilenAy == i)">@aylar[i - 1]</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-outline-primary">Filtrele</button>
+    </form>
+
+    <form asp-action="GelirleriSenkronizeEt" method="post" class="kt-sync-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="yil" value="@Model.SecilenYil" />
+        <input type="hidden" name="ay" value="@Model.SecilenAy" />
+        <button type="submit" class="btn btn-success" title="Muhasebe fatura kayıtlarını kota eşleştirmelerine göre gelir olarak aktarır">
+            Gelirleri Faturalardan Güncelle
+        </button>
+    </form>
+</div>
+
+<details class="kt-setup" open="@(Model.Kotalar.Count == 0)">
+    <summary>
+        <span>Kota ve müşteri tanımları</span>
+        <small>Yalnızca yeni kota veya yeni müşteri bağlantısı olduğunda açın</small>
+    </summary>
+
+    <div class="kt-setup-grid">
+        <section class="kt-card kt-card-compact">
+            <div class="kt-card-title">
+                <div>
+                    <h2>Yeni kota</h2>
+                    <p>Eklediğiniz kota seçim listelerine otomatik gelir.</p>
+                </div>
+            </div>
+            <form asp-action="KotaEkle" method="post" class="kt-grid-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="yil" value="@Model.SecilenYil" />
+                <input type="hidden" name="ay" value="@Model.SecilenAy" />
+                <div>
+                    <label asp-for="YeniKota.KotaKodu"></label>
+                    <input asp-for="YeniKota.KotaKodu" class="form-control" placeholder="Örn. K-IZM-ELISA" />
+                    <span asp-validation-for="YeniKota.KotaKodu" class="text-danger"></span>
+                </div>
+                <div class="kt-span-2">
+                    <label asp-for="YeniKota.KotaAdi"></label>
+                    <input asp-for="YeniKota.KotaAdi" class="form-control" placeholder="Örn. İzmir Elisa / Hepatit" />
+                    <span asp-validation-for="YeniKota.KotaAdi" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="YeniKota.ProformaUsd"></label>
+                    <input asp-for="YeniKota.ProformaUsd" class="form-control" type="number" min="0" step="0.01" />
+                    <span asp-validation-for="YeniKota.ProformaUsd" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="YeniKota.BaslangicTarihi"></label>
+                    <input asp-for="YeniKota.BaslangicTarihi" class="form-control" />
+                </div>
+                <div>
+                    <label asp-for="YeniKota.BitisTarihi"></label>
+                    <input asp-for="YeniKota.BitisTarihi" class="form-control" />
+                </div>
+                <div class="kt-span-full kt-form-actions">
+                    <button type="submit" class="btn btn-primary">Kotayı Ekle</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="kt-card kt-card-compact">
+            <div class="kt-card-title">
+                <div>
+                    <h2>Müşteriyi kotaya bağla</h2>
+                    <p>Bu bağlantı, bizim faturalarımızın doğru kotaya otomatik aktarılmasını sağlar.</p>
+                </div>
+            </div>
+            <form asp-action="KotaCariEkle" method="post" class="kt-grid-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="yil" value="@Model.SecilenYil" />
+                <input type="hidden" name="ay" value="@Model.SecilenAy" />
+                <div class="kt-span-2">
+                    <label asp-for="YeniKotaCari.KotaId"></label>
+                    <select asp-for="YeniKotaCari.KotaId" class="form-control">
+                        <option value="0">Kota seçiniz</option>
+                        @foreach (var kota in Model.Kotalar)
+                        {
+                            <option value="@kota.Id">@kota.KotaKodu - @kota.KotaAdi</option>
+                        }
+                    </select>
+                    <span asp-validation-for="YeniKotaCari.KotaId" class="text-danger"></span>
+                </div>
+                <div class="kt-span-2">
+                    <label asp-for="YeniKotaCari.CariId"></label>
+                    <select asp-for="YeniKotaCari.CariId" class="form-control">
+                        <option value="0">Cari seçiniz</option>
+                        @foreach (var cari in Model.Cariler)
+                        {
+                            <option value="@cari.Id">@cari.CariKodu - @cari.Unvan</option>
+                        }
+                    </select>
+                    <span asp-validation-for="YeniKotaCari.CariId" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="YeniKotaCari.BaslangicTarihi"></label>
+                    <input asp-for="YeniKotaCari.BaslangicTarihi" class="form-control" />
+                </div>
+                <div>
+                    <label asp-for="YeniKotaCari.BitisTarihi"></label>
+                    <input asp-for="YeniKotaCari.BitisTarihi" class="form-control" />
+                </div>
+                <div class="kt-span-full kt-form-actions">
+                    <button type="submit" class="btn btn-primary" disabled="@(Model.Kotalar.Count == 0 || Model.Cariler.Count == 0)">Eşleştirmeyi Ekle</button>
+                </div>
+            </form>
+
+            @if (Model.Kotalar.SelectMany(x => x.KotaCariler).Any())
+            {
+                <div class="kt-mapping-list">
+                    @foreach (var kota in Model.Kotalar.Where(x => x.KotaCariler.Any()))
+                    {
+                        @foreach (var eslestirme in kota.KotaCariler.OrderBy(x => x.Cari.Unvan))
+                        {
+                            <div class="kt-mapping-item">
+                                <span><strong>@kota.KotaKodu</strong> · @eslestirme.Cari.Unvan</span>
+                                <form asp-action="KotaCariSil" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@eslestirme.Id" />
+                                    <input type="hidden" name="yil" value="@Model.SecilenYil" />
+                                    <input type="hidden" name="ay" value="@Model.SecilenAy" />
+                                    <button type="submit" class="btn btn-sm btn-link text-danger">Kaldır</button>
+                                </form>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</details>
+
+<section class="kt-card kt-entry-card">
+    <div class="kt-card-title">
+        <div>
+            <h2>@(Model.DuzenlemeModu ? "Finans kaydını düzenle" : "Yeni finans kaydı")</h2>
+            <p>Abbott, 3rd party ve diğer giderlerle manuel gelirleri buradan kaydedin.</p>
+        </div>
+        @if (Model.DuzenlemeModu)
+        {
+            <a asp-action="Index" asp-route-yil="@Model.SecilenYil" asp-route-ay="@Model.SecilenAy" class="btn btn-sm btn-outline-secondary">Düzenlemeyi İptal Et</a>
+        }
+    </div>
+
+    <form asp-action="KayitKaydet" method="post" class="kt-grid-form kt-entry-form">
+        @Html.AntiForgeryToken()
+        <input asp-for="Kayit.Id" type="hidden" />
+        <input type="hidden" name="filtreAy" value="@Model.SecilenAy" />
+
+        <div class="kt-span-2">
+            <label asp-for="Kayit.KotaId"></label>
+            <select asp-for="Kayit.KotaId" class="form-control">
+                <option value="0">Kota seçiniz</option>
+                @foreach (var kota in Model.Kotalar)
+                {
+                    <option value="@kota.Id">@kota.KotaKodu - @kota.KotaAdi</option>
+                }
+            </select>
+            <span asp-validation-for="Kayit.KotaId" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.DonemYil"></label>
+            <input asp-for="Kayit.DonemYil" class="form-control" type="number" min="2020" max="2100" />
+            <span asp-validation-for="Kayit.DonemYil" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.DonemAy"></label>
+            <select asp-for="Kayit.DonemAy" class="form-control">
+                @for (var i = 1; i <= 12; i++)
+                {
+                    <option value="@i">@aylar[i - 1]</option>
+                }
+            </select>
+            <span asp-validation-for="Kayit.DonemAy" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.KayitTipi"></label>
+            <select asp-for="Kayit.KayitTipi" asp-items="Html.GetEnumSelectList<KotaKayitTipi>()" class="form-control" id="kayitTipi"></select>
+        </div>
+        <div>
+            <label asp-for="Kayit.TedarikciGrubu"></label>
+            <select asp-for="Kayit.TedarikciGrubu" asp-items="Html.GetEnumSelectList<KotaTedarikciGrubu>()" class="form-control" id="tedarikciGrubu"></select>
+        </div>
+        <div>
+            <label asp-for="Kayit.GiderKategorisi"></label>
+            <select asp-for="Kayit.GiderKategorisi" asp-items="Html.GetEnumSelectList<KotaGiderKategorisi>()" class="form-control" id="giderKategorisi"></select>
+        </div>
+        <div>
+            <label asp-for="Kayit.FaturaNo"></label>
+            <input asp-for="Kayit.FaturaNo" class="form-control" />
+            <span asp-validation-for="Kayit.FaturaNo" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.FaturaTarihi"></label>
+            <input asp-for="Kayit.FaturaTarihi" class="form-control" />
+            <span asp-validation-for="Kayit.FaturaTarihi" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.Tutar"></label>
+            <input asp-for="Kayit.Tutar" class="form-control" type="number" min="0.01" step="0.01" />
+            <span asp-validation-for="Kayit.Tutar" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Kayit.ParaBirimi"></label>
+            <select asp-for="Kayit.ParaBirimi" asp-items="Html.GetEnumSelectList<KotaParaBirimi>()" class="form-control" id="paraBirimi"></select>
+        </div>
+        <div>
+            <label asp-for="Kayit.DovizKuru"></label>
+            <input asp-for="Kayit.DovizKuru" class="form-control" type="number" min="0" step="0.000001" id="dovizKuru" />
+            <small class="form-text text-muted">TRY seçilirse otomatik 1 kabul edilir.</small>
+            <span asp-validation-for="Kayit.DovizKuru" class="text-danger"></span>
+        </div>
+        <div class="kt-span-2">
+            <label asp-for="Kayit.Aciklama"></label>
+            <input asp-for="Kayit.Aciklama" class="form-control" placeholder="İş veya giderle ilgili kısa not" />
+        </div>
+        <div class="kt-span-2">
+            <label asp-for="Kayit.BelgeLinki"></label>
+            <input asp-for="Kayit.BelgeLinki" class="form-control" placeholder="https://..." />
+            <span asp-validation-for="Kayit.BelgeLinki" class="text-danger"></span>
+        </div>
+        <div class="kt-span-full kt-form-actions">
+            <button type="submit" class="btn btn-primary" disabled="@(Model.Kotalar.Count == 0)">
+                @(Model.DuzenlemeModu ? "Değişiklikleri Kaydet" : "Kaydı Ekle")
+            </button>
+            @if (Model.Kotalar.Count == 0)
+            {
+                <span class="text-warning">Önce yukarıdaki bölümden bir kota ekleyin.</span>
+            }
+        </div>
+    </form>
+</section>
+
+<section class="kt-card">
+    <div class="kt-card-title">
+        <div>
+            <h2>Finans kayıtları</h2>
+            <p>@Model.SecilenYil yılı · @(Model.SecilenAy.HasValue ? aylar[Model.SecilenAy.Value - 1] : "Tüm aylar") · @Model.Kayitlar.Count kayıt</p>
+        </div>
+    </div>
+
+    @if (!Model.Kayitlar.Any())
+    {
+        <div class="kt-empty">Bu filtrede henüz finans kaydı yok.</div>
+    }
+    else
+    {
+        <div class="kt-table-wrap">
+            <table class="kt-table">
+                <thead>
+                    <tr>
+                        <th>Kayıt</th>
+                        <th>Dönem</th>
+                        <th>Kota</th>
+                        <th>Tür / Kaynak</th>
+                        <th>Kategori</th>
+                        <th>Fatura</th>
+                        <th class="text-right">Tutar</th>
+                        <th class="text-right">TL Karşılığı</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var kayit in Model.Kayitlar)
+                    {
+                        <tr class="@(kayit.TedarikciGrubu == KotaTedarikciGrubu.UcuncuParti ? "kt-row-third-party" : null)">
+                            <td>
+                                <span class="kt-record-no">KT-@kayit.Id.ToString("D6")</span>
+                                <span class="kt-source-badge @(kayit.KayitKaynagi == KotaKayitKaynagi.FaturaModulu ? "auto" : "manual")">
+                                    @EnumAdi(kayit.KayitKaynagi)
+                                </span>
+                            </td>
+                            <td>@aylar[kayit.DonemAy - 1] @kayit.DonemYil</td>
+                            <td><strong>@kayit.Kota.KotaKodu</strong><small>@kayit.Kota.KotaAdi</small></td>
+                            <td>
+                                <span class="kt-type-badge @(kayit.KayitTipi == KotaKayitTipi.Gelir ? "income" : "expense")">@EnumAdi(kayit.KayitTipi)</span>
+                                <small>@EnumAdi(kayit.TedarikciGrubu)</small>
+                            </td>
+                            <td>@EnumAdi(kayit.GiderKategorisi)</td>
+                            <td><strong>@kayit.FaturaNo</strong><small>@kayit.FaturaTarihi.ToString("dd.MM.yyyy")</small></td>
+                            <td class="text-right font-monospace">@kayit.Tutar.ToString("N2") @kayit.ParaBirimi</td>
+                            <td class="text-right font-monospace"><strong>@kayit.TutarTry.ToString("N2") ₺</strong></td>
+                            <td class="kt-actions">
+                                @if (kayit.KayitKaynagi == KotaKayitKaynagi.Manuel)
+                                {
+                                    <a asp-action="Index" asp-route-yil="@Model.SecilenYil" asp-route-ay="@Model.SecilenAy" asp-route-editId="@kayit.Id" class="btn btn-sm btn-outline-secondary">Düzenle</a>
+                                    <form asp-action="KayitSil" method="post" onsubmit="return confirm('Bu finans kaydı silinsin mi?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@kayit.Id" />
+                                        <input type="hidden" name="yil" value="@Model.SecilenYil" />
+                                        <input type="hidden" name="ay" value="@Model.SecilenAy" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Sil</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Fatura modülünden yönetilir</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const tip = document.getElementById('kayitTipi');
+            const tedarikci = document.getElementById('tedarikciGrubu');
+            const kategori = document.getElementById('giderKategorisi');
+            const paraBirimi = document.getElementById('paraBirimi');
+            const kur = document.getElementById('dovizKuru');
+
+            function kayitTipiniUygula() {
+                const gelir = tip && tip.value === '@((int)KotaKayitTipi.Gelir)';
+                if (gelir) {
+                    tedarikci.value = '@((int)KotaTedarikciGrubu.Ozem)';
+                    kategori.value = '@((int)KotaGiderKategorisi.Gelir)';
+                }
+                tedarikci.disabled = gelir;
+                kategori.disabled = gelir;
+            }
+
+            function paraBiriminiUygula() {
+                const trySecili = paraBirimi && paraBirimi.value === '@((int)KotaParaBirimi.TRY)';
+                if (trySecili) kur.value = '1';
+                kur.readOnly = trySecili;
+            }
+
+            tip?.addEventListener('change', kayitTipiniUygula);
+            paraBirimi?.addEventListener('change', paraBiriminiUygula);
+            kayitTipiniUygula();
+            paraBiriminiUygula();
+        })();
+    </script>
+}

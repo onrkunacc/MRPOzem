@@ -107,6 +107,27 @@
         </li>
 
         <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#kota-takip-yon-menu">
+                <i class="fe fe-trending-up fe-16"></i>
+                <span class="ml-3 item-text">Kota Takip</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="kota-takip-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Index">
+                        <i class="fe fe-edit-3 fe-14"></i>
+                        <span class="ml-1 item-text">Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Ozet">
+                        <i class="fe fe-pie-chart fe-14"></i>
+                        <span class="ml-1 item-text">Finansal Özet</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#masraf-rapor-menu">
                 <i class="fe fe-file-text fe-16"></i>
                 <span class="ml-3 item-text">Masraf Raporları</span>
@@ -265,6 +286,27 @@
             </ul>
         </li>
 
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#muhasebe-kota-menu">
+                <i class="fe fe-trending-up fe-16"></i>
+                <span class="ml-3 item-text">Kota Takip</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="muhasebe-kota-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Index">
+                        <i class="fe fe-edit-3 fe-14"></i>
+                        <span class="ml-1 item-text">Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Ozet">
+                        <i class="fe fe-pie-chart fe-14"></i>
+                        <span class="ml-1 item-text">Finansal Özet</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- Cari İşlemler Menüsü -->
         <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#muhasebe-cari-menu">
@@ -343,11 +385,25 @@
     }
     @if (Model.Contains("Finans"))
     {
-        <li class="nav-item">
-            <a class="nav-link" asp-area="Finans" asp-controller="Raporlar" asp-action="Index">
-                <i class="fe fe-pie-chart fe-16"></i>
-                <span class="ml-3 item-text">Finans Raporları</span>
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#finans-kota-menu">
+                <i class="fe fe-trending-up fe-16"></i>
+                <span class="ml-3 item-text">Kota Takip</span>
             </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="finans-kota-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Index">
+                        <i class="fe fe-edit-3 fe-14"></i>
+                        <span class="ml-1 item-text">Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="KotaTakip" asp-action="Ozet">
+                        <i class="fe fe-pie-chart fe-14"></i>
+                        <span class="ml-1 item-text">Finansal Özet</span>
+                    </a>
+                </li>
+            </ul>
         </li>
     }
 

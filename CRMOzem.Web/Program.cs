@@ -56,6 +56,7 @@ builder.Services.AddScoped<IHospitalIstatistikService, HospitalIstatistikService
 builder.Services.AddScoped<IShipmentTemplateService, ShipmentTemplateService>();
 builder.Services.AddScoped<IUsageTemplateService, UsageTemplateService>();
 builder.Services.AddScoped<IKacAyYeterService, KacAyYeterService>();
+builder.Services.AddScoped<IKotaTakipService, KotaTakipService>();
 
 builder.Services.AddMemoryCache();
 
@@ -164,6 +165,11 @@ app.Use(async (context, next) =>
         if (roles.Contains("Muhasebe"))
         {
             context.Response.Redirect("/Muhasebe/Cari/Index");
+            return;
+        }
+        if (roles.Contains("Finans"))
+        {
+            context.Response.Redirect("/Finans/KotaTakip/Index");
             return;
         }
         if (roles.Contains("IT"))

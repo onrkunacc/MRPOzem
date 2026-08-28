@@ -1,0 +1,145 @@
+@model KotaOzetViewModel
+@{
+    ViewData["Title"] = "Kota Takip - Özet";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var aylar = new[] { "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+
+    string KategoriAdi(KotaGiderKategorisi deger)
+    {
+        var alan = deger.GetType().GetField(deger.ToString());
+        return alan?.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
+            .Cast<System.ComponentModel.DataAnnotations.DisplayAttribute>()
+            .FirstOrDefault()?.Name ?? deger.ToString();
+    }
+}
+
+<link rel="stylesheet" href="~/css/kota-takip.css" asp-append-version="true" />
+
+<div class="kt-page-header">
+    <div>
+        <span class="kt-eyebrow">Finans</span>
+        <h1>Kota Finansal Özeti</h1>
+        <p>Gelir, tüm giderler ve 3rd party maliyetlerinin kota bazında karşılaştırması.</p>
+    </div>
+    <a asp-area="Finans" asp-controller="KotaTakip" asp-action="Index"
+       asp-route-yil="@Model.SecilenYil" asp-route-ay="@Model.SecilenAy"
+       class="btn btn-outline-primary">Veri Girişine Dön</a>
+</div>
+
+<div class="kt-toolbar">
+    <form method="get" class="kt-filter-form">
+        <div>
+            <label for="yil">Yıl</label>
+            <input id="yil" name="yil" type="number" min="2020" max="2100" value="@Model.SecilenYil" class="form-control" />
+        </div>
+        <div>
+            <label for="ay">Ay</label>
+            <select id="ay" name="ay" class="form-control">
+                <option value="">Yıl toplamı</option>
+                @for (var i = 1; i <= 12; i++)
+                {
+                    <option value="@i" selected="@(Model.SecilenAy == i)">@aylar[i - 1]</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Özeti Güncelle</button>
+    </form>
+</div>
+
+<div class="kt-kpi-grid">
+    <article class="kt-kpi expense">
+        <span>Toplam Gider</span>
+        <strong>@Model.ToplamGiderTry.ToString("N2") ₺</strong>
+        <small>Abbott + 3rd party + diğer tüm giderler</small>
+    </article>
+    <article class="kt-kpi third-party">
+        <span>3rd Party Gideri</span>
+        <strong>@Model.ToplamUcuncuPartiTry.ToString("N2") ₺</strong>
+        <small>Toplam giderin içinde yer alır</small>
+    </article>
+    <article class="kt-kpi income">
+        <span>Toplam Gelir</span>
+        <strong>@Model.ToplamGelirTry.ToString("N2") ₺</strong>
+        <small>Bizim kestiğimiz faturalar</small>
+    </article>
+    <article class="kt-kpi difference @(Model.ToplamFinansalFarkTry < 0 ? "negative" : null)">
+        <span>Brüt Finansal Fark</span>
+        <strong>@Model.ToplamFinansalFarkTry.ToString("N2") ₺</strong>
+        <small>Gelir - toplam gider</small>
+    </article>
+</div>
+
+<section class="kt-card">
+    <div class="kt-card-title">
+        <div>
+            <h2>Kota karşılaştırması</h2>
+            <p>@Model.SecilenYil · @(Model.SecilenAy.HasValue ? aylar[Model.SecilenAy.Value - 1] : "Yıl toplamı")</p>
+        </div>
+    </div>
+
+    @if (!Model.Satirlar.Any())
+    {
+        <div class="kt-empty">Aktif kota bulunamadı.</div>
+    }
+    else
+    {
+        <div class="kt-table-wrap">
+            <table class="kt-table kt-summary-table">
+                <thead>
+                    <tr>
+                        <th>Kota</th>
+                        <th class="text-right">Proforma USD</th>
+                        <th class="text-right">Abbott USD</th>
+                        <th class="text-right">3rd Party TL</th>
+                        <th class="text-right">Toplam Gider TL</th>
+                        <th class="text-right">Gelir TL</th>
+                        <th class="text-right">Brüt Fark TL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var satir in Model.Satirlar)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@satir.KotaKodu</strong>
+                                <small>@satir.KotaAdi</small>
+                                @if (satir.ProformaUsd > 0)
+                                {
+                                    <span class="kt-usage @(satir.ProformaKullanimOrani > 100 ? "over" : null)">
+                                        Abbott kullanımı %@satir.ProformaKullanimOrani.ToString("N1")
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-right font-monospace">@satir.ProformaUsd.ToString("N2") $</td>
+                            <td class="text-right font-monospace">@satir.AbbottUsd.ToString("N2") $</td>
+                            <td class="text-right font-monospace kt-third-party-value">@satir.UcuncuPartiTry.ToString("N2") ₺</td>
+                            <td class="text-right font-monospace">@satir.ToplamGiderTry.ToString("N2") ₺</td>
+                            <td class="text-right font-monospace">@satir.ToplamGelirTry.ToString("N2") ₺</td>
+                            <td class="text-right font-monospace @(satir.FinansalFarkTry < 0 ? "kt-negative" : "kt-positive")">
+                                <strong>@satir.FinansalFarkTry.ToString("N2") ₺</strong>
+                            </td>
+                        </tr>
+                        <tr class="kt-breakdown-row">
+                            <td colspan="7">
+                                <div class="kt-breakdown">
+                                    <span class="kt-breakdown-label">Gider dağılımı</span>
+                                    @if (satir.KategoriToplamlari.Any())
+                                    {
+                                        @foreach (var kategori in satir.KategoriToplamlari.OrderBy(x => x.Key))
+                                        {
+                                            <span class="kt-breakdown-chip">@KategoriAdi(kategori.Key) <strong>@kategori.Value.ToString("N2") ₺</strong></span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Bu dönemde gider kaydı yok.</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

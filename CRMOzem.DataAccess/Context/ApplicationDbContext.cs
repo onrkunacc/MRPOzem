@@ -47,6 +47,9 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<EkGider> EkGiderler { get; set; }
         public DbSet<IhaleKalem> IhaleKalemler { get; set; }
         public DbSet<HospitalBirim> HospitalBirimler { get; set; }
+        public DbSet<Kota> Kotalar { get; set; }
+        public DbSet<KotaCari> KotaCariler { get; set; }
+        public DbSet<KotaFinansKaydi> KotaFinansKayitlari { get; set; }
 
         public DbSet<HospitalAylikIstatistik> HospitalAylikIstatistikler => Set<HospitalAylikIstatistik>();
 
@@ -333,6 +336,62 @@ namespace CRMOzem.DataAccess.Context
             });
 
             builder.Entity<HospitalBirim>().ToTable("HospitalBirimler", "ozem");
+
+            builder.Entity<Kota>(e =>
+            {
+                e.ToTable("Kotalar", "ozem");
+                e.HasKey(x => x.Id);
+                e.Property(x => x.KotaKodu).HasMaxLength(50).IsRequired();
+                e.Property(x => x.KotaAdi).HasMaxLength(250).IsRequired();
+                e.Property(x => x.ProformaUsd).HasColumnType("decimal(18,2)");
+                e.HasIndex(x => x.KotaKodu).IsUnique();
+            });
+
+            builder.Entity<KotaCari>(e =>
+            {
+                e.ToTable("KotaCariler", "ozem");
+                e.HasKey(x => x.Id);
+                e.HasOne(x => x.Kota)
+                    .WithMany(x => x.KotaCariler)
+                    .HasForeignKey(x => x.KotaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Cari)
+                    .WithMany()
+                    .HasForeignKey(x => x.CariId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(x => new { x.KotaId, x.CariId, x.Aktif });
+                e.HasIndex(x => new { x.CariId, x.Aktif });
+            });
+
+            builder.Entity<KotaFinansKaydi>(e =>
+            {
+                e.ToTable("KotaFinansKayitlari", "ozem");
+                e.HasKey(x => x.Id);
+                e.Property(x => x.FaturaNo).HasMaxLength(100).IsRequired();
+                e.Property(x => x.Aciklama).HasMaxLength(1000);
+                e.Property(x => x.BelgeLinki).HasMaxLength(500);
+                e.Property(x => x.OlusturanKullaniciId).HasMaxLength(450);
+                e.Property(x => x.Tutar).HasColumnType("decimal(18,2)");
+                e.Property(x => x.DovizKuru).HasColumnType("decimal(18,6)");
+                e.Property(x => x.TutarTry).HasColumnType("decimal(18,2)");
+                e.Property(x => x.KayitTipi).HasConversion<string>().HasMaxLength(20);
+                e.Property(x => x.TedarikciGrubu).HasConversion<string>().HasMaxLength(30);
+                e.Property(x => x.GiderKategorisi).HasConversion<string>().HasMaxLength(30);
+                e.Property(x => x.ParaBirimi).HasConversion<string>().HasMaxLength(10);
+                e.Property(x => x.KayitKaynagi).HasConversion<string>().HasMaxLength(30);
+                e.HasOne(x => x.Kota)
+                    .WithMany(x => x.FinansKayitlari)
+                    .HasForeignKey(x => x.KotaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.KaynakFatura)
+                    .WithMany()
+                    .HasForeignKey(x => x.KaynakFaturaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(x => new { x.KotaId, x.DonemYil, x.DonemAy });
+                e.HasIndex(x => x.KaynakFaturaId)
+                    .IsUnique()
+                    .HasFilter("[KaynakFaturaId] IS NOT NULL");
+            });
 
             builder.Entity<Test>(e =>
             {
