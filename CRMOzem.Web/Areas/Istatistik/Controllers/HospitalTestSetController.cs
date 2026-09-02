@@ -1,6 +1,7 @@
 ﻿using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
     [Area("Istatistik")]
+    [Authorize(Roles = "Yönetici,İstatistik,Aplikasyon")]
     public class HospitalTestSetController : Controller
     {
         private readonly ApplicationDbContext _db;

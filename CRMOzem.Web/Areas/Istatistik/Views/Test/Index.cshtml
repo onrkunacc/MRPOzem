@@ -1,315 +1,448 @@
 ﻿@model IEnumerable<CRMOzem.Core.ViewModels.TestViewModel>
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @using CRMOzem.Core.Models
 
 @{
     ViewData["Title"] = "Test Listesi";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var flat = Model.Select(m => new
-    {
-        testID = m.TestID,
-        testName = m.TestName ?? "",
-        sutCode = m.SutCode ?? "",
-        girisTipi = m.GirisTipi.ToString(),    
-        kutuBasinaAdet = m.KutuBasinaAdet
-    });
-
-    var json = JsonSerializer.Serialize(flat, new JsonSerializerOptions
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    });
+    var kategoriler = ViewBag.Kategoriler as List<string> ?? new List<string>();
+    var platformlar = ViewBag.Platformlar as List<string> ?? new List<string>();
+    var selectedSearch = ViewBag.SelectedSearch as string ?? "";
+    var selectedKategori = ViewBag.SelectedKategori as string ?? "";
+    var selectedPlatform = ViewBag.SelectedPlatform as string ?? "";
+    var selectedGirisTipi = ViewBag.SelectedGirisTipi as string ?? "";
+    var toplamKayit = Model.Count();
 }
 
 <style>
-    .sticky-head thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background: #fff;
+    .tst-page {
+        padding: 1rem 0;
     }
 
-    .table-sm td, .table-sm th {
-        padding-top: .5rem;
-        padding-bottom: .5rem
+    .tst-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: #fff;
+        padding: 1.5rem;
+        border-radius: 16px;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 8px 28px rgba(59,130,246,.25);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    .pagination .page-link {
-        min-width: 2.25rem;
-        text-align: center
+        .tst-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .tst-header p {
+            margin: .3rem 0 0;
+            opacity: .92;
+            font-size: .87rem;
+        }
+
+    .tst-total-badge {
+        background: rgba(255,255,255,.25);
+        backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(255,255,255,.4);
+        color: #fff;
+        padding: .3rem .75rem;
+        border-radius: 999px;
+        font-size: .85rem;
+        font-weight: 700;
     }
 
-    .badge-muted {
-        background-color: #eef1f4;
-        color: #495057
-    }
-
-    .code-badge {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    .tst-btn-new {
+        background: rgba(255,255,255,.2);
+        backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(255,255,255,.4);
+        color: #fff;
+        padding: .55rem 1.2rem;
+        border-radius: 10px;
         font-weight: 600;
-        letter-spacing: .2px;
+        font-size: .9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        text-decoration: none;
+        transition: all .2s;
     }
 
-    .badge-tip-adet {
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-        color: #fff;
+        .tst-btn-new:hover {
+            background: rgba(255,255,255,.3);
+            color: #fff;
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
+
+    .tst-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .tst-filter-label {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-bottom: .25rem;
+        display: block;
+    }
+
+    .tst-btn-apply {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         border: none;
-    }
-
-    .badge-tip-kutu {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: #fff;
-        border: none;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
     }
 
-    .kba-pill {
+        .tst-btn-apply:hover {
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+    .tst-btn-clear {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        text-decoration: none;
+    }
+
+        .tst-btn-clear:hover {
+            background: #e2e8f0;
+            color: #334155;
+            text-decoration: none;
+        }
+
+    .tst-table-wrap {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .tst-table {
+        width: 100%;
+        margin: 0;
+        font-size: .9rem;
+    }
+
+        .tst-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            color: #475569;
+            padding: .8rem 1rem;
+            z-index: 1;
+        }
+
+        .tst-table tbody td {
+            padding: .7rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .tst-table tbody tr:hover {
+            background: rgba(59,130,246,.04);
+        }
+
+    .tst-badge {
         display: inline-flex;
         align-items: center;
         gap: .25rem;
-        padding: .15rem .5rem;
-        font-size: .78rem;
+        padding: .2rem .55rem;
+        font-size: .72rem;
         border-radius: 999px;
-        background: rgba(16,185,129,.08);
-        color: #047857;
-        border: 1px solid rgba(16,185,129,.2);
         font-weight: 600;
+    }
+
+    .tst-badge-sut {
+        background: #eef1f4;
+        color: #475569;
+        font-family: ui-monospace, monospace;
+        letter-spacing: .03em;
+    }
+
+    .tst-badge-kategori {
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .tst-badge-tip-adet {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        color: #fff;
+    }
+
+    .tst-badge-tip-kutu {
+        background: linear-gradient(135deg,#10b981,#059669);
+        color: #fff;
+    }
+
+    .tst-kba-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .25rem .65rem;
+        background: linear-gradient(135deg, rgba(16,185,129,.1), rgba(5,150,105,.1));
+        border: 1px solid rgba(16,185,129,.3);
+        color: #047857;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: .82rem;
+    }
+
+    .tst-btn-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: none;
+        transition: transform .15s;
+    }
+
+        .tst-btn-icon:hover {
+            transform: translateY(-1px);
+        }
+
+    .tst-btn-edit {
+        background: linear-gradient(135deg,#f59e0b,#d97706);
+        color: #fff;
+    }
+
+    .tst-btn-delete {
+        background: linear-gradient(135deg,#ef4444,#dc2626);
+        color: #fff;
+    }
+
+    .tst-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+
+    .tst-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: .5;
     }
 </style>
 
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <h5 class="mb-0"><i class="fa fa-flask me-2"></i> Test Listesi</h5>
-            <span class="badge badge-muted" id="totalBadge">Toplam: 0</span>
+<div class="tst-page">
+
+    <div class="tst-header">
+        <div>
+            <h1>🧪 Test Listesi</h1>
+            <p>Sistem genelinde tanımlı testler — hastane test setlerinde kullanılır.</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary btn-sm">
-            <i class="fa fa-plus"></i> Yeni Test
-        </a>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <span class="tst-total-badge"><i class="fa fa-list me-1"></i> Toplam: @toplamKayit</span>
+            <a asp-action="Create" class="tst-btn-new">
+                <i class="fa fa-plus"></i> Yeni Test
+            </a>
+        </div>
     </div>
 
-    <div class="card-body">
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
-                @TempData["SuccessMessage"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
-                @TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        <div class="row g-2 align-items-end mb-3">
-            <div class="col-12 col-md-6 col-lg-4">
-                <label class="form-label mb-1">Ara</label>
-                <input type="text" id="q" class="form-control form-control-sm" placeholder="Test adı veya SUT kodu ile ara">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label mb-1">Giriş Tipi</label>
-                <select id="tipFilter" class="form-select form-select-sm">
-                    <option value="">Tümü</option>
-                    <option value="Adet">Adet</option>
-                    <option value="Kutu">Kutu</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label mb-1">Sayfa Boyutu</label>
-                <select id="pageSize" class="form-select form-select-sm">
-                    <option>5</option>
-                    <option selected>10</option>
-                    <option>20</option>
-                    <option>50</option>
-                </select>
-            </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa fa-check-circle me-1"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa fa-exclamation-circle me-1"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
+    <!-- Filtreler -->
+    <div class="tst-card">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="tst-filter-label">Ara</label>
+                <input type="text" name="search" class="form-control" value="@selectedSearch" placeholder="Test adı veya Stok Kodu ile ara..." />
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="tst-filter-label">Kategori</label>
+                <select name="kategori" class="form-select">
+                    <option value="">Tüm Kategoriler</option>
+                    @foreach (var k in kategoriler)
+                    {
+                        <option value="@k" selected="@(selectedKategori == k)">@k</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="tst-filter-label">Platform</label>
+                <select name="platform" class="form-select">
+                    <option value="">Tüm Platformlar</option>
+                    @foreach (var p in platformlar)
+                    {
+                        <option value="@p" selected="@(selectedPlatform == p)">@p</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="tst-filter-label">Giriş Tipi</label>
+                <select name="girisTipi" class="form-select">
+                    <option value="">Tümü</option>
+                    <option value="Adet" selected="@(selectedGirisTipi == "Adet")">Adet</option>
+                    <option value="Kutu" selected="@(selectedGirisTipi == "Kutu")">Kutu</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="tst-btn-apply flex-fill">
+                    <i class="fa fa-filter"></i> Uygula
+                </button>
+                <a asp-action="Index" class="tst-btn-clear">
+                    <i class="fa fa-broom"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tablo -->
+    <div class="tst-table-wrap">
         <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle sticky-head" id="dataTable">
-                <thead class="table-light">
+            <table class="tst-table">
+                <thead>
                     <tr>
                         <th>Test Adı</th>
-                        <th style="width:140px;">SUT Kodu</th>
-                        <th style="width:110px;">Giriş Tipi</th>
-                        <th style="width:130px;">Kutu Adet</th>
-                        <th class="text-end" style="width:140px;">İşlemler</th>
+                        <th style="width:130px;">Stok Kodu</th>
+                        <th style="width:140px;">Kategori</th>
+                        <th style="width:120px;">Platform</th>
+                        <th style="width:90px;">Tip</th>
+                        <th style="width:110px;">Kutu Adet</th>
+                        <th style="width:110px;" class="text-end">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td colspan="5" class="text-center text-muted py-4">Yükleniyor…</td></tr>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="tst-empty">
+                                <div class="tst-empty-icon">🧪</div>
+                                <h5 class="text-muted">Kayıt bulunamadı</h5>
+                                <small>Filtreleri temizleyip tekrar deneyin veya yeni test ekleyin.</small>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var t in Model)
+                        {
+                            var tipClass = t.GirisTipi == TestGirisTipi.Kutu ? "tst-badge-tip-kutu" : "tst-badge-tip-adet";
+
+                            <tr>
+                                <td class="fw-semibold">@t.TestName</td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(t.SutCode))
+                                    {
+                                        <span class="tst-badge tst-badge-sut">@t.SutCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(t.Kategori))
+                                    {
+                                        <span class="tst-badge tst-badge-kategori">@t.Kategori</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(t.Platform))
+                                    {
+                                        <small class="text-muted fw-semibold">@t.Platform</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <span class="tst-badge @tipClass">@t.GirisTipi</span>
+                                </td>
+
+                                <td>
+                                    @if (t.GirisTipi == TestGirisTipi.Kutu && t.KutuBasinaAdet.HasValue)
+                                    {
+                                        <span class="tst-kba-pill">
+                                            <i class="fa fa-box"></i> @t.KutuBasinaAdet
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@t.TestID" class="tst-btn-icon tst-btn-edit me-1" title="Düzenle">
+                                        <i class="fa fa-edit"></i>
+                                    </a>
+                                    <form method="post" asp-action="Delete" asp-route-id="@t.TestID" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="tst-btn-icon tst-btn-delete" title="Sil"
+                                                onclick="return confirm('Bu testi silmek istediğinize emin misiniz?')">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
-
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-2">
-            <div id="pageInfo" class="text-muted small">Sayfa 1 / 1</div>
-            <nav aria-label="Sayfalama">
-                <ul class="pagination mb-0" id="pager"></ul>
-            </nav>
-        </div>
     </div>
 </div>
-
-<div id="af" class="d-none">
-    <form method="post">
-        @Html.AntiForgeryToken()
-    </form>
-</div>
-
-<script>
-    (function () {
-        const trTR = 'tr-TR';
-        const raw = @Html.Raw(json);
-
-        const state = {
-            q: '',
-            tip: '',
-            page: 1,
-            pageSize: parseInt(document.getElementById('pageSize').value, 10) || 10
-        };
-
-        const els = {
-            q: document.getElementById('q'),
-            tipFilter: document.getElementById('tipFilter'),
-            pageSize: document.getElementById('pageSize'),
-            tbody: document.querySelector('#dataTable tbody'),
-            pager: document.getElementById('pager'),
-            pageInfo: document.getElementById('pageInfo'),
-            totalBadge: document.getElementById('totalBadge')
-        };
-
-        let t = null;
-        els.q.addEventListener('input', () => {
-            clearTimeout(t);
-            t = setTimeout(() => {
-                state.q = (els.q.value || '').trim();
-                state.page = 1;
-                render();
-            }, 200);
-        });
-
-        els.tipFilter.addEventListener('change', () => {
-            state.tip = els.tipFilter.value;
-            state.page = 1;
-            render();
-        });
-
-        els.pageSize.addEventListener('change', () => {
-            state.pageSize = parseInt(els.pageSize.value, 10) || 10;
-            state.page = 1;
-            render();
-        });
-
-        function filterData(data) {
-            const q = state.q.toLocaleLowerCase(trTR);
-            return data.filter(x => {
-                const matchQ = !q
-                    || (x.testName || '').toLocaleLowerCase(trTR).includes(q)
-                    || (x.sutCode || '').toLocaleLowerCase(trTR).includes(q);
-                const matchTip = !state.tip || x.girisTipi === state.tip;
-                return matchQ && matchTip;
-            });
-        }
-
-        function paginate(data) {
-            const total = data.length;
-            const size = state.pageSize;
-            const totalPages = Math.max(1, Math.ceil(total / size));
-            if (state.page > totalPages) state.page = totalPages;
-            const start = (state.page - 1) * size;
-            const items = data.slice(start, start + size);
-            return { items, total, totalPages, start, end: Math.min(start + size, total) };
-        }
-
-        function render() {
-            const filtered = filterData(raw);
-            const { items, total, totalPages, start, end } = paginate(filtered);
-
-            els.totalBadge.textContent = `Toplam: ${total}`;
-            els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages} (${total ? (start + 1) : 0} - ${end} / ${total})`;
-
-            const fr = document.createDocumentFragment();
-
-            if (items.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="5" class="text-center text-muted py-4">Kayıt bulunamadı.</td>`;
-                fr.appendChild(tr);
-            } else {
-                const token = (document.querySelector('#af input[name="__RequestVerificationToken"]') || {}).value || '';
-                items.forEach(x => {
-                    const tr = document.createElement('tr');
-
-                    const sut = (x.sutCode || '').trim();
-                    const sutHtml = sut
-                        ? `<span class="badge badge-muted code-badge">${escapeHtml(sut)}</span>`
-                        : `<span class="text-muted">-</span>`;
-
-                    const tipClass = x.girisTipi === 'Kutu' ? 'badge-tip-kutu' : 'badge-tip-adet';
-                    const tipHtml = `<span class="badge ${tipClass}">${escapeHtml(x.girisTipi)}</span>`;
-
-                    const kbaHtml = (x.girisTipi === 'Kutu' && x.kutuBasinaAdet)
-                        ? `<span class="kba-pill"><i class="fe fe-package"></i> ${x.kutuBasinaAdet} adet</span>`
-                        : `<span class="text-muted">-</span>`;
-
-                    tr.innerHTML = `
-                        <td class="fw-semibold">${escapeHtml(x.testName)}</td>
-                        <td>${sutHtml}</td>
-                        <td>${tipHtml}</td>
-                        <td>${kbaHtml}</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", "Test", new { area = "Istatistik" })/${x.testID}">
-                                <i class="fa fa-edit"></i>
-                            </a>
-                            <form class="d-inline" method="post" action="@Url.Action("Delete", "Test", new { area = "Istatistik" })/${x.testID}">
-                                <input name="__RequestVerificationToken" type="hidden" value="${token}">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Silmek istediğinize emin misiniz?')">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </form>
-                        </td>`;
-                    fr.appendChild(tr);
-                });
-            }
-
-            els.tbody.innerHTML = '';
-            els.tbody.appendChild(fr);
-            renderPager(totalPages);
-        }
-
-        function renderPager(totalPages) {
-            const ul = els.pager; ul.innerHTML = '';
-            const p = state.page;
-
-            const makeItem = (label, page, disabled = false, active = false) => {
-                const li = document.createElement('li');
-                li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
-                const a = document.createElement('a'); a.className = 'page-link'; a.href = '#'; a.textContent = label;
-                if (!disabled && !active) {
-                    a.addEventListener('click', e => { e.preventDefault(); state.page = page; render(); });
-                }
-                li.appendChild(a); return li;
-            };
-
-            ul.appendChild(makeItem('«', 1, p <= 1));
-            ul.appendChild(makeItem('Önceki', Math.max(1, p - 1), p <= 1));
-
-            const start = Math.max(1, p - 2), end = Math.min(totalPages, p + 2);
-            for (let i = start; i <= end; i++) ul.appendChild(makeItem(String(i), i, false, i === p));
-
-            ul.appendChild(makeItem('Sonraki', Math.min(totalPages, p + 1), p >= totalPages));
-            ul.appendChild(makeItem('»', totalPages, p >= totalPages));
-        }
-
-        function escapeHtml(s) {
-            return String(s ?? '').replace(/[&<>"']/g,
-                m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-        }
-
-        render();
-    })();
-</script>

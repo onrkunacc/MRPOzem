@@ -9,12 +9,26 @@ using CRMOzem.Core.Models;
 using CRMOzem.DataAccess.Context;
 using CRMOzem.DataAccess.Seeders;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ─────────────────────────────────────────────────────────────
+// Data Protection — Cookie/Token şifreleme anahtarlarını sabitle
+// Bu olmadan her app restart'ta oturumlar düşer.
+// ─────────────────────────────────────────────────────────────
+var keysPath = Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys");
+Directory.CreateDirectory(keysPath);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+    .SetApplicationName("CRMOzem")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+
 
 //  Veritabanı Bağlantıları
 var connectionString = builder.Configuration.GetConnectionString("MainDb");
@@ -29,6 +43,22 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
+
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = "CRMOzem.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+});
 
 //  Servisleri Ekliyoruz
 builder.Services.AddScoped<IUserService, UserService>();
@@ -76,6 +106,19 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireLowercase = false;
 });
 
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.ValueCountLimit = 10000;          // Default: 1024 — form değer sayısı
+    options.KeyLengthLimit = 4096;            // Default: 2048 — anahtar uzunluğu
+    options.ValueLengthLimit = int.MaxValue;  // Default: 4194304 (4MB)
+    options.MultipartBodyLengthLimit = long.MaxValue;
+    options.MultipartHeadersLengthLimit = int.MaxValue;
+});
+// MVC model binding koleksiyon limiti (Default: 1024)
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+{
+    options.MaxModelBindingCollectionSize = 10000;
+});
 //  MVC ve Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();

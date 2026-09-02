@@ -79,6 +79,14 @@ namespace CRMOzem.Web.Controllers
                 return Redirect("/Evrak/Document/Index");
             if (roles.Contains("IT"))
                 return Redirect("/IT/Inventory/Index");
+            if (await _userManager.IsInRoleAsync(user, "Aplikasyon"))
+                return Redirect("/Istatistik/Report/Index");
+
+            if (await _userManager.IsInRoleAsync(user, "Lojistik"))
+                return Redirect("/Istatistik/Shipment/Index");
+
+            if (await _userManager.IsInRoleAsync(user, "İstatistikGiris"))
+                return Redirect("/Istatistik/Usage/Create");
 
             return RedirectToAction("Index", "Home");
 

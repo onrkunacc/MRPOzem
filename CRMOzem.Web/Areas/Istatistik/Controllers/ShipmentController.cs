@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
     [Area("Istatistik")]
-    [Authorize(Roles = "Yönetici,İstatistik")]
+    [Authorize(Roles = "Yönetici,İstatistik,Lojistik,Aplikasyon")]
     public class ShipmentController : Controller
     {
         private readonly IStatisticsService _statisticsService;

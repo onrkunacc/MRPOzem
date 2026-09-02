@@ -410,7 +410,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="ShipmentUpload" asp-action="Index">
-                        <i class="fe fe-upload fe-14"></i>
+                        <i class="fe fe-send fe-14"></i>
                         <span class="ml-1 item-text">Toplu Test Gönder</span>
                     </a>
                 </li>
@@ -438,11 +438,10 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="Upload" asp-action="Index">
-                        <i class="fe fe-upload fe-14"></i>
+                        <i class="fe fe-edit-2 fe-14"></i>
                         <span class="ml-1 item-text">Toplu İstatistik Giriş</span>
                     </a>
                 </li>
-
              
 
     
@@ -495,15 +494,15 @@
                         <span class="ml-1 item-text">Hastane Test Seti</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
-                        <i class="fe fe-grid fe-14"></i>
-                        <span class="ml-1 item-text">Hastane Birimleri</span>
-                    </a>
-                </li>
+            
             </ul>
         </li>
-
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                <i class="fe fe-grid fe-14"></i>
+                <span class="ml-1 item-text">Hastane Birimleri</span>
+            </a>
+        </li>
         <!-- Raporlama -->
         <li class="nav-item">
             <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="Index">
@@ -552,5 +551,127 @@
             </a>
         </li>
     }
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* APLIKASYON ROLÜ *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    @if (Model.Contains("Aplikasyon"))
+    {
+        <li class="sidebar-group-title">
+            <span class="group-icon">📋</span>
+            <span>Aplikasyon</span>
+        </li>
 
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="Index">
+                <i class="fe fe-pie-chart fe-16"></i>
+                <span class="ml-3 item-text">Raporlama</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="HospitalTestSet" asp-action="Index">
+                <i class="fe fe-sliders fe-16"></i>
+                <span class="ml-3 item-text">Hastane Test Seti</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Usage" asp-action="Index">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İstatistik Listesi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Shipment" asp-action="Index">
+                <i class="fe fe-truck fe-16"></i>
+                <span class="ml-3 item-text">Gönderim Listesi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                <i class="fe fe-grid fe-16"></i>
+                <span class="ml-3 item-text">Hastane Birimleri</span>
+            </a>
+        </li>
+    }
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* LOJİSTİK ROLÜ *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    @if (Model.Contains("Lojistik"))
+    {
+        <li class="sidebar-group-title">
+            <span class="group-icon">🚚</span>
+            <span>Lojistik</span>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Shipment" asp-action="Create">
+                <i class="fe fe-send fe-16"></i>
+                <span class="ml-3 item-text">Gönderim Yap</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Shipment" asp-action="Index">
+                <i class="fe fe-truck fe-16"></i>
+                <span class="ml-3 item-text">Giden Listesi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                <i class="fe fe-grid fe-16"></i>
+                <span class="ml-3 item-text">Hastane Birimleri</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="Index">
+                <i class="fe fe-pie-chart fe-16"></i>
+                <span class="ml-3 item-text">Raporlama</span>
+            </a>
+        </li>
+    }
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* İSTATİSTİK GİRİŞ ROLÜ *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    @if (Model.Contains("İstatistikGiris"))
+    {
+        <li class="sidebar-group-title">
+            <span class="group-icon">📊</span>
+            <span>İstatistik Giriş</span>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Usage" asp-action="Create">
+                <i class="fe fe-edit-2 fe-16"></i>
+                <span class="ml-3 item-text">İstatistik Girişi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Usage" asp-action="Index">
+                <i class="fe fe-clipboard fe-16"></i>
+                <span class="ml-3 item-text">İstatistik Listesi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="HospitalBirim" asp-action="Index">
+                <i class="fe fe-grid fe-16"></i>
+                <span class="ml-3 item-text">Hastane Birimleri</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Report" asp-action="Index">
+                <i class="fe fe-pie-chart fe-16"></i>
+                <span class="ml-3 item-text">Raporlama</span>
+            </a>
+        </li>
+    }
 </ul>

@@ -1,10 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CRMOzem.Core.ViewModels
 {
@@ -26,10 +21,14 @@ namespace CRMOzem.Core.ViewModels
     public class ShipmentPreviewItem
     {
         public int? TestID { get; set; }
-        public string TestName { get; set; }
+        public string? SutCode { get; set; }
+        public string TestName { get; set; } = "";
         public int SentCount { get; set; }
 
+        /// <summary>Eşleşme kaynağı: "sut", "name", "none"</summary>
+        public string MatchSource { get; set; } = "none";
+
         public bool HasError { get; set; }
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = "";
     }
 }

@@ -53,6 +53,8 @@
         box-shadow: 0 4px 20px rgba(0,0,0,.04);
         padding: 1.25rem;
         margin-bottom: 1.25rem;
+        /* ÖNEMLİ: overflow yok, dropdown taşabilsin */
+        overflow: visible;
     }
 
     .hts-kpi-row {
@@ -136,19 +138,53 @@
         line-height: 1.1;
     }
 
-    .hts-actions {
+    /* Aksiyon kartı */
+    .hts-action-card {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        overflow: visible;
+        position: relative;
+        z-index: 100;
+    }
+
+    .hts-action-title {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: .5rem;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .hts-action-btns {
         display: flex;
         flex-wrap: wrap;
         gap: .5rem;
         align-items: center;
-        justify-content: space-between;
+    }
+
+    .hts-info-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        margin-top: .75rem;
+        padding-top: .75rem;
+        border-top: 1px dashed #e2e8f0;
     }
 
     .hts-btn-grad {
         background: linear-gradient(135deg,#6366f1,#4f46e5);
         color: #fff;
         border: none;
-        padding: .5rem 1rem;
+        padding: .55rem 1.1rem;
         border-radius: 10px;
         font-weight: 600;
         font-size: .87rem;
@@ -156,6 +192,7 @@
         align-items: center;
         gap: .4rem;
         transition: transform .15s;
+        white-space: nowrap;
     }
 
         .hts-btn-grad:hover {
@@ -172,10 +209,11 @@
         background: transparent;
         border: 1.5px solid #ef4444;
         color: #ef4444;
-        padding: .5rem 1rem;
+        padding: .55rem 1.1rem;
         border-radius: 10px;
         font-weight: 600;
         font-size: .87rem;
+        white-space: nowrap;
     }
 
         .hts-btn-outline:hover {
@@ -183,18 +221,113 @@
             color: #fff;
         }
 
-    .hts-toolbar {
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        background: rgba(255,255,255,.92);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,.6);
-        border-radius: 14px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+    .hts-btn-visible-on {
+        background: linear-gradient(135deg,#06b6d4,#0891b2);
+        color: #fff;
+        border: none;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
     }
 
+    .hts-btn-visible-off {
+        background: transparent;
+        border: 1.5px solid #f59e0b;
+        color: #b45309;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .85rem;
+    }
+
+        .hts-btn-visible-off:hover {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+    .hts-quick-cat-btn {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: #fff;
+        border: none;
+        padding: .55rem 1.1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        white-space: nowrap;
+    }
+
+        .hts-quick-cat-btn:hover {
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+    /* Filtre kartı */
+    .hts-filter-card {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        overflow: visible;
+    }
+
+    .hts-filter-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr auto;
+        gap: .75rem;
+        align-items: end;
+    }
+
+    @@media (max-width: 992px) {
+        .hts-filter-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .hts-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+        .hts-filter-group label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            margin: 0;
+        }
+
+    .hts-bulk-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+        margin-top: .75rem;
+        padding-top: .75rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+
+    .hts-bulk-label {
+        font-size: .78rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-right: .25rem;
+    }
+
+    /* Tablo */
     .hts-table-wrap {
         background: rgba(255,255,255,.8);
         backdrop-filter: blur(8px);
@@ -238,6 +371,36 @@
         box-shadow: inset 4px 0 0 #f59e0b;
     }
 
+    .hts-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: color .15s, background .15s;
+        position: relative;
+    }
+
+        .hts-sortable:hover {
+            color: #4f46e5 !important;
+            background: rgba(99,102,241,.06) !important;
+        }
+
+    .hts-sort-indicator {
+        display: inline-block;
+        margin-left: .3rem;
+        opacity: .4;
+        font-size: .75rem;
+        transition: opacity .15s;
+    }
+
+    .hts-sortable.hts-sort-active .hts-sort-indicator {
+        opacity: 1;
+        color: #6366f1;
+    }
+
+    .hts-sortable.hts-sort-active {
+        color: #4f46e5 !important;
+        background: rgba(99,102,241,.05) !important;
+    }
+
     .hts-badge {
         display: inline-flex;
         align-items: center;
@@ -253,6 +416,11 @@
         color: #475569;
         font-family: ui-monospace, monospace;
         letter-spacing: .03em;
+    }
+
+    .hts-badge-kategori {
+        background: #eef2ff;
+        color: #4338ca;
     }
 
     .hts-badge-tip-adet {
@@ -338,6 +506,28 @@
         .hts-search-wrap input {
             padding-left: 35px;
         }
+
+    /* Dropdown taşma sorunu için */
+    .dropdown-menu {
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 1050;
+    }
+
+    .dropdown-item-cat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: .5rem 1rem;
+    }
+
+        .dropdown-item-cat small {
+            color: #64748b;
+            font-size: .75rem;
+            background: #f1f5f9;
+            padding: .1rem .4rem;
+            border-radius: 999px;
+        }
 </style>
 
 <div class="hts-page">
@@ -392,7 +582,7 @@
             <div class="hts-kpi-icon">✅</div>
             <div>
                 <div class="hts-kpi-label">Aktif</div>
-                <div class="hts-kpi-value">@activeCount</div>
+                <div class="hts-kpi-value" id="kpiActive">@activeCount</div>
             </div>
         </div>
         <div class="hts-kpi hts-kpi-info">
@@ -406,77 +596,127 @@
             <div class="hts-kpi-icon">📦</div>
             <div>
                 <div class="hts-kpi-label">Kutu Tipinde Aktif</div>
-                <div class="hts-kpi-value">@kutuTipiAktif</div>
+                <div class="hts-kpi-value" id="kpiKutuActive">@kutuTipiAktif</div>
             </div>
         </div>
     </div>
 
-    <!-- ═══ AKSİYONLAR ═══ -->
-    <div class="hts-card">
-        <div class="hts-actions">
-            <div class="d-flex flex-wrap gap-2">
-                <form method="post" asp-action="ApplyStandardSet" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
-                    <button class="hts-btn-grad" type="submit" title="Sistemdeki tüm testleri bu hastaneye bağlar (eksik olanları)">
-                        <i class="fe fe-plus-circle"></i> Standart Seti Uygula
-                    </button>
-                </form>
+    <!-- ═══ AKSİYONLAR (üstte, ayrı kart) ═══ -->
+    <div class="hts-action-card">
+        <div class="hts-action-title">
+            <i class="fe fe-zap"></i> Toplu Aksiyonlar
+        </div>
 
-                <form method="post" asp-action="SetAll" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
+        <div class="hts-action-btns">
+            <form method="post" asp-action="ApplyStandardSet" class="d-inline m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
+                <button class="hts-btn-grad" type="submit" title="Sistemdeki tüm testleri bu hastaneye bağlar (eksik olanları)">
+                    <i class="fe fe-plus-circle"></i> Standart Seti Uygula
+                </button>
+            </form>
 
-                    <input type="hidden" name="isActive" value="true" />
-                    <button class="hts-btn-grad hts-btn-success" type="submit">
-                        <i class="fe fe-check-circle"></i> Tümünü Aktif
-                    </button>
-                </form>
-
-                <form method="post" asp-action="SetAll" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
-
-                    <input type="hidden" name="isActive" value="false" />
-                    <button class="hts-btn-outline" type="submit">
-                        <i class="fe fe-x-circle"></i> Tümünü Pasif
-                    </button>
-                </form>
+            <!-- Kategoriye Göre Hızlı Aktif -->
+            <div class="dropdown d-inline-block">
+                <button class="hts-quick-cat-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Belirli bir kategorinin tüm testlerini aktif eder">
+                    <i class="fe fe-tag"></i> Kategoriye Göre Aktif Et
+                </button>
+                <ul class="dropdown-menu">
+                    @{
+                        var kategoriGruplari = Model.Rows
+                            .Where(r => !string.IsNullOrEmpty(r.Kategori))
+                            .GroupBy(r => r.Kategori)
+                            .OrderBy(g => g.Key)
+                            .ToList();
+                    }
+                    @if (kategoriGruplari.Any())
+                    {
+                        <li><h6 class="dropdown-header">✅ Aktif Et</h6></li>
+                        @foreach (var g in kategoriGruplari)
+                        {
+                            <li>
+                                <a class="dropdown-item dropdown-item-cat js-quick-cat"
+                                   href="#"
+                                   data-kategori="@g.Key"
+                                   data-action="on">
+                                    <span>➕ @g.Key</span>
+                                    <small>@g.Count() test</small>
+                                </a>
+                            </li>
+                        }
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">❌ Pasif Et</h6></li>
+                        @foreach (var g in kategoriGruplari)
+                        {
+                            <li>
+                                <a class="dropdown-item dropdown-item-cat js-quick-cat"
+                                   href="#"
+                                   data-kategori="@g.Key"
+                                   data-action="off"
+                                   style="color:#b45309;">
+                                    <span>➖ @g.Key</span>
+                                    <small>@g.Count() test</small>
+                                </a>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li><span class="dropdown-item text-muted">Kategori bilgisi yok</span></li>
+                    }
+                </ul>
             </div>
 
-            <div class="d-flex flex-wrap gap-2">
-                <span class="hts-pill-info">
-                    <i class="fe fe-home"></i> <strong>@Model.HospitalName</strong>
-                </span>
-                <span class="hts-pill-info">
-                    <i class="fe fe-list"></i> Görüntülenen: <strong id="shownCount">0</strong> / <span id="totalShown">@totalCount</span>
-                </span>
-                <span class="hts-pill-info d-none" id="dirtyPill" style="background: rgba(245,158,11,.15); border-color: #f59e0b; color: #92400e;">
-                    <i class="fe fe-edit-3"></i> Kaydedilmedi
-                </span>
-            </div>
+            <form method="post" asp-action="SetAll" class="d-inline m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
+                <input type="hidden" name="isActive" value="true" />
+                <button class="hts-btn-grad hts-btn-success" type="submit">
+                    <i class="fe fe-check-circle"></i> Tümünü Aktif
+                </button>
+            </form>
+
+            <form method="post" asp-action="SetAll" class="d-inline m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
+                <input type="hidden" name="isActive" value="false" />
+                <button class="hts-btn-outline" type="submit">
+                    <i class="fe fe-x-circle"></i> Tümünü Pasif
+                </button>
+            </form>
+        </div>
+
+        <div class="hts-info-pills">
+            <span class="hts-pill-info">
+                <i class="fe fe-home"></i> <strong>@Model.HospitalName</strong>
+            </span>
+            <span class="hts-pill-info">
+                <i class="fe fe-list"></i> Görüntülenen: <strong id="shownCount">0</strong> / <span id="totalShown">@totalCount</span>
+            </span>
+            <span class="hts-pill-info d-none" id="dirtyPill" style="background: rgba(245,158,11,.15); border-color: #f59e0b; color: #92400e;">
+                <i class="fe fe-edit-3"></i> Kaydedilmedi
+            </span>
         </div>
     </div>
 
-    <!-- ═══ FORM + TABLE ═══ -->
+    <!-- ═══ FORM + FİLTRE + TABLO ═══ -->
     <form method="post" asp-action="Save" id="setForm">
         @Html.AntiForgeryToken()
         <input type="hidden" name="HospitalId" value="@Model.HospitalID" />
 
-
-        <!-- Toolbar -->
-        <div class="hts-toolbar">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-5">
-                    <label class="form-label mb-1 small fw-semibold">Ara</label>
+        <!-- Filtre Kartı -->
+        <div class="hts-filter-card">
+            <div class="hts-filter-grid">
+                <div class="hts-filter-group">
+                    <label>🔍 Ara</label>
                     <div class="hts-search-wrap">
                         <i class="fe fe-search"></i>
                         <input id="q" class="form-control" placeholder="Test adı veya SUT kodu ile ara…">
                     </div>
                 </div>
 
-                <div class="col-6 col-md-3">
-                    <label class="form-label mb-1 small fw-semibold">Filtre</label>
+                <div class="hts-filter-group">
+                    <label>Durum</label>
                     <select id="filterMode" class="form-select">
                         <option value="all">Tümü</option>
                         <option value="active">Sadece aktifler</option>
@@ -487,11 +727,57 @@
                     </select>
                 </div>
 
-                <div class="col-6 col-md-4 d-flex justify-content-md-end align-items-end">
-                    <button class="hts-btn-grad" type="submit" style="padding: .55rem 1.25rem; font-size: .9rem;">
+                <div class="hts-filter-group">
+                    <label>Kategori</label>
+                    <select id="filterKategori" class="form-select">
+                        <option value="">Tümü</option>
+                        @foreach (var k in Model.Rows
+                            .Where(r => !string.IsNullOrEmpty(r.Kategori))
+                            .Select(r => r.Kategori!)
+                            .Distinct()
+                            .OrderBy(x => x))
+                        {
+                            <option value="@k">@k</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="hts-filter-group">
+                    <label>Platform</label>
+                    <select id="filterPlatform" class="form-select">
+                        <option value="">Tümü</option>
+                        @foreach (var p in Model.Rows
+                            .Where(r => !string.IsNullOrEmpty(r.Platform))
+                            .Select(r => r.Platform!)
+                            .Distinct()
+                            .OrderBy(x => x))
+                        {
+                            <option value="@p">@p</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="hts-filter-group">
+                    <label style="visibility: hidden;">.</label>
+                    <button class="hts-btn-grad" type="submit" style="padding: .55rem 1.25rem;">
                         <i class="fe fe-save"></i> Kaydet
                     </button>
                 </div>
+            </div>
+
+            <div class="hts-bulk-row">
+                <span class="hts-bulk-label">
+                    <i class="fe fe-filter"></i> Filtreli Listeye Uygula:
+                </span>
+                <button type="button" class="hts-btn-visible-on" id="btnVisibleOn">
+                    <i class="fe fe-check-square"></i> Görünenleri Aktif Et
+                </button>
+                <button type="button" class="hts-btn-visible-off" id="btnVisibleOff">
+                    <i class="fe fe-square"></i> Görünenleri Pasif Et
+                </button>
+                <small class="text-muted ms-auto">
+                    (<strong id="visibleCountInline">0</strong> teste uygulanır)
+                </small>
             </div>
         </div>
 
@@ -501,19 +787,37 @@
                 <table class="hts-table" id="tbl">
                     <thead>
                         <tr>
-                            <th style="width:80px" class="text-center">Aktif</th>
-                            <th>Test</th>
-                            <th style="width:140px">SUT</th>
-                            <th style="width:110px">Giriş Tipi</th>
-                            <th style="width:130px">Kutu Adet</th>
-                            <th style="width:120px">Durum</th>
+                            <th style="width:80px" class="text-center hts-sortable" data-sort="active">
+                                Aktif <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th class="hts-sortable" data-sort="testname">
+                                Test <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:130px" class="hts-sortable" data-sort="sutcode">
+                                SUT <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:130px" class="hts-sortable" data-sort="kategori">
+                                Kategori <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:100px" class="hts-sortable" data-sort="platform">
+                                Platform <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:100px" class="hts-sortable" data-sort="tip">
+                                Tip <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:110px" class="hts-sortable" data-sort="kutuadet">
+                                Kutu Adet <span class="hts-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:110px" class="hts-sortable" data-sort="linked">
+                                Durum <span class="hts-sort-indicator">⇅</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         @if (Model.Rows.Count == 0)
                         {
                             <tr>
-                                <td colspan="6" class="hts-empty">
+                                <td colspan="8" class="hts-empty">
                                     <div class="hts-empty-icon">🧪</div>
                                     Sistemde henüz test yok.
                                     <br />
@@ -533,9 +837,12 @@
 
                                 <tr data-testname="@((r.TestName ?? "").ToLowerInvariant())"
                                     data-sutcode="@((r.SutCode ?? "").ToLowerInvariant())"
+                                    data-kategori="@(r.Kategori ?? "")"
+                                    data-platform="@(r.Platform ?? "")"
                                     data-linked="@(r.IsLinked ? "1" : "0")"
                                     data-active-initial="@(r.IsActive ? "1" : "0")"
-                                    data-tip="@tipText.ToLowerInvariant()">
+                                    data-tip="@tipText.ToLowerInvariant()"
+                                    data-kutuadet="@(r.KutuBasinaAdet ?? 0)">
                                     <td class="text-center">
                                         <input type="checkbox" class="form-check-input hts-switch js-row-check"
                                                data-testid="@r.TestID"
@@ -557,6 +864,28 @@
                                     </td>
 
                                     <td>
+                                        @if (!string.IsNullOrWhiteSpace(r.Kategori))
+                                        {
+                                            <span class="hts-badge hts-badge-kategori">@r.Kategori</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(r.Platform))
+                                        {
+                                            <small class="text-muted fw-semibold">@r.Platform</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+
+                                    <td>
                                         <span class="hts-badge @tipClass">@tipText</span>
                                     </td>
 
@@ -564,7 +893,7 @@
                                         @if (r.GirisTipi == TestGirisTipi.Kutu && r.KutuBasinaAdet.HasValue)
                                         {
                                             <span class="hts-kba-pill">
-                                                <i class="fe fe-package"></i> @r.KutuBasinaAdet adet
+                                                <i class="fe fe-package"></i> @r.KutuBasinaAdet
                                             </span>
                                         }
                                         else
@@ -591,7 +920,7 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-center p-3" style="border-top: 1px solid #e2e8f0;">
-                <small class="text-muted">Değişen satırlar sarı çizgi ile işaretlenir.</small>
+                <small class="text-muted">Değişen satırlar sarı çizgi ile işaretlenir. Kolon başlıklarına tıklayarak sıralayabilirsiniz.</small>
                 <button class="hts-btn-grad" type="submit">
                     <i class="fe fe-save"></i> Kaydet
                 </button>
@@ -608,9 +937,16 @@
             const els = {
                 q: document.getElementById('q'),
                 filterMode: document.getElementById('filterMode'),
+                filterKategori: document.getElementById('filterKategori'),
+                filterPlatform: document.getElementById('filterPlatform'),
                 shownCount: document.getElementById('shownCount'),
+                visibleCountInline: document.getElementById('visibleCountInline'),
                 dirtyPill: document.getElementById('dirtyPill'),
-                form: document.getElementById('setForm')
+                form: document.getElementById('setForm'),
+                kpiActive: document.getElementById('kpiActive'),
+                kpiKutuActive: document.getElementById('kpiKutuActive'),
+                btnVisibleOn: document.getElementById('btnVisibleOn'),
+                btnVisibleOff: document.getElementById('btnVisibleOff')
             };
 
             const table = document.getElementById('tbl');
@@ -620,6 +956,8 @@
             function applyFilter() {
                 const query = (els.q.value || '').trim().toLocaleLowerCase(trTR);
                 const mode = els.filterMode.value;
+                const kategori = els.filterKategori.value || '';
+                const platform = els.filterPlatform.value || '';
 
                 let shown = 0;
                 rows.forEach(r => {
@@ -627,10 +965,14 @@
                     const sc = r.getAttribute('data-sutcode') || '';
                     const isLinked = r.getAttribute('data-linked') === '1';
                     const tip = r.getAttribute('data-tip') || '';
+                    const kat = r.getAttribute('data-kategori') || '';
+                    const pf = r.getAttribute('data-platform') || '';
                     const chk = r.querySelector('.js-row-check');
                     const isActive = chk && chk.checked;
 
                     const matchQ = !query || tn.includes(query) || sc.includes(query);
+                    const matchKat = !kategori || kat === kategori;
+                    const matchPf = !platform || pf === platform;
 
                     let matchMode = true;
                     switch (mode) {
@@ -641,12 +983,27 @@
                         case 'adet': matchMode = tip === 'adet'; break;
                     }
 
-                    const visible = matchQ && matchMode;
+                    const visible = matchQ && matchMode && matchKat && matchPf;
                     r.style.display = visible ? '' : 'none';
                     if (visible) shown++;
                 });
 
                 els.shownCount.textContent = shown.toString();
+                if (els.visibleCountInline) els.visibleCountInline.textContent = shown.toString();
+            }
+
+            function updateKpis() {
+                let activeCount = 0;
+                let kutuActiveCount = 0;
+                rows.forEach(r => {
+                    const chk = r.querySelector('.js-row-check');
+                    if (chk && chk.checked) {
+                        activeCount++;
+                        if (r.getAttribute('data-tip') === 'kutu') kutuActiveCount++;
+                    }
+                });
+                if (els.kpiActive) els.kpiActive.textContent = activeCount;
+                if (els.kpiKutuActive) els.kpiKutuActive.textContent = kutuActiveCount;
             }
 
             function updateDirty() {
@@ -662,7 +1019,152 @@
                     const changed = (chk.checked !== initial);
                     tr.classList.toggle('hts-row-dirty', changed);
                     updateDirty();
+                    updateKpis();
                     applyFilter();
+                });
+            });
+
+            function bulkSetVisible(active) {
+                const visibleRows = rows.filter(r => r.style.display !== 'none');
+                if (visibleRows.length === 0) {
+                    alert('Görünen test bulunamadı. Filtreleri değiştirin.');
+                    return;
+                }
+
+                const actionText = active ? 'AKTİF' : 'PASİF';
+                if (!confirm(`Görünen ${visibleRows.length} teste "${actionText}" işlemi uygulansın mı?`)) {
+                    return;
+                }
+
+                visibleRows.forEach(tr => {
+                    const chk = tr.querySelector('.js-row-check');
+                    if (!chk) return;
+                    if (chk.checked !== active) {
+                        chk.checked = active;
+                        const initial = chk.dataset.initial === '1';
+                        const changed = (chk.checked !== initial);
+                        tr.classList.toggle('hts-row-dirty', changed);
+                    }
+                });
+
+                updateDirty();
+                updateKpis();
+                applyFilter();
+            }
+
+            els.btnVisibleOn?.addEventListener('click', () => bulkSetVisible(true));
+            els.btnVisibleOff?.addEventListener('click', () => bulkSetVisible(false));
+
+            document.querySelectorAll('.js-quick-cat').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const kategori = a.getAttribute('data-kategori');
+                    const action = a.getAttribute('data-action');
+                    const isActive = action === 'on';
+                    const catRows = rows.filter(r => r.getAttribute('data-kategori') === kategori);
+
+                    if (catRows.length === 0) return;
+
+                    const actionText = isActive ? 'AKTİF' : 'PASİF';
+                    if (!confirm(`"${kategori}" kategorisindeki ${catRows.length} test "${actionText}" edilsin mi?`)) {
+                        return;
+                    }
+
+                    catRows.forEach(tr => {
+                        const chk = tr.querySelector('.js-row-check');
+                        if (!chk) return;
+                        if (chk.checked !== isActive) {
+                            chk.checked = isActive;
+                            const initial = chk.dataset.initial === '1';
+                            const changed = (chk.checked !== initial);
+                            tr.classList.toggle('hts-row-dirty', changed);
+                        }
+                    });
+
+                    updateDirty();
+                    updateKpis();
+                    applyFilter();
+                });
+            });
+
+            let sortState = { key: null, dir: 'asc' };
+
+            function sortRows(key) {
+                if (sortState.key === key) {
+                    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState.key = key;
+                    sortState.dir = 'asc';
+                }
+
+                const tbody = table.querySelector('tbody');
+                const rowsArr = Array.from(tbody.querySelectorAll('tr[data-testname]'));
+                const dir = sortState.dir === 'asc' ? 1 : -1;
+
+                rowsArr.sort((a, b) => {
+                    let va, vb;
+                    switch (key) {
+                        case 'active':
+                            va = a.querySelector('.js-row-check')?.checked ? 1 : 0;
+                            vb = b.querySelector('.js-row-check')?.checked ? 1 : 0;
+                            return (va - vb) * dir;
+                        case 'testname':
+                            va = a.getAttribute('data-testname') || '';
+                            vb = b.getAttribute('data-testname') || '';
+                            return va.localeCompare(vb, trTR) * dir;
+                        case 'sutcode':
+                            va = a.getAttribute('data-sutcode') || '';
+                            vb = b.getAttribute('data-sutcode') || '';
+                            return va.localeCompare(vb, trTR) * dir;
+                        case 'kategori':
+                            va = a.getAttribute('data-kategori') || '';
+                            vb = b.getAttribute('data-kategori') || '';
+                            return va.localeCompare(vb, trTR) * dir;
+                        case 'platform':
+                            va = a.getAttribute('data-platform') || '';
+                            vb = b.getAttribute('data-platform') || '';
+                            return va.localeCompare(vb, trTR) * dir;
+                        case 'tip':
+                            va = a.getAttribute('data-tip') || '';
+                            vb = b.getAttribute('data-tip') || '';
+                            return va.localeCompare(vb, trTR) * dir;
+                        case 'kutuadet':
+                            va = parseInt(a.getAttribute('data-kutuadet')) || 0;
+                            vb = parseInt(b.getAttribute('data-kutuadet')) || 0;
+                            return (va - vb) * dir;
+                        case 'linked':
+                            va = a.getAttribute('data-linked') === '1' ? 1 : 0;
+                            vb = b.getAttribute('data-linked') === '1' ? 1 : 0;
+                            return (va - vb) * dir;
+                    }
+                    return 0;
+                });
+
+                rowsArr.forEach(tr => tbody.appendChild(tr));
+                updateSortIndicators();
+            }
+
+            function updateSortIndicators() {
+                document.querySelectorAll('.hts-sortable').forEach(th => {
+                    th.classList.remove('hts-sort-active');
+                    const ind = th.querySelector('.hts-sort-indicator');
+                    if (ind) ind.textContent = '⇅';
+                });
+
+                if (sortState.key) {
+                    const activeTh = document.querySelector(`.hts-sortable[data-sort="${sortState.key}"]`);
+                    if (activeTh) {
+                        activeTh.classList.add('hts-sort-active');
+                        const ind = activeTh.querySelector('.hts-sort-indicator');
+                        if (ind) ind.textContent = sortState.dir === 'asc' ? '▲' : '▼';
+                    }
+                }
+            }
+
+            document.querySelectorAll('.hts-sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.getAttribute('data-sort');
+                    if (key) sortRows(key);
                 });
             });
 
@@ -673,36 +1175,30 @@
             });
 
             els.form.addEventListener('submit', function (e) {
-            // Önce eski dinamik input'ları temizle (varsa)
-            els.form.querySelectorAll('.js-dynamic-row').forEach(x => x.remove());
+                els.form.querySelectorAll('.js-dynamic-row').forEach(x => x.remove());
 
-            // Tüm satırları topla (görünür/gizli fark etmez)
-            const allChecks = Array.from(table.querySelectorAll('.js-row-check'));
+                const allChecks = Array.from(table.querySelectorAll('.js-row-check'));
+                allChecks.forEach((chk, i) => {
+                    const testId = chk.dataset.testid;
+                    const isActive = chk.checked ? 'true' : 'false';
 
-            allChecks.forEach((chk, i) => {
-                const testId = chk.dataset.testid;
-                const isActive = chk.checked ? 'true' : 'false';
+                    const hTestId = document.createElement('input');
+                    hTestId.type = 'hidden';
+                    hTestId.name = `Rows[${i}].TestId`;
+                    hTestId.value = testId;
+                    hTestId.classList.add('js-dynamic-row');
+                    els.form.appendChild(hTestId);
 
-                const hTestId = document.createElement('input');
-                hTestId.type = 'hidden';
-                hTestId.name = `Rows[${i}].TestId`;
-                hTestId.value = testId;
-                hTestId.classList.add('js-dynamic-row');
-                els.form.appendChild(hTestId);
+                    const hIsActive = document.createElement('input');
+                    hIsActive.type = 'hidden';
+                    hIsActive.name = `Rows[${i}].IsActive`;
+                    hIsActive.value = isActive;
+                    hIsActive.classList.add('js-dynamic-row');
+                    els.form.appendChild(hIsActive);
+                });
 
-                const hIsActive = document.createElement('input');
-                hIsActive.type = 'hidden';
-                hIsActive.name = `Rows[${i}].IsActive`;
-                hIsActive.value = isActive;
-                hIsActive.classList.add('js-dynamic-row');
-                els.form.appendChild(hIsActive);
-            });
-
-            // dirty pill'i sıfırla
-            els.dirtyPill.classList.add('d-none');
-            rows.forEach(r => r.classList.remove('hts-row-dirty'));
-
-            // ✅ form normal şekilde submit olsun
+                els.dirtyPill.classList.add('d-none');
+                rows.forEach(r => r.classList.remove('hts-row-dirty'));
             });
 
             let t = null;
@@ -711,6 +1207,8 @@
                 t = setTimeout(applyFilter, 150);
             });
             els.filterMode.addEventListener('change', applyFilter);
+            els.filterKategori.addEventListener('change', applyFilter);
+            els.filterPlatform.addEventListener('change', applyFilter);
 
             applyFilter();
         })();

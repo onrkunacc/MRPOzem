@@ -1,49 +1,234 @@
-﻿
-@{
+﻿@{
     ViewData["Title"] = "Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var hospitals = (IEnumerable<dynamic>)(ViewBag.Hospitals ?? new List<object>());
+    var canBulkUpload = User.IsInRole("Yönetici") || User.IsInRole("İstatistik");
 }
 
 <style>
-    .dashboard-toolbar {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: .75rem;
-        padding: .75rem
+    .dsh-page {
+        padding: 1rem 0;
     }
 
-        .dashboard-toolbar .form-label {
-            font-size: .8rem;
-            color: #6c757d;
-            margin-bottom: .25rem
+    .dsh-header {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: #fff;
+        padding: 1.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 8px 28px rgba(14,165,233,.25);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+        .dsh-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
         }
 
-    .kpi-card {
-        border: 1px solid #e9ecef;
-        border-radius: .75rem;
-        padding: 1rem;
-        background: #fff
+        .dsh-header p {
+            margin: .25rem 0 0;
+            opacity: .92;
+            font-size: .87rem;
+        }
+
+    .dsh-toolbar-actions {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
     }
 
-    .kpi-value {
+    .dsh-btn-action {
+        background: rgba(255,255,255,.2);
+        backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(255,255,255,.4);
+        color: #fff;
+        padding: .5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        text-decoration: none;
+        transition: all .2s;
+    }
+
+        .dsh-btn-action:hover {
+            background: rgba(255,255,255,.3);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+    .dsh-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .dsh-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+        .dsh-filter-group .form-label {
+            font-size: .72rem;
+            font-weight: 600;
+            color: #475569;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+
+        .dsh-filter-group .form-control, .dsh-filter-group .form-select {
+            border-color: #e2e8f0;
+        }
+
+    .dsh-btn-apply {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        border: none;
+        color: #fff;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+        .dsh-btn-apply:hover {
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+    .dsh-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    @@media (max-width: 992px) {
+        .dsh-kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .dsh-kpi-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .dsh-kpi {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 14px;
+        padding: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        transition: transform .2s, box-shadow .2s;
+    }
+
+        .dsh-kpi:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+        }
+
+    .dsh-kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .dsh-kpi-1 .dsh-kpi-icon {
+        background: linear-gradient(135deg,#10b981,#059669);
+    }
+
+    .dsh-kpi-2 .dsh-kpi-icon {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+    }
+
+    .dsh-kpi-3 .dsh-kpi-icon {
+        background: linear-gradient(135deg,#f59e0b,#d97706);
+    }
+
+    .dsh-kpi-4 .dsh-kpi-icon {
+        background: linear-gradient(135deg,#ef4444,#dc2626);
+    }
+
+    .dsh-kpi-label {
+        color: #64748b;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 600;
+    }
+
+    .dsh-kpi-value {
+        font-size: 1.55rem;
         font-weight: 700;
-        font-size: 1.25rem
+        color: #1e293b;
+        line-height: 1.1;
     }
 
-    .kpi-sub {
-        color: #6c757d;
-        font-size: .85rem
+    .dsh-chart-card {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .dsh-chart-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dsh-chart-title {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: .95rem;
+    }
+
+    .dsh-chart-body {
+        padding: 1rem;
     }
 
     canvas {
-        max-height: 360px
+        max-height: 320px;
     }
 
     .skeleton {
         background: linear-gradient(90deg,#f0f0f0 25%,#e6e6e6 37%,#f0f0f0 63%);
         background-size: 400% 100%;
-        animation: shimmer 1.2s infinite
+        animation: shimmer 1.2s infinite;
+        border-radius: 4px;
     }
 
     @@keyframes shimmer {
@@ -57,172 +242,116 @@
     }
 </style>
 
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <h5 class="mb-0"><i class="fa fa-chart-line me-2"></i> İstatistik Özet</h5>
+<div class="dsh-page">
+
+    <div class="dsh-header">
+        <div>
+            <h1>📈 İstatistik Özet</h1>
+            <p>Gönderim, tüketim ve genel performans göstergeleri</p>
         </div>
-
-        <div class="d-flex gap-2 flex-wrap">
-
-            
-            <a asp-area="Istatistik"
-               asp-controller="Upload"
-               asp-action="Index"
-               class="btn btn-sm btn-outline-secondary">
-                <i class="fa fa-table"></i> Toplu İstatistik Yükle
-            </a>
-            &nbsp;
-            &nbsp;
-            <a asp-area="Istatistik"
-               asp-controller="ShipmentUpload"
-               asp-action="Index"
-               class="btn btn-sm btn-outline-secondary">
-                <i class="fa fa-truck"></i> Toplu Gönderim Yükle
-            </a>
-            &nbsp;
-            &nbsp;
-            
-            <div class="btn-group">
-                <button type="button"
-                        class="btn btn-sm btn-outline-success dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false">
-                    <i class="fa fa-file-excel"></i> Şablon Excel
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                        <a class="dropdown-item"
-                           asp-area="Istatistik"
-                           asp-controller="Dashboard"
-                           asp-action="DownloadUsageTemplate">
-                            İstatistik Şablonu
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item"
-                           asp-area="Istatistik"
-                           asp-controller="Dashboard"
-                           asp-action="DownloadShipmentTemplate">
-                            Gönderim Şablonu
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            &nbsp;
-            &nbsp;
-            <button id="btnRefresh" class="btn btn-sm btn-outline-primary">
-                <i class="fa fa-rotate"></i> Yenile
-            </button>
+        <div class="dsh-toolbar-actions">
+            <button id="btnRefresh" class="dsh-btn-action"><i class="fa fa-rotate"></i> Yenile</button>
         </div>
     </div>
 
-    <div class="card-body">
-        <div class="dashboard-toolbar mb-3">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-4">
+    <div class="dsh-card">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <div class="dsh-filter-group">
                     <label class="form-label">Hastane</label>
                     <select class="form-select form-select-sm" id="hospitalId">
-                        <option value="">Tümü</option>
+                        <option value="">Tüm Hastaneler</option>
                         @foreach (var h in hospitals)
                         {
                             <option value="@h.HospitalID">@h.HospitalName</option>
                         }
                     </select>
                 </div>
-                <div class="col-6 col-md-3">
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="dsh-filter-group">
                     <label class="form-label">Başlangıç</label>
                     <input type="date" class="form-control form-control-sm" id="startDate" />
                 </div>
-                <div class="col-6 col-md-3">
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="dsh-filter-group">
                     <label class="form-label">Bitiş</label>
                     <input type="date" class="form-control form-control-sm" id="endDate" />
                 </div>
-                <div class="col-12 col-md-2 d-grid">
-                    <button id="btnApply" class="btn btn-sm btn-primary"><i class="fa fa-filter"></i> Uygula</button>
-                </div>
+            </div>
+            <div class="col-12 col-md-2 d-grid">
+                <button id="btnApply" class="dsh-btn-apply"><i class="fa fa-filter"></i> Uygula</button>
             </div>
         </div>
+    </div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-12 col-md-3">
-                <div class="kpi-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="kpi-sub">Toplam Gönderim</div>
-                            <div id="kpiShipment" class="kpi-value skeleton">—</div>
-                        </div>
-                        <i class="fa fa-truck-fast fs-3 text-muted"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-3">
-                <div class="kpi-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="kpi-sub">Toplam Kullanım</div>
-                            <div id="kpiUsage" class="kpi-value skeleton">—</div>
-                        </div>
-                        <i class="fa fa-vials fs-3 text-muted"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-3">
-                <div class="kpi-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="kpi-sub">Benzersiz Test</div>
-                            <div id="kpiTests" class="kpi-value skeleton">—</div>
-                        </div>
-                        <i class="fa fa-flask fs-3 text-muted"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-3">
-                <div class="kpi-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="kpi-sub">Aktif Hastane</div>
-                            <div id="kpiHospitals" class="kpi-value skeleton">—</div>
-                        </div>
-                        <i class="fa fa-hospital fs-3 text-muted"></i>
-                    </div>
-                </div>
+    <div class="dsh-kpi-row">
+        <div class="dsh-kpi dsh-kpi-1">
+            <div class="dsh-kpi-icon">🚚</div>
+            <div>
+                <div class="dsh-kpi-label">Toplam Gönderim</div>
+                <div id="kpiShipment" class="dsh-kpi-value skeleton">—</div>
             </div>
         </div>
+        <div class="dsh-kpi dsh-kpi-2">
+            <div class="dsh-kpi-icon">🧪</div>
+            <div>
+                <div class="dsh-kpi-label">Toplam Kullanım</div>
+                <div id="kpiUsage" class="dsh-kpi-value skeleton">—</div>
+            </div>
+        </div>
+        <div class="dsh-kpi dsh-kpi-3">
+            <div class="dsh-kpi-icon">🔬</div>
+            <div>
+                <div class="dsh-kpi-label">Benzersiz Test</div>
+                <div id="kpiTests" class="dsh-kpi-value skeleton">—</div>
+            </div>
+        </div>
+        <div class="dsh-kpi dsh-kpi-4">
+            <div class="dsh-kpi-icon">🏥</div>
+            <div>
+                <div class="dsh-kpi-label">Aktif Hastane</div>
+                <div id="kpiHospitals" class="dsh-kpi-value skeleton">—</div>
+            </div>
+        </div>
+    </div>
 
-        <div id="dashAlert" class="alert alert-danger d-none" role="alert"></div>
+    <div id="dashAlert" class="alert alert-danger d-none" role="alert"></div>
 
-        <div class="row g-3">
-            <div class="col-12 col-xl-6">
-                <div class="card h-100">
-                    <div class="card-header"><strong>Aylık Trend — Gönderim & Kullanım</strong></div>
-                    <div class="card-body"><canvas id="trendChart"></canvas></div>
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <div class="dsh-chart-card">
+                <div class="dsh-chart-header">
+                    <span class="dsh-chart-title">📊 Aylık Trend — Gönderim & Kullanım</span>
                 </div>
+                <div class="dsh-chart-body"><canvas id="trendChart"></canvas></div>
             </div>
-            <div class="col-12 col-xl-6">
-                <div class="card h-100">
-                    <div class="card-header"><strong>Hastaneye Göre Toplamlar</strong></div>
-                    <div class="card-body"><canvas id="hospitalChart"></canvas></div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="dsh-chart-card">
+                <div class="dsh-chart-header">
+                    <span class="dsh-chart-title">🏥 Hastaneye Göre Toplamlar</span>
                 </div>
+                <div class="dsh-chart-body"><canvas id="hospitalChart"></canvas></div>
             </div>
-            <div class="col-12 col-xl-6">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <strong>En Çok Gönderilen Testler</strong>
-                        <small class="text-muted">Top 10</small>
-                    </div>
-                    <div class="card-body"><canvas id="topShipChart"></canvas></div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="dsh-chart-card">
+                <div class="dsh-chart-header">
+                    <span class="dsh-chart-title">📦 En Çok Gönderilen Testler</span>
+                    <small class="text-muted">Top 10</small>
                 </div>
+                <div class="dsh-chart-body"><canvas id="topShipChart"></canvas></div>
             </div>
-            <div class="col-12 col-xl-6">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <strong>En Çok Kullanılan Testler</strong>
-                        <small class="text-muted">Top 10</small>
-                    </div>
-                    <div class="card-body"><canvas id="topUseChart"></canvas></div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="dsh-chart-card">
+                <div class="dsh-chart-header">
+                    <span class="dsh-chart-title">🧪 En Çok Kullanılan Testler</span>
+                    <small class="text-muted">Top 10</small>
                 </div>
+                <div class="dsh-chart-body"><canvas id="topUseChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -230,152 +359,169 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-
     <script>
-        (function(){
-          function fatal(msg){
-            console.error(msg);
-            const a = document.getElementById('dashAlert');
-            if(a){ a.textContent = msg; a.classList.remove('d-none'); }
-          }
-          function ensureDom(){
-            const ids = ['hospitalId','startDate','endDate','btnApply','btnRefresh',
-                         'kpiShipment','kpiUsage','kpiTests','kpiHospitals',
-                         'trendChart','hospitalChart','topShipChart','topUseChart'];
-            for(const id of ids){ if(!document.getElementById(id)) return false; }
-            return true;
-          }
+        (function () {
+        function fatal(msg) {
+        console.error(msg);
+        const a = document.getElementById('dashAlert');
+        if (a) { a.textContent = msg; a.classList.remove('d-none'); }
+        }
+        function ensureDom() {
+        const ids = ['hospitalId', 'startDate', 'endDate', 'btnApply', 'btnRefresh',
+        'kpiShipment', 'kpiUsage', 'kpiTests', 'kpiHospitals',
+        'trendChart', 'hospitalChart', 'topShipChart', 'topUseChart'];
+        for (const id of ids) { if (!document.getElementById(id)) return false; }
+        return true;
+        }
 
-          document.addEventListener('DOMContentLoaded', init, { once:true });
+        document.addEventListener('DOMContentLoaded', init, { once: true });
 
-          async function init(){
-            try{
-              if(!ensureDom()) return fatal('Dashboard DOM yüklenemedi. Layout veya kısmi görünüm sırası kontrol edin.');
-              if(!window.Chart) return fatal('Chart.js yüklenemedi. Yerel dosyadan yüklemeyi deneyin: ~/lib/chart.js/chart.umd.min.js');
+        async function init() {
+        try {
+        if (!ensureDom()) return fatal('Dashboard DOM yüklenemedi.');
+        if (!window.Chart) return fatal('Chart.js yüklenemedi.');
 
-              const els = {
-                hospitalId: document.getElementById('hospitalId'),
-                startDate: document.getElementById('startDate'),
-                endDate: document.getElementById('endDate'),
-                btnApply: document.getElementById('btnApply'),
-                btnRefresh: document.getElementById('btnRefresh'),
-                kpiShipment: document.getElementById('kpiShipment'),
-                kpiUsage: document.getElementById('kpiUsage'),
-                kpiTests: document.getElementById('kpiTests'),
-                kpiHospitals: document.getElementById('kpiHospitals')
-              };
+        const els = {
+        hospitalId: document.getElementById('hospitalId'),
+        startDate: document.getElementById('startDate'),
+        endDate: document.getElementById('endDate'),
+        btnApply: document.getElementById('btnApply'),
+        btnRefresh: document.getElementById('btnRefresh'),
+        kpiShipment: document.getElementById('kpiShipment'),
+        kpiUsage: document.getElementById('kpiUsage'),
+        kpiTests: document.getElementById('kpiTests'),
+        kpiHospitals: document.getElementById('kpiHospitals')
+        };
 
-              const state = { hospitalId:'', startDate:'', endDate:'' };
-              const charts = { trend:null, hospital:null, topShip:null, topUse:null };
+        const state = { hospitalId: '', startDate: '', endDate: '' };
+        const charts = { trend: null, hospital: null, topShip: null, topUse: null };
+        const colors = {
+        green: 'rgba(16,185,129,.7)',
+        greenBorder: '#059669',
+        purple: 'rgba(99,102,241,.7)',
+        purpleBorder: '#4f46e5',
+        blue: 'rgba(14,165,233,.7)',
+        blueBorder: '#0284c7',
+        orange: 'rgba(245,158,11,.7)',
+        orangeBorder: '#d97706'
+        };
 
-              function params(){
-                const p = new URLSearchParams();
-                if(state.hospitalId) p.append('hospitalId', state.hospitalId);
-                if(state.startDate)  p.append('startDate', state.startDate);
-                if(state.endDate)    p.append('endDate', state.endDate);
-                return p.toString();
-              }
+        function params() {
+        const p = new URLSearchParams();
+        if (state.hospitalId) p.append('hospitalId', state.hospitalId);
+        if (state.startDate) p.append('startDate', state.startDate);
+        if (state.endDate) p.append('endDate', state.endDate);
+        return p.toString();
+        }
 
-              function setKpiLoading(on){
-                [els.kpiShipment,els.kpiUsage,els.kpiTests,els.kpiHospitals].forEach(el=>{
-                  if(on){ el.classList.add('skeleton'); el.textContent='—'; }
-                  else  { el.classList.remove('skeleton'); }
-                });
-              }
+        function setKpiLoading(on) {
+        [els.kpiShipment, els.kpiUsage, els.kpiTests, els.kpiHospitals].forEach(el => {
+        if (on) { el.classList.add('skeleton'); el.textContent = '—'; }
+        else { el.classList.remove('skeleton'); }
+        });
+        }
 
-              async function safeJson(url){
-                try{
-                  const res = await fetch(url,{headers:{'Accept':'application/json'}});
-                  if(!res.ok) throw new Error(res.status+' '+res.statusText);
-                  return await res.json();
-                }catch(e){ console.error('İstek hatası:', url, e); return null; }
-              }
-              const guard = a => Array.isArray(a) ? a : [];
+        async function safeJson(url) {
+        try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        return await res.json();
+        } catch (e) { console.error('İstek hatası:', url, e); return null; }
+        }
+        const guard = a => Array.isArray(a) ? a : [];
 
-              async function loadKpis(){
-                setKpiLoading(true);
-                const data = await safeJson(`@Url.Action("GetKpis", "Dashboard", new { area = "Istatistik" })?${params()}`);
-                els.kpiShipment.textContent = ((data?.totalShipment)||0).toLocaleString('tr-TR');
-                els.kpiUsage.textContent    = ((data?.totalUsage)||0).toLocaleString('tr-TR');
-                els.kpiTests.textContent    = ((data?.uniqueTests)||0).toLocaleString('tr-TR');
-                els.kpiHospitals.textContent= ((data?.activeHospitals)||0).toLocaleString('tr-TR');
-                setKpiLoading(false);
-              }
-              async function loadTrends(){
-                const data = guard(await safeJson(`@Url.Action("GetTrends", "Dashboard", new { area = "Istatistik" })?${params()}`));
-                chartTrend(data.map(x=>x.month), data.map(x=>x.shipment), data.map(x=>x.usage));
-              }
-              async function loadTop(){
-                const data = await safeJson(`@Url.Action("GetTopTests", "Dashboard", new { area = "Istatistik" })?${params()}`);
-                const ship = guard(data?.shipments), use = guard(data?.usage);
-                chartTopShip(ship.map(x=>x.name), ship.map(x=>x.value));
-                chartTopUse(use.map(x=>x.name),   use.map(x=>x.value));
-              }
-              async function loadByHospital(){
-                const rows = guard(await safeJson(`@Url.Action("GetByHospital", "Dashboard", new { area = "Istatistik" })?${params()}`));
-                chartHospital(rows.map(x=>x.hospital), rows.map(x=>x.shipment), rows.map(x=>x.usage));
-              }
+        async function loadKpis() {
+        setKpiLoading(true);
+        const data = await safeJson(`@Url.Action("GetKpis", "Dashboard", new { area = "Istatistik" })?${params()}`);
+        els.kpiShipment.textContent = ((data?.totalShipment) || 0).toLocaleString('tr-TR');
+        els.kpiUsage.textContent = ((data?.totalUsage) || 0).toLocaleString('tr-TR');
+        els.kpiTests.textContent = ((data?.uniqueTests) || 0).toLocaleString('tr-TR');
+        els.kpiHospitals.textContent = ((data?.activeHospitals) || 0).toLocaleString('tr-TR');
+        setKpiLoading(false);
+        }
+        async function loadTrends() {
+        const data = guard(await safeJson(`@Url.Action("GetTrends", "Dashboard", new { area = "Istatistik" })?${params()}`));
+        chartTrend(data.map(x => x.month), data.map(x => x.shipment), data.map(x => x.usage));
+        }
+        async function loadTop() {
+        const data = await safeJson(`@Url.Action("GetTopTests", "Dashboard", new { area = "Istatistik" })?${params()}`);
+        const ship = guard(data?.shipments), use = guard(data?.usage);
+        chartTopShip(ship.map(x => x.name), ship.map(x => x.value));
+        chartTopUse(use.map(x => x.name), use.map(x => x.value));
+        }
+        async function loadByHospital() {
+        const rows = guard(await safeJson(`@Url.Action("GetByHospital", "Dashboard", new { area = "Istatistik" })?${params()}`));
+        chartHospital(rows.map(x => x.hospital), rows.map(x => x.shipment), rows.map(x => x.usage));
+        }
 
-              function destroy(c){ if(c) c.destroy(); }
-              function chartTrend(labels, ship, use){
-                destroy(charts.trend);
-                charts.trend = new Chart(document.getElementById('trendChart'), {
-                  type:'line',
-                  data:{ labels, datasets:[
-                    { label:'Gönderim', data:ship, tension:.2, borderWidth:2, pointRadius:2 },
-                    { label:'Kullanım', data:use,  tension:.2, borderWidth:2, pointRadius:2 }
-                  ]},
-                  options:{ responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
-                });
-              }
-              function chartHospital(labels, ship, use){
-                destroy(charts.hospital);
-                charts.hospital = new Chart(document.getElementById('hospitalChart'), {
-                  type:'bar',
-                  data:{ labels, datasets:[
-                    { label:'Gönderim', data:ship, borderWidth:1 },
-                    { label:'Kullanım', data:use, borderWidth:1 }
-                  ]},
-                  options:{ responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'bottom'}} }
-                });
-              }
-              function chartTopShip(labels, values){
-                destroy(charts.topShip);
-                charts.topShip = new Chart(document.getElementById('topShipChart'), {
-                  type:'bar',
-                  data:{ labels, datasets:[{ label:'Gönderim', data:values, borderWidth:1 }] },
-                  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{beginAtZero:true}}, plugins:{legend:{display:false}} }
-                });
-              }
-              function chartTopUse(labels, values){
-                destroy(charts.topUse);
-                charts.topUse = new Chart(document.getElementById('topUseChart'), {
-                  type:'bar',
-                  data:{ labels, datasets:[{ label:'Kullanım', data:values, borderWidth:1 }] },
-                  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{beginAtZero:true}}, plugins:{legend:{display:false}} }
-                });
-              }
+        function destroy(c) { if (c) c.destroy(); }
 
-              async function refreshAll(){
-                state.hospitalId = (els.hospitalId.value||'').trim();
-                state.startDate  = (els.startDate.value||'').trim();
-                state.endDate    = (els.endDate.value||'').trim();
-                await Promise.all([loadKpis(), loadTrends(), loadTop(), loadByHospital()]);
-              }
+        function chartTrend(labels, ship, use) {
+        destroy(charts.trend);
+        charts.trend = new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+        labels, datasets: [
+        { label: 'Gönderim', data: ship, tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.greenBorder, backgroundColor: colors.green, fill: false },
+        { label: 'Kullanım', data: use, tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.purpleBorder, backgroundColor: colors.purple, fill: false }
+        ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+        });
+        }
 
-              els.btnApply.addEventListener('click', refreshAll);
-              els.btnRefresh.addEventListener('click', refreshAll);
+        function chartHospital(labels, ship, use) {
+        destroy(charts.hospital);
+        charts.hospital = new Chart(document.getElementById('hospitalChart'), {
+        type: 'bar',
+        data: {
+        labels, datasets: [
+        { label: 'Gönderim', data: ship, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 },
+        { label: 'Kullanım', data: use, backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }
+        ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+        });
+        }
 
-              const today = new Date(), yyyy = today.getFullYear();
-              els.startDate.value = `${yyyy}-01-01`;
-              els.endDate.value   = today.toISOString().slice(0,10);
+        function chartTopShip(labels, values) {
+        destroy(charts.topShip);
+        charts.topShip = new Chart(document.getElementById('topShipChart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Gönderim', data: values, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+        }
 
-              refreshAll();
+        function chartTopUse(labels, values) {
+        destroy(charts.topUse);
+        charts.topUse = new Chart(document.getElementById('topUseChart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Kullanım', data: values, backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+        }
 
-            }catch(err){
-              fatal('Dashboard başlatılamadı: ' + (err?.message || err));
-            }
-          }
+        async function refreshAll() {
+        state.hospitalId = (els.hospitalId.value || '').trim();
+        state.startDate = (els.startDate.value || '').trim();
+        state.endDate = (els.endDate.value || '').trim();
+        await Promise.all([loadKpis(), loadTrends(), loadTop(), loadByHospital()]);
+        }
+
+        els.btnApply.addEventListener('click', refreshAll);
+        els.btnRefresh.addEventListener('click', refreshAll);
+
+        const today = new Date(), yyyy = today.getFullYear();
+        els.startDate.value = `${yyyy}-01-01`;
+        els.endDate.value = today.toISOString().slice(0, 10);
+
+        refreshAll();
+
+        } catch (err) {
+        fatal('Dashboard başlatılamadı: ' + (err?.message || err));
+        }
+        }
         })();
     </script>
 }

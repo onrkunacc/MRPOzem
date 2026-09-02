@@ -37,10 +37,14 @@ namespace CRMOzem.Business.Services
                         t.TestID,
                         t.Test.TestName,
                         t.Test.SutCode,
+                        t.Test.Kategori,     
+                        t.Test.Platform,
                         t.Test.GirisTipi,
                         t.Test.KutuBasinaAdet
                     })
-                    .OrderBy(t => t.TestName)
+                    .OrderBy(t => t.Platform)
+                    .ThenBy(t => t.Kategori)
+                    .ThenBy(t => t.TestName)
                     .ToListAsync(ct);
 
                 if (aktifTestler.Count == 0)
@@ -83,6 +87,8 @@ namespace CRMOzem.Business.Services
                     TestID = t.TestID,
                     TestName = t.TestName,
                     SutCode = t.SutCode,
+                    Kategori = t.Kategori,
+                    Platform = t.Platform,  
                     GirisTipi = t.GirisTipi,
                     KutuBasinaAdet = t.KutuBasinaAdet,
                     ToplamGonderilen = toplamGonderilenler.GetValueOrDefault(t.TestID, 0),

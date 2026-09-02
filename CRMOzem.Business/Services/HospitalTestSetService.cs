@@ -29,7 +29,7 @@ namespace CRMOzem.Business.Services
                 throw new InvalidOperationException("Hospital not found.");
 
             var allTests = await _db.Tests.AsNoTracking()
-                .Select(t => new { t.TestID, t.TestName, t.SutCode, t.GirisTipi, t.KutuBasinaAdet })
+                .Select(t => new { t.TestID, t.TestName, t.SutCode, t.GirisTipi, t.KutuBasinaAdet, t.Kategori, t.Platform })
                 .OrderBy(t => t.TestName)
                 .ToListAsync();
 
@@ -45,6 +45,8 @@ namespace CRMOzem.Business.Services
                 TestID = t.TestID,
                 TestName = t.TestName,
                 SutCode = t.SutCode,
+                Kategori = t.Kategori,        // ← YENİ
+                Platform = t.Platform,
                 GirisTipi = t.GirisTipi,
                 KutuBasinaAdet = t.KutuBasinaAdet,
                 IsActive = templateMap.TryGetValue(t.TestID, out var active) ? active : false,

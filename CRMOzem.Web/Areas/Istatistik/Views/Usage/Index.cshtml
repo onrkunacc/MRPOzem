@@ -6,6 +6,9 @@
     ViewData["Title"] = "İstatistik Listesi";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
+    var canCreate = User.IsInRole("Yönetici") || User.IsInRole("İstatistik") || User.IsInRole("İstatistikGiris");
+    var canEdit = User.IsInRole("Yönetici") || User.IsInRole("İstatistik") || User.IsInRole("İstatistikGiris");
+
     var flat = Model.Select(m => new
     {
         id = m.Id,
@@ -22,152 +25,461 @@
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     });
+
+    var toplamAdet = Model.Sum(x => x.TestCount);
+    var hastaneSayisi = Model.Select(x => x.HospitalID).Distinct().Count();
+    var testSayisi = Model.Select(x => x.TestID).Distinct().Count();
+    var kayitSayisi = Model.Count();
 }
 
 <style>
-    .filter-toolbar {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: .75rem;
-        padding: .75rem
+    .usg-page {
+        padding: 1rem 0;
     }
 
-        .filter-toolbar .form-label {
-            font-size: .8rem;
-            color: #6c757d;
-            margin-bottom: .25rem
-        }
-
-        .filter-toolbar .form-select, .filter-toolbar .form-control {
-            font-size: .9rem
-        }
-
-        .filter-toolbar .input-group-text {
-            background: #fff;
-            border-right: 0
-        }
-
-        .filter-toolbar .input-group .form-control, .filter-toolbar .input-group .form-select {
-            border-left: 0
-        }
-
-    .sticky-head thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background: #fff
+    .usg-header {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #fff;
+        padding: 1.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 8px 28px rgba(99,102,241,.25);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    .table-sm td, .table-sm th {
-        padding-top: .5rem;
-        padding-bottom: .5rem
+        .usg-header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .usg-header p {
+            margin: .25rem 0 0;
+            opacity: .92;
+            font-size: .87rem;
+        }
+
+    .usg-btn-new {
+        background: rgba(255,255,255,.2);
+        backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(255,255,255,.4);
+        color: #fff;
+        padding: .55rem 1.2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: .9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        text-decoration: none;
+        transition: all .2s;
     }
 
-    .sortable {
+        .usg-btn-new:hover {
+            background: rgba(255,255,255,.3);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+    .usg-total-badge {
+        background: rgba(255,255,255,.25);
+        backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(255,255,255,.4);
+        color: #fff;
+        padding: .25rem .65rem;
+        border-radius: 999px;
+        font-size: .82rem;
+        font-weight: 700;
+    }
+
+    .usg-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    @@media (max-width: 992px) {
+        .usg-kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .usg-kpi-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .usg-kpi {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 14px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+    }
+
+    .usg-kpi-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        color: #fff;
+    }
+
+    .usg-kpi.usg-kpi-green .usg-kpi-icon {
+        background: linear-gradient(135deg,#10b981,#059669);
+    }
+
+    .usg-kpi.usg-kpi-blue .usg-kpi-icon {
+        background: linear-gradient(135deg,#3b82f6,#2563eb);
+    }
+
+    .usg-kpi.usg-kpi-orange .usg-kpi-icon {
+        background: linear-gradient(135deg,#f59e0b,#d97706);
+    }
+
+    .usg-kpi-label {
+        color: #64748b;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 600;
+    }
+
+    .usg-kpi-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.1;
+    }
+
+    .usg-card {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        padding: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .usg-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+        .usg-filter-group .form-label {
+            font-size: .75rem;
+            font-weight: 600;
+            color: #475569;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+
+        .usg-filter-group .input-group-text {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        .usg-filter-group .form-control, .usg-filter-group .form-select {
+            border-color: #e2e8f0;
+        }
+
+    .usg-btn-apply {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border: none;
+        color: #fff;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        transition: transform .15s;
+    }
+
+        .usg-btn-apply:hover {
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+    .usg-btn-clear {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .87rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .usg-table-wrap {
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.6);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .usg-table {
+        width: 100%;
+        margin: 0;
+        font-size: .9rem;
+    }
+
+        .usg-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .04em;
+            color: #475569;
+            padding: .8rem 1rem;
+            z-index: 1;
+        }
+
+        .usg-table tbody td {
+            padding: .7rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .usg-table tbody tr:hover {
+            background: rgba(99,102,241,.04);
+        }
+
+    .usg-sortable {
         cursor: pointer;
-        user-select: none
+        user-select: none;
+        transition: color .15s;
     }
 
-    .sort-indicator {
+        .usg-sortable:hover {
+            color: #4f46e5;
+        }
+
+    .usg-sort-indicator {
         opacity: .5;
-        margin-left: .25rem
+        margin-left: .25rem;
     }
 
-    .btn-icon {
-        width: 2rem;
-        height: 2rem;
+    .usg-badge-month {
+        display: inline-block;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1e40af;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .usg-count-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .25rem .65rem;
+        background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(79,70,229,.1));
+        border: 1px solid rgba(99,102,241,.3);
+        color: #4338ca;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: .85rem;
+    }
+
+    .usg-btn-icon {
+        width: 32px;
+        height: 32px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0
+        border-radius: 8px;
+        border: none;
+        transition: transform .15s;
     }
 
-    .pagination .page-link {
+        .usg-btn-icon:hover {
+            transform: translateY(-1px);
+        }
+
+    .usg-btn-edit {
+        background: linear-gradient(135deg,#f59e0b,#d97706);
+        color: #fff;
+    }
+
+    .usg-btn-delete {
+        background: linear-gradient(135deg,#ef4444,#dc2626);
+        color: #fff;
+    }
+
+    .usg-pagination .page-link {
         min-width: 2.25rem;
-        text-align: center
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        margin: 0 2px;
+        border-radius: 8px;
     }
 
-    .badge-muted {
-        background-color: #eef1f4;
-        color: #495057
+    .usg-pagination .page-item.active .page-link {
+        background: linear-gradient(135deg,#6366f1,#4f46e5);
+        border-color: #6366f1;
+        color: #fff;
+    }
+
+    .usg-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+
+    .usg-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: .5;
     }
 </style>
 
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <h5 class="mb-0"><i class="fa fa-vials me-2"></i> İstatistik Listesi</h5>
-            <span class="badge badge-muted" id="totalBadge">Toplam: 0</span>
+<div class="usg-page">
+
+    <div class="usg-header">
+        <div>
+            <h1>📊 İstatistik Listesi</h1>
+            <p>Hastanelerden gelen aylık tüketim verileri</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary btn-sm">
-            <i class="fa fa-plus me-1"></i> Yeni İstatistik
-        </a>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <span class="usg-total-badge"><i class="fa fa-list me-1"></i> Toplam: <span id="totalBadge">@kayitSayisi</span> kayıt</span>
+            @if (canCreate)
+            {
+                <a asp-action="Create" class="usg-btn-new">
+                    <i class="fa fa-plus"></i> Yeni İstatistik
+                </a>
+            }
+        </div>
     </div>
 
-    <div class="card-body">
-        <form class="filter-toolbar mb-3" id="filterForm" onsubmit="return false;">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-lg-3">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa fa-check-circle me-1"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa fa-exclamation-circle me-1"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="usg-kpi-row">
+        <div class="usg-kpi">
+            <div class="usg-kpi-icon">📊</div>
+            <div>
+                <div class="usg-kpi-label">Toplam Tüketim</div>
+                <div class="usg-kpi-value">@toplamAdet.ToString("N0")</div>
+            </div>
+        </div>
+        <div class="usg-kpi usg-kpi-blue">
+            <div class="usg-kpi-icon">🏥</div>
+            <div>
+                <div class="usg-kpi-label">Hastane</div>
+                <div class="usg-kpi-value">@hastaneSayisi</div>
+            </div>
+        </div>
+        <div class="usg-kpi usg-kpi-green">
+            <div class="usg-kpi-icon">🧪</div>
+            <div>
+                <div class="usg-kpi-label">Farklı Test</div>
+                <div class="usg-kpi-value">@testSayisi</div>
+            </div>
+        </div>
+        <div class="usg-kpi usg-kpi-orange">
+            <div class="usg-kpi-icon">📋</div>
+            <div>
+                <div class="usg-kpi-label">Kayıt</div>
+                <div class="usg-kpi-value">@kayitSayisi</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="usg-card">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-lg-3">
+                <div class="usg-filter-group">
                     <label class="form-label">Hastane</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="fa fa-hospital"></i></span>
-                        <select class="form-select form-select-sm" id="hospitalId">
-                            <option value="">Tüm Hastaneler</option>
-                        </select>
+                        <select class="form-select form-select-sm" id="hospitalId"><option value="">Tüm Hastaneler</option></select>
                     </div>
                 </div>
-
-                <div class="col-12 col-lg-3">
+            </div>
+            <div class="col-12 col-lg-3">
+                <div class="usg-filter-group">
                     <label class="form-label">Test</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="fa fa-vial"></i></span>
-                        <select class="form-select form-select-sm" id="testId">
-                            <option value="">Tüm Testler</option>
-                        </select>
+                        <select class="form-select form-select-sm" id="testId"><option value="">Tüm Testler</option></select>
                     </div>
                 </div>
-
-                <div class="col-6 col-lg-2">
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="usg-filter-group">
                     <label class="form-label">Başlangıç</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
-                        <input type="date" class="form-control form-control-sm" id="startDate" />
-                    </div>
+                    <input type="date" class="form-control form-control-sm" id="startDate" />
                 </div>
-
-                <div class="col-6 col-lg-2">
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="usg-filter-group">
                     <label class="form-label">Bitiş</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa fa-calendar-day"></i></span>
-                        <input type="date" class="form-control form-control-sm" id="endDate" />
-                    </div>
+                    <input type="date" class="form-control form-control-sm" id="endDate" />
                 </div>
-
-                <div class="col-6 col-lg-2">
+            </div>
+            <div class="col-12 col-lg-2">
+                <div class="usg-filter-group">
+                    <label class="form-label">Arama</label>
+                    <input type="text" class="form-control form-control-sm" id="q" placeholder="Hastane veya test..." />
+                </div>
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="usg-filter-group">
                     <label class="form-label">Min Adet</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa fa-arrow-down-1-9"></i></span>
-                        <input type="number" min="0" class="form-control form-control-sm" id="minCount" />
-                    </div>
+                    <input type="number" min="0" class="form-control form-control-sm" id="minCount" />
                 </div>
-
-                <div class="col-6 col-lg-2">
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="usg-filter-group">
                     <label class="form-label">Max Adet</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa fa-arrow-up-9-1"></i></span>
-                        <input type="number" min="0" class="form-control form-control-sm" id="maxCount" />
-                    </div>
+                    <input type="number" min="0" class="form-control form-control-sm" id="maxCount" />
                 </div>
-
-                <div class="col-12 col-lg-3">
-                    <label class="form-label">Ara (Hastane / Test)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa fa-magnifying-glass"></i></span>
-                        <input type="text" class="form-control form-control-sm" id="q" placeholder="Örn: Denizli Devlet Hastanesi" />
-                    </div>
-                </div>
-
-                <div class="col-6 col-lg-2">
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="usg-filter-group">
                     <label class="form-label">Sayfa Boyutu</label>
                     <select class="form-select form-select-sm" id="pageSize">
                         <option>5</option>
@@ -177,252 +489,185 @@
                         <option>100</option>
                     </select>
                 </div>
-
-                <div class="col-6 col-lg-2 ms-lg-auto d-grid">
-                    <button type="button" class="btn btn-sm btn-primary" id="applyBtn">
-                        <i class="fa fa-filter me-1"></i> Uygula
-                    </button>
-                </div>
-
-                <div class="col-6 col-lg-2 d-grid">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clearBtn">
-                        <i class="fa fa-broom me-1"></i> Temizle
-                    </button>
-                </div>
             </div>
-        </form>
+            <div class="col-12 col-lg-3 d-flex gap-2 justify-content-lg-end mt-2 mt-lg-0">
+                <button type="button" class="usg-btn-clear" id="clearBtn"><i class="fa fa-broom"></i> Temizle</button>
+                <button type="button" class="usg-btn-apply" id="applyBtn"><i class="fa fa-filter"></i> Uygula</button>
+            </div>
+        </div>
+    </div>
 
+    <div class="usg-table-wrap">
         <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle sticky-head" id="dataTable">
-                <thead class="table-light">
+            <table class="usg-table" id="dataTable">
+                <thead>
                     <tr>
-                        <th data-sort="hospitalName" class="sortable">Hastane <span class="sort-indicator"></span></th>
-                        <th data-sort="testName" class="sortable">Test <span class="sort-indicator"></span></th>
-                        <th data-sort="month" class="sortable">Ay <span class="sort-indicator"></span></th>
-                        <th data-sort="testCount" class="sortable">Kullanılan Adet <span class="sort-indicator"></span></th>
-                        <th class="text-end">İşlemler</th>
+                        <th data-sort="hospitalName" class="usg-sortable">Hastane <span class="usg-sort-indicator"></span></th>
+                        <th data-sort="testName" class="usg-sortable">Test <span class="usg-sort-indicator"></span></th>
+                        <th data-sort="month" class="usg-sortable" style="width:140px;">Ay <span class="usg-sort-indicator"></span></th>
+                        <th data-sort="testCount" class="usg-sortable text-end" style="width:160px;">Kullanılan Adet <span class="usg-sort-indicator"></span></th>
+                        <th class="text-end" style="width:120px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td colspan="5" class="text-center text-muted py-4">Yükleniyor…</td></tr>
+                    <tr><td colspan="5" class="usg-empty">Yükleniyor…</td></tr>
                 </tbody>
             </table>
         </div>
-
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 mt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 p-3" style="border-top: 1px solid #e2e8f0;">
             <div id="pageInfo" class="text-muted small">Sayfa 1 / 1</div>
-            <nav aria-label="Sayfalama">
-                <ul class="pagination mb-0" id="pager"></ul>
-            </nav>
+            <nav><ul class="pagination usg-pagination mb-0" id="pager"></ul></nav>
         </div>
     </div>
 </div>
 
-<div id="af" class="d-none">
-    <form method="post">
-        @Html.AntiForgeryToken()
-    </form>
-</div>
+<div id="af" class="d-none"><form method="post">@Html.AntiForgeryToken()</form></div>
 
 <script>
-    (function(){
+    (function () {
         const trTR = 'tr-TR';
         const raw = @Html.Raw(json);
+        const canEdit = @canEdit.ToString().ToLowerInvariant();
 
-        const state = {
-            q:'', hospitalId:'', testId:'',
-            startDate:'', endDate:'',
-            minCount:'', maxCount:'',
-            sortKey:'month', sortDir:'desc',
-            page:1, pageSize: parseInt(document.getElementById('pageSize').value, 10) || 20
-        };
-
+        const state = { q: '', hospitalId: '', testId: '', startDate: '', endDate: '', minCount: '', maxCount: '', sortKey: 'month', sortDir: 'desc', page: 1, pageSize: 20 };
         const els = {
-            hospitalId: document.getElementById('hospitalId'),
-            testId: document.getElementById('testId'),
-            startDate: document.getElementById('startDate'),
-            endDate: document.getElementById('endDate'),
-            minCount: document.getElementById('minCount'),
-            maxCount: document.getElementById('maxCount'),
-            q: document.getElementById('q'),
-            pageSize: document.getElementById('pageSize'),
-            applyBtn: document.getElementById('applyBtn'),
-            clearBtn: document.getElementById('clearBtn'),
-            tbody: document.querySelector('#dataTable tbody'),
-            thead: document.querySelector('#dataTable thead'),
-            pager: document.getElementById('pager'),
-            pageInfo: document.getElementById('pageInfo'),
+            hospitalId: document.getElementById('hospitalId'), testId: document.getElementById('testId'),
+            startDate: document.getElementById('startDate'), endDate: document.getElementById('endDate'),
+            minCount: document.getElementById('minCount'), maxCount: document.getElementById('maxCount'),
+            q: document.getElementById('q'), pageSize: document.getElementById('pageSize'),
+            applyBtn: document.getElementById('applyBtn'), clearBtn: document.getElementById('clearBtn'),
+            tbody: document.querySelector('#dataTable tbody'), thead: document.querySelector('#dataTable thead'),
+            pager: document.getElementById('pager'), pageInfo: document.getElementById('pageInfo'),
             totalBadge: document.getElementById('totalBadge')
         };
 
-        const hospitals = [...new Map(raw.map(x => [x.hospitalID, { id: x.hospitalID, name: x.hospitalName }])).values()]
-            .sort((a,b)=>a.name.localeCompare(b.name, trTR));
-        const tests = [...new Map(raw.map(x => [x.testID, { id: x.testID, name: x.testName }])).values()]
-            .sort((a,b)=>a.name.localeCompare(b.name, trTR));
+        const hospitals = [...new Map(raw.map(x => [x.hospitalID, { id: x.hospitalID, name: x.hospitalName }])).values()].sort((a, b) => a.name.localeCompare(b.name, trTR));
+        const tests = [...new Map(raw.map(x => [x.testID, { id: x.testID, name: x.testName }])).values()].sort((a, b) => a.name.localeCompare(b.name, trTR));
+        hospitals.forEach(h => { const o = document.createElement('option'); o.value = h.id; o.textContent = h.name; els.hospitalId.appendChild(o); });
+        tests.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; els.testId.appendChild(o); });
 
-        hospitals.forEach(h=>{ const o=document.createElement('option'); o.value=h.id; o.textContent=h.name; els.hospitalId.appendChild(o); });
-        tests.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; els.testId.appendChild(o); });
-
-        [els.hospitalId, els.testId, els.startDate, els.endDate, els.minCount, els.maxCount, els.pageSize]
-            .forEach(e=>e.addEventListener('change', applyFilters));
+        [els.hospitalId, els.testId, els.startDate, els.endDate, els.minCount, els.maxCount, els.pageSize].forEach(e => e.addEventListener('change', applyFilters));
         els.applyBtn.addEventListener('click', applyFilters);
-        els.clearBtn.addEventListener('click', resetAll);
+        els.clearBtn.addEventListener('click', () => {
+            Object.assign(state, { q: '', hospitalId: '', testId: '', startDate: '', endDate: '', minCount: '', maxCount: '', sortKey: 'month', sortDir: 'desc', page: 1, pageSize: 20 });
+            els.hospitalId.value = ''; els.testId.value = ''; els.startDate.value = ''; els.endDate.value = '';
+            els.minCount.value = ''; els.maxCount.value = ''; els.q.value = ''; els.pageSize.value = '20';
+            render();
+        });
 
-        let t=null;
-        els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 200); });
+        let t = null;
+        els.q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 200); });
 
-        els.thead.addEventListener('click', (ev)=>{
-            const th = ev.target.closest('.sortable'); if(!th) return;
+        els.thead.addEventListener('click', (ev) => {
+            const th = ev.target.closest('.usg-sortable'); if (!th) return;
             const key = th.dataset.sort;
-            if(state.sortKey === key){ state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; }
-            else { state.sortKey = key; state.sortDir = (key==='month' || key==='testCount') ? 'desc':'asc'; }
+            if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+            else { state.sortKey = key; state.sortDir = (key === 'month' || key === 'testCount') ? 'desc' : 'asc'; }
             state.page = 1; render();
         });
 
-        function resetAll(){
-            Object.assign(state,{
-                q:'', hospitalId:'', testId:'',
-                startDate:'', endDate:'',
-                minCount:'', maxCount:'',
-                sortKey:'month', sortDir:'desc', page:1, pageSize: parseInt(els.pageSize.value,10) || 20
-            });
-            els.hospitalId.value=''; els.testId.value='';
-            els.startDate.value=''; els.endDate.value='';
-            els.minCount.value=''; els.maxCount.value='';
-            els.q.value='';
-            render();
+        function applyFilters() {
+            state.q = (els.q.value || '').trim();
+            state.hospitalId = els.hospitalId.value || ''; state.testId = els.testId.value || '';
+            state.startDate = els.startDate.value || ''; state.endDate = els.endDate.value || '';
+            state.minCount = els.minCount.value || ''; state.maxCount = els.maxCount.value || '';
+            state.pageSize = parseInt(els.pageSize.value, 10) || 20; state.page = 1; render();
         }
 
-        function applyFilters(){
-            state.q = (els.q.value||'').trim();
-            state.hospitalId = els.hospitalId.value || '';
-            state.testId = els.testId.value || '';
-            state.startDate = els.startDate.value || '';
-            state.endDate = els.endDate.value || '';
-            state.minCount = els.minCount.value || '';
-            state.maxCount = els.maxCount.value || '';
-            state.pageSize = parseInt(els.pageSize.value,10) || 20;
-            state.page = 1; render();
-        }
-
-        function filterData(data){
+        function filterData(data) {
             const q = state.q.toLocaleLowerCase(trTR);
-            return data.filter(x=>{
-                if(state.hospitalId && String(x.hospitalID)!==String(state.hospitalId)) return false;
-                if(state.testId && String(x.testID)!==String(state.testId)) return false;
-
+            return data.filter(x => {
+                if (state.hospitalId && String(x.hospitalID) !== String(state.hospitalId)) return false;
+                if (state.testId && String(x.testID) !== String(state.testId)) return false;
                 const d = new Date(x.month);
-                if(state.startDate && d < new Date(state.startDate)) return false;
-                if(state.endDate && d > new Date(state.endDate)) return false;
-
-                if(state.minCount && x.testCount < Number(state.minCount)) return false;
-                if(state.maxCount && x.testCount > Number(state.maxCount)) return false;
-
-                if(q){
-                    const hay = `${x.hospitalName} ${x.testName}`.toLocaleLowerCase(trTR);
-                    if(!hay.includes(q)) return false;
-                }
+                if (state.startDate && d < new Date(state.startDate)) return false;
+                if (state.endDate && d > new Date(state.endDate)) return false;
+                if (state.minCount && x.testCount < Number(state.minCount)) return false;
+                if (state.maxCount && x.testCount > Number(state.maxCount)) return false;
+                if (q) { const hay = `${x.hospitalName} ${x.testName}`.toLocaleLowerCase(trTR); if (!hay.includes(q)) return false; }
                 return true;
             });
         }
 
-        function sortData(data){
-            const key = state.sortKey;
-            const dir = state.sortDir === 'asc' ? 1 : -1;
-            return [...data].sort((a,b)=>{
-                let va=a[key], vb=b[key];
-                if(key==='month'){ va=new Date(a.month); vb=new Date(b.month); }
-                if(key==='testCount'){ va=Number(a.testCount)||0; vb=Number(b.testCount)||0; }
-                if(typeof va==='string' && typeof vb==='string'){ return va.localeCompare(vb, trTR)*dir; }
-                if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0;
+        function sortData(data) {
+            const key = state.sortKey, dir = state.sortDir === 'asc' ? 1 : -1;
+            return [...data].sort((a, b) => {
+                let va = a[key], vb = b[key];
+                if (key === 'month') { va = new Date(a.month); vb = new Date(b.month); }
+                if (key === 'testCount') { va = Number(a.testCount) || 0; vb = Number(b.testCount) || 0; }
+                if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb, trTR) * dir;
+                if (va < vb) return -1 * dir; if (va > vb) return 1 * dir; return 0;
             });
         }
 
-        function paginate(data){
-            const total = data.length;
-            const size = state.pageSize;
-            const totalPages = Math.max(1, Math.ceil(total/size));
-            if(state.page>totalPages) state.page=totalPages;
-            const start=(state.page-1)*size;
-            const items=data.slice(start,start+size);
-            return { items,total,totalPages,start,end:Math.min(start+size,total) };
+        function paginate(data) {
+            const total = data.length, size = state.pageSize, totalPages = Math.max(1, Math.ceil(total / size));
+            if (state.page > totalPages) state.page = totalPages;
+            const start = (state.page - 1) * size, items = data.slice(start, start + size);
+            return { items, total, totalPages, start, end: Math.min(start + size, total) };
         }
 
-        function formatMonth(iso){
-            const d=new Date(iso);
-            return d.toLocaleDateString(trTR,{month:'long',year:'numeric'});
+        function formatMonth(iso) { const d = new Date(iso); return d.toLocaleDateString(trTR, { month: 'long', year: 'numeric' }); }
+
+        function renderSortIndicators() {
+            document.querySelectorAll('.usg-sort-indicator').forEach(si => si.textContent = '');
+            const th = document.querySelector(`.usg-sortable[data-sort="${state.sortKey}"] .usg-sort-indicator`);
+            if (th) th.textContent = state.sortDir === 'asc' ? '▲' : '▼';
         }
 
-        function renderSortIndicators(){
-            document.querySelectorAll('.sortable .sort-indicator').forEach(si=>si.textContent='');
-            const th=document.querySelector(`.sortable[data-sort="${state.sortKey}"] .sort-indicator`);
-            if(th) th.textContent = state.sortDir==='asc' ? '▲' : '▼';
-        }
+        function render() {
+            const filtered = filterData(raw), sorted = sortData(filtered);
+            const { items, total, totalPages, start, end } = paginate(sorted);
 
-        function render(){
-            const filtered=filterData(raw);
-            const sorted=sortData(filtered);
-            const {items,total,totalPages,start,end}=paginate(sorted);
-
-            els.totalBadge.textContent=`Toplam: ${total}`;
-            els.pageInfo.textContent=`Sayfa ${state.page} / ${totalPages} (${total ? (start+1) : 0} - ${end} / ${total})`;
+            els.totalBadge.textContent = total;
+            els.pageInfo.textContent = `Sayfa ${state.page} / ${totalPages}  •  ${total ? (start + 1) : 0} – ${end} / ${total}`;
             renderSortIndicators();
 
-            const fr=document.createDocumentFragment();
-            if(items.length===0){
-                const tr=document.createElement('tr');
-                tr.innerHTML=`<td colspan="5" class="text-center text-muted py-4">Kayıt bulunamadı.</td>`;
+            const fr = document.createDocumentFragment();
+            if (items.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="5" class="usg-empty"><div class="usg-empty-icon">📭</div>Kayıt bulunamadı.</td>`;
                 fr.appendChild(tr);
-            }else{
-                const token=(document.querySelector('#af input[name="__RequestVerificationToken"]')||{}).value||'';
-                items.forEach(x=>{
-                    const tr=document.createElement('tr');
-                    tr.innerHTML=`
-                        <td>${escapeHtml(x.hospitalName)}</td>
+            } else {
+                const token = (document.querySelector('#af input[name="__RequestVerificationToken"]') || {}).value || '';
+                items.forEach(x => {
+                    const tr = document.createElement('tr');
+                    const actionsHtml = canEdit ? `
+                        <a class="usg-btn-icon usg-btn-edit me-1" title="Düzenle" href="@Url.Action("Edit", "Usage", new { area = "Istatistik" })/${x.id}"><i class="fa fa-edit"></i></a>
+                        <form class="d-inline" method="post" action="@Url.Action("Delete", "Usage", new { area = "Istatistik" })/${x.id}">
+                            <input name="__RequestVerificationToken" type="hidden" value="${token}">
+                            <button type="submit" class="usg-btn-icon usg-btn-delete" title="Sil" onclick="return confirm('Silmek istediğinize emin misiniz?')"><i class="fa fa-trash"></i></button>
+                        </form>` : '<span class="text-muted small">—</span>';
+                    tr.innerHTML = `
+                        <td class="fw-semibold">${escapeHtml(x.hospitalName)}</td>
                         <td>${escapeHtml(x.testName)}</td>
-                        <td>${escapeHtml(formatMonth(x.month))}</td>
-                        <td>${Number(x.testCount).toLocaleString(trTR)}</td>
-                        <td class="text-end">
-                            <a class="btn btn-warning btn-icon me-1" title="Düzenle" href="@Url.Action("Edit", "Usage", new { area = "Istatistik" })/${x.id}">
-                                <i class="fa fa-edit"></i>
-                            </a>
-                            <form class="d-inline" method="post" action="@Url.Action("Delete", "Usage", new { area = "Istatistik" })/${x.id}">
-                                <input name="__RequestVerificationToken" type="hidden" value="${token}">
-                                <button type="submit" class="btn btn-danger btn-icon" title="Sil"
-                                    onclick="return confirm('Silmek istediğinize emin misiniz?')">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </form>
-                        </td>`;
+                        <td><span class="usg-badge-month">${escapeHtml(formatMonth(x.month))}</span></td>
+                        <td class="text-end"><span class="usg-count-pill">${Number(x.testCount).toLocaleString(trTR)}</span></td>
+                        <td class="text-end">${actionsHtml}</td>`;
                     fr.appendChild(tr);
                 });
             }
-            els.tbody.innerHTML=''; els.tbody.appendChild(fr);
+            els.tbody.innerHTML = ''; els.tbody.appendChild(fr);
             renderPager(totalPages);
         }
 
-        function renderPager(totalPages){
-            const p=state.page, ul=els.pager; ul.innerHTML='';
-
-            const makeItem=(label,page,disabled=false,active=false)=>{
-                const li=document.createElement('li');
-                li.className=`page-item ${disabled?'disabled':''} ${active?'active':''}`;
-                const a=document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent=label;
-                if(!disabled && !active){ a.addEventListener('click',e=>{e.preventDefault(); state.page=page; render();}); }
+        function renderPager(totalPages) {
+            const p = state.page, ul = els.pager; ul.innerHTML = '';
+            const makeItem = (label, page, disabled = false, active = false) => {
+                const li = document.createElement('li'); li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                const a = document.createElement('a'); a.className = 'page-link'; a.href = '#'; a.textContent = label;
+                if (!disabled && !active) a.addEventListener('click', e => { e.preventDefault(); state.page = page; render(); });
                 li.appendChild(a); return li;
             };
-
-            ul.appendChild(makeItem('«',1,p<=1));
-            ul.appendChild(makeItem('Önceki',Math.max(1,p-1),p<=1));
-
-            const start=Math.max(1,p-2), end=Math.min(totalPages,p+2);
-            for(let i=start;i<=end;i++) ul.appendChild(makeItem(String(i),i,false,i===p));
-
-            ul.appendChild(makeItem('Sonraki',Math.min(totalPages,p+1),p>=totalPages));
-            ul.appendChild(makeItem('»',totalPages,p>=totalPages));
+            ul.appendChild(makeItem('«', 1, p <= 1));
+            ul.appendChild(makeItem('‹', Math.max(1, p - 1), p <= 1));
+            const start = Math.max(1, p - 2), end = Math.min(totalPages, p + 2);
+            for (let i = start; i <= end; i++) ul.appendChild(makeItem(String(i), i, false, i === p));
+            ul.appendChild(makeItem('›', Math.min(totalPages, p + 1), p >= totalPages));
+            ul.appendChild(makeItem('»', totalPages, p >= totalPages));
         }
 
-        function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+        function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
 
         render();
     })();

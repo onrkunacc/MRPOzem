@@ -13,6 +13,11 @@ namespace CRMOzem.Core.Models
 
         [StringLength(30)]
         public string? SutCode { get; set; }
+        [StringLength(50)]
+        public string? Kategori { get; set; }  // "Alinity Sarf", "Architect CC" vb
+
+        [StringLength(50)]
+        public string? Platform { get; set; }  // "Alinity C", "Architect IA" vb
 
         // ── YENİ: Giriş tipi ve kutu bilgisi ──
         public TestGirisTipi GirisTipi { get; set; } = TestGirisTipi.Adet;

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
     [Area("Istatistik")]
-    [Authorize(Roles = "İstatistik,Yönetici")]
+    [Authorize(Roles = "Yönetici,İstatistik,Aplikasyon,Lojistik,İstatistikGiris")]
     public class HospitalBirimController : Controller
     {
         private readonly ApplicationDbContext _context;

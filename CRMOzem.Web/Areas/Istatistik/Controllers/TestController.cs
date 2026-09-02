@@ -19,24 +19,73 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(CancellationToken ct)
+        public async Task<IActionResult> Index(
+            string? search,
+            string? kategori,
+            string? platform,
+            string? girisTipi,
+            CancellationToken ct)
         {
             try
             {
-                var tests = await _context.Tests.AsNoTracking()
-                    .OrderBy(x => x.TestName)
+                var query = _context.Tests.AsNoTracking().AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var s = search.Trim();
+                    query = query.Where(t =>
+                        t.TestName.Contains(s) ||
+                        (t.SutCode != null && t.SutCode.Contains(s)));
+                }
+
+                if (!string.IsNullOrWhiteSpace(kategori))
+                    query = query.Where(t => t.Kategori == kategori);
+
+                if (!string.IsNullOrWhiteSpace(platform))
+                    query = query.Where(t => t.Platform == platform);
+
+                if (!string.IsNullOrWhiteSpace(girisTipi))
+                {
+                    if (Enum.TryParse<TestGirisTipi>(girisTipi, out var tipi))
+                        query = query.Where(t => t.GirisTipi == tipi);
+                }
+
+                var tests = await query
+                    .OrderBy(t => t.Platform)
+                    .ThenBy(t => t.Kategori)
+                    .ThenBy(t => t.TestName)
+                    .Select(t => new TestViewModel
+                    {
+                        TestID = t.TestID,
+                        TestName = t.TestName,
+                        SutCode = t.SutCode,
+                        Kategori = t.Kategori,
+                        Platform = t.Platform,
+                        GirisTipi = t.GirisTipi,
+                        KutuBasinaAdet = t.KutuBasinaAdet
+                    })
                     .ToListAsync(ct);
 
-                var viewModel = tests.Select(t => new TestViewModel
-                {
-                    TestID = t.TestID,
-                    TestName = t.TestName,
-                    SutCode = t.SutCode,
-                    GirisTipi = t.GirisTipi,
-                    KutuBasinaAdet = t.KutuBasinaAdet
-                }).ToList();
+                ViewBag.Kategoriler = await _context.Tests.AsNoTracking()
+                    .Where(t => t.Kategori != null)
+                    .Select(t => t.Kategori!)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToListAsync(ct);
 
-                return View(viewModel);
+                ViewBag.Platformlar = await _context.Tests.AsNoTracking()
+                    .Where(t => t.Platform != null)
+                    .Select(t => t.Platform!)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToListAsync(ct);
+
+                ViewBag.SelectedSearch = search;
+                ViewBag.SelectedKategori = kategori;
+                ViewBag.SelectedPlatform = platform;
+                ViewBag.SelectedGirisTipi = girisTipi;
+
+                return View(tests);
             }
             catch (Exception ex)
             {
@@ -46,40 +95,38 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         }
 
         [HttpGet]
-        public IActionResult Create() => View(new TestCreateViewModel());
+        public IActionResult Create()
+        {
+            return View(new TestCreateViewModel());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TestCreateViewModel model, CancellationToken ct)
         {
-            // GirisTipi=Kutu ise KutuBasinaAdet zorunlu
-            if (model.GirisTipi == TestGirisTipi.Kutu && !model.KutuBasinaAdet.HasValue)
-            {
-                ModelState.AddModelError(nameof(model.KutuBasinaAdet),
-                    "Giriş tipi Kutu seçildiğinde kutu başına adet girilmelidir.");
-            }
-
-            if (!ModelState.IsValid) return View(model);
-
             try
             {
-                var exists = await _context.Tests.AsNoTracking()
-                    .AnyAsync(t => t.TestName.ToLower() == model.TestName.ToLower(), ct);
-
-                if (exists)
+                if (model.GirisTipi == TestGirisTipi.Kutu &&
+                    (!model.KutuBasinaAdet.HasValue || model.KutuBasinaAdet.Value <= 0))
                 {
-                    ModelState.AddModelError(nameof(model.TestName), "Bu test adı zaten kayıtlı.");
-                    return View(model);
+                    ModelState.AddModelError(nameof(model.KutuBasinaAdet),
+                        "Kutu tipinde giriş için 'Kutu Başına Adet' zorunludur.");
                 }
 
-                _context.Tests.Add(new Test
+                if (!ModelState.IsValid)
+                    return View(model);
+
+                var test = new Test
                 {
-                    TestName = model.TestName.Trim(),
-                    SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim(),
+                    TestName = model.TestName?.Trim() ?? "",
+                    SutCode = model.SutCode?.Trim(),
+                    Kategori = string.IsNullOrWhiteSpace(model.Kategori) ? null : model.Kategori.Trim(),
+                    Platform = string.IsNullOrWhiteSpace(model.Platform) ? null : model.Platform.Trim(),
                     GirisTipi = model.GirisTipi,
                     KutuBasinaAdet = model.GirisTipi == TestGirisTipi.Kutu ? model.KutuBasinaAdet : null
-                });
+                };
 
+                _context.Tests.Add(test);
                 await _context.SaveChangesAsync(ct);
 
                 TempData["SuccessMessage"] = "Test başarıyla eklendi.";
@@ -87,7 +134,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Hata: " + ex.Message);
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return View(model);
             }
         }
@@ -97,25 +144,31 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         {
             try
             {
-                var test = await _context.Tests.FindAsync(new object?[] { id }, ct);
+                var test = await _context.Tests.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TestID == id, ct);
+
                 if (test == null)
                 {
                     TempData["Error"] = "Test bulunamadı.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                return View(new TestEditViewModel
+                var model = new TestEditViewModel
                 {
                     TestID = test.TestID,
                     TestName = test.TestName,
                     SutCode = test.SutCode,
+                    Kategori = test.Kategori,
+                    Platform = test.Platform,
                     GirisTipi = test.GirisTipi,
                     KutuBasinaAdet = test.KutuBasinaAdet
-                });
+                };
+
+                return View(model);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = "Yükleme hatası: " + ex.Message;
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -124,27 +177,31 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(TestEditViewModel model, CancellationToken ct)
         {
-            if (model.GirisTipi == TestGirisTipi.Kutu && !model.KutuBasinaAdet.HasValue)
-            {
-                ModelState.AddModelError(nameof(model.KutuBasinaAdet),
-                    "Giriş tipi Kutu seçildiğinde kutu başına adet girilmelidir.");
-            }
-
-            if (!ModelState.IsValid) return View(model);
-
             try
             {
-                var test = await _context.Tests.FindAsync(new object?[] { model.TestID }, ct);
-                if (test == null)
+                if (model.GirisTipi == TestGirisTipi.Kutu &&
+                    (!model.KutuBasinaAdet.HasValue || model.KutuBasinaAdet.Value <= 0))
+                {
+                    ModelState.AddModelError(nameof(model.KutuBasinaAdet),
+                        "Kutu tipinde giriş için 'Kutu Başına Adet' zorunludur.");
+                }
+
+                if (!ModelState.IsValid)
+                    return View(model);
+
+                var existing = await _context.Tests.FirstOrDefaultAsync(t => t.TestID == model.TestID, ct);
+                if (existing == null)
                 {
                     TempData["Error"] = "Test bulunamadı.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                test.TestName = model.TestName.Trim();
-                test.SutCode = string.IsNullOrWhiteSpace(model.SutCode) ? null : model.SutCode.Trim();
-                test.GirisTipi = model.GirisTipi;
-                test.KutuBasinaAdet = model.GirisTipi == TestGirisTipi.Kutu ? model.KutuBasinaAdet : null;
+                existing.TestName = model.TestName?.Trim() ?? "";
+                existing.SutCode = model.SutCode?.Trim();
+                existing.Kategori = string.IsNullOrWhiteSpace(model.Kategori) ? null : model.Kategori.Trim();
+                existing.Platform = string.IsNullOrWhiteSpace(model.Platform) ? null : model.Platform.Trim();
+                existing.GirisTipi = model.GirisTipi;
+                existing.KutuBasinaAdet = model.GirisTipi == TestGirisTipi.Kutu ? model.KutuBasinaAdet : null;
 
                 await _context.SaveChangesAsync(ct);
 
@@ -153,7 +210,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Hata: " + ex.Message);
+                TempData["Error"] = "Hata oluştu: " + ex.Message;
                 return View(model);
             }
         }
@@ -174,69 +231,13 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 _context.Tests.Remove(test);
                 await _context.SaveChangesAsync(ct);
 
-                TempData["SuccessMessage"] = "Test başarıyla silindi.";
+                TempData["SuccessMessage"] = "Test silindi.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["Error"] = "Silme hatası: " + ex.Message;
                 return RedirectToAction(nameof(Index));
-            }
-        }
-
-        // Upload tarafı (otomatik test ekleme — varsayılan Adet, KutuBasinaAdet null)
-        [HttpPost]
-        public async Task<IActionResult> CreateFromUpload(string testName, string? sutCode, CancellationToken ct)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(testName))
-                    return Json(new { success = false, message = "Test adı boş olamaz." });
-
-                var exists = await _context.Tests.AsNoTracking()
-                    .AnyAsync(t => t.TestName == testName, ct);
-
-                if (exists)
-                    return Json(new { success = false, message = "Bu test zaten kayıtlı." });
-
-                var test = new Test
-                {
-                    TestName = testName.Trim(),
-                    SutCode = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim(),
-                    GirisTipi = TestGirisTipi.Adet  // upload'tan eklenen default Adet
-                };
-
-                _context.Tests.Add(test);
-                await _context.SaveChangesAsync(ct);
-
-                return Json(new { success = true, testId = test.TestID });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateSutCode(int id, string? sutCode, CancellationToken ct)
-        {
-            try
-            {
-                var test = await _context.Tests.FindAsync(new object?[] { id }, ct);
-                if (test == null)
-                    return Json(new { success = false, message = "Test bulunamadı." });
-
-                var normalized = string.IsNullOrWhiteSpace(sutCode) ? null : sutCode.Trim();
-
-                test.SutCode = normalized;
-                await _context.SaveChangesAsync(ct);
-
-                return Json(new { success = true, sutCode = test.SutCode });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
             }
         }
     }

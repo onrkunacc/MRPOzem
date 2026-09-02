@@ -14,7 +14,7 @@ using System.Globalization;
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
     [Area("Istatistik")]
-    [Authorize(Roles = "Yönetici,İstatistik")]
+    [Authorize(Roles = "Yönetici,İstatistik,Aplikasyon,Lojistik,İstatistikGiris")]
     public class ReportController : Controller
     {
         private readonly IStatisticsService _statisticsService;

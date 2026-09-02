@@ -1228,8 +1228,16 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Adet");
 
+                    b.Property<string>("Kategori")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int?>("KutuBasinaAdet")
                         .HasColumnType("int");
+
+                    b.Property<string>("Platform")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("SutCode")
                         .HasMaxLength(30)

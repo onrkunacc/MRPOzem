@@ -24,6 +24,8 @@ namespace CRMOzem.Core.ViewModels
         public int TestID { get; set; }
         public string TestName { get; set; } = "";
         public string? SutCode { get; set; }
+        public string? Kategori { get; set; }
+        public string? Platform { get; set; }
         public TestGirisTipi GirisTipi { get; set; }
         public int? KutuBasinaAdet { get; set; }
 

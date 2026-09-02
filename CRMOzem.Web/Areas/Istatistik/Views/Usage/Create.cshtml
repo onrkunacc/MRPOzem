@@ -321,6 +321,36 @@
             font-size: .9rem;
         }
     }
+
+    .us-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: color .15s;
+        position: relative;
+    }
+
+        .us-sortable:hover {
+            color: #4f46e5 !important;
+            background: rgba(99,102,241,.06);
+        }
+
+    .us-sort-indicator {
+        display: inline-block;
+        margin-left: .3rem;
+        opacity: .4;
+        font-size: .75rem;
+        transition: opacity .15s;
+    }
+
+    .us-sortable.us-sort-active .us-sort-indicator {
+        opacity: 1;
+        color: #6366f1;
+    }
+
+    .us-sortable.us-sort-active {
+        color: #4f46e5 !important;
+        background: rgba(99,102,241,.05);
+    }
 </style>
 
 <div class="us-page">
@@ -455,10 +485,18 @@
                     <thead>
                         <tr>
                             <th style="width:40px;">#</th>
-                            <th>Test Adı</th>
-                            <th style="width:120px;">SUT</th>
-                            <th style="width:90px;">Tip</th>
-                            <th style="width:200px;">Kullanılan (Adet)</th>
+                            <th class="us-sortable" data-sort="testname">
+                                Test Adı <span class="us-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:120px;" class="us-sortable" data-sort="sutcode">
+                                SUT <span class="us-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:90px;" class="us-sortable" data-sort="tip">
+                                Tip <span class="us-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:200px;" class="us-sortable" data-sort="mevcut">
+                                Kullanılan (Adet) <span class="us-sort-indicator">⇅</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -471,7 +509,8 @@
                             <tr data-testname="@((r.TestName ?? "").ToLowerInvariant())"
                                 data-sutcode="@((r.SutCode ?? "").ToLowerInvariant())"
                                 data-tip="@tipText.ToLowerInvariant()"
-                                data-mevcut="@r.MevcutAdet">
+                                data-mevcut="@r.MevcutAdet"
+                                data-index="@(i + 1)">
 
                                 <td class="text-muted small">@(i + 1)</td>
 
@@ -570,7 +609,96 @@
                     }
                 });
             });
+                    // ═════════════════════════════════════════════
+        // TABLO SIRALAMA (Excel benzeri)
+        // ═════════════════════════════════════════════
+        let sortState = { key: null, dir: 'asc' };
 
+        function sortRows(key) {
+            // Aynı kolona tekrar tıklandıysa yön değiştir
+            if (sortState.key === key) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.key = key;
+                sortState.dir = 'asc';
+            }
+
+            const tbody = table.querySelector('tbody');
+            const rowsArr = Array.from(tbody.querySelectorAll('tr'));
+
+            const dir = sortState.dir === 'asc' ? 1 : -1;
+
+            rowsArr.sort((a, b) => {
+                let va, vb;
+
+                switch (key) {
+                    case 'testname':
+                        va = a.getAttribute('data-testname') || '';
+                        vb = b.getAttribute('data-testname') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'sutcode':
+                        va = a.getAttribute('data-sutcode') || '';
+                        vb = b.getAttribute('data-sutcode') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'tip':
+                        va = a.getAttribute('data-tip') || '';
+                        vb = b.getAttribute('data-tip') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'mevcut':
+                        // Öncelik: kullanıcının girdiği değer, yoksa mevcut kayıt
+                        const inputA = a.querySelector('.js-amount');
+                        const inputB = b.querySelector('.js-amount');
+                        const currentA = parseInt(inputA?.value) || 0;
+                        const currentB = parseInt(inputB?.value) || 0;
+                        const mevcutA = parseInt(a.getAttribute('data-mevcut')) || 0;
+                        const mevcutB = parseInt(b.getAttribute('data-mevcut')) || 0;
+                        // Toplam: input + mevcut kayıt
+                        va = currentA + mevcutA;
+                        vb = currentB + mevcutB;
+                        return (va - vb) * dir;
+                }
+                return 0;
+            });
+
+            // DOM'a yeniden ekle (sıra değişir)
+            rowsArr.forEach(tr => tbody.appendChild(tr));
+
+            // # kolonunu yeniden numarala
+            rowsArr.forEach((tr, i) => {
+                const firstTd = tr.querySelector('td:first-child');
+                if (firstTd) firstTd.textContent = i + 1;
+            });
+
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('.us-sortable').forEach(th => {
+                th.classList.remove('us-sort-active');
+                const ind = th.querySelector('.us-sort-indicator');
+                if (ind) ind.textContent = '⇅';
+            });
+
+            if (sortState.key) {
+                const activeTh = document.querySelector(`.us-sortable[data-sort="${sortState.key}"]`);
+                if (activeTh) {
+                    activeTh.classList.add('us-sort-active');
+                    const ind = activeTh.querySelector('.us-sort-indicator');
+                    if (ind) ind.textContent = sortState.dir === 'asc' ? '▲' : '▼';
+                }
+            }
+        }
+
+        // Kolon başlıklarına tıklama olayı
+        document.querySelectorAll('.us-sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.getAttribute('data-sort');
+                if (key) sortRows(key);
+            });
+        });
             // Filtre
             function applyFilter() {
                 const query = (els.q.value || '').trim().toLocaleLowerCase(trTR);
@@ -619,6 +747,7 @@
                 els.totalAmount.textContent = total.toLocaleString('tr-TR');
                 els.btnSubmit.disabled = filled === 0;
             }
+
 
             rows.forEach(tr => {
                 const input = tr.querySelector('.js-amount');

@@ -356,6 +356,36 @@
             font-size: .9rem;
         }
     }
+
+    .sp-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: color .15s;
+        position: relative;
+    }
+
+        .sp-sortable:hover {
+            color: #059669 !important;
+            background: rgba(16,185,129,.06);
+        }
+
+    .sp-sort-indicator {
+        display: inline-block;
+        margin-left: .3rem;
+        opacity: .4;
+        font-size: .75rem;
+        transition: opacity .15s;
+    }
+
+    .sp-sortable.sp-sort-active .sp-sort-indicator {
+        opacity: 1;
+        color: #059669;
+    }
+
+    .sp-sortable.sp-sort-active {
+        color: #059669 !important;
+        background: rgba(16,185,129,.05);
+    }
 </style>
 
 <div class="sh-page">
@@ -492,11 +522,18 @@
                     <thead>
                         <tr>
                             <th style="width:40px;">#</th>
-                            <th>Test Adı</th>
-                            <th style="width:120px;">SUT</th>
-                            <th style="width:90px;">Tip</th>
-                            <th style="width:200px;">Adet (Bu Gönderim)</th>
-                            <th style="width:180px;">Bilgi</th>
+                            <th class="sp-sortable" data-sort="testname">
+                                Test Adı <span class="sp-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:120px;" class="sp-sortable" data-sort="sutcode">
+                                SUT <span class="sp-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:90px;" class="sp-sortable" data-sort="tip">
+                                Tip <span class="sp-sort-indicator">⇅</span>
+                            </th>
+                            <th style="width:200px;" class="sp-sortable" data-sort="mevcut">
+                                Gönderilecek Miktar <span class="sp-sort-indicator">⇅</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -624,7 +661,91 @@
                     }
                 });
             });
+        // ═════════════════════════════════════════════
+        // TABLO SIRALAMA (Excel benzeri)
+        // ═════════════════════════════════════════════
+        let sortState = { key: null, dir: 'asc' };
 
+        function sortRows(key) {
+            if (sortState.key === key) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.key = key;
+                sortState.dir = 'asc';
+            }
+
+            const tbody = table.querySelector('tbody');
+            const rowsArr = Array.from(tbody.querySelectorAll('tr'));
+
+            const dir = sortState.dir === 'asc' ? 1 : -1;
+
+            rowsArr.sort((a, b) => {
+                let va, vb;
+
+                switch (key) {
+                    case 'testname':
+                        va = a.getAttribute('data-testname') || '';
+                        vb = b.getAttribute('data-testname') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'sutcode':
+                        va = a.getAttribute('data-sutcode') || '';
+                        vb = b.getAttribute('data-sutcode') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'tip':
+                        va = a.getAttribute('data-tip') || '';
+                        vb = b.getAttribute('data-tip') || '';
+                        return va.localeCompare(vb, trTR) * dir;
+
+                    case 'mevcut':
+                        const inputA = a.querySelector('.js-amount');
+                        const inputB = b.querySelector('.js-amount');
+                        const currentA = parseInt(inputA?.value) || 0;
+                        const currentB = parseInt(inputB?.value) || 0;
+                        const mevcutA = parseInt(a.getAttribute('data-mevcut')) || 0;
+                        const mevcutB = parseInt(b.getAttribute('data-mevcut')) || 0;
+                        va = currentA + mevcutA;
+                        vb = currentB + mevcutB;
+                        return (va - vb) * dir;
+                }
+                return 0;
+            });
+
+            rowsArr.forEach(tr => tbody.appendChild(tr));
+
+            // # kolonunu yeniden numarala
+            rowsArr.forEach((tr, i) => {
+                const firstTd = tr.querySelector('td:first-child');
+                if (firstTd) firstTd.textContent = i + 1;
+            });
+
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('.sp-sortable').forEach(th => {
+                th.classList.remove('sp-sort-active');
+                const ind = th.querySelector('.sp-sort-indicator');
+                if (ind) ind.textContent = '⇅';
+            });
+
+            if (sortState.key) {
+                const activeTh = document.querySelector(`.sp-sortable[data-sort="${sortState.key}"]`);
+                if (activeTh) {
+                    activeTh.classList.add('sp-sort-active');
+                    const ind = activeTh.querySelector('.sp-sort-indicator');
+                    if (ind) ind.textContent = sortState.dir === 'asc' ? '▲' : '▼';
+                }
+            }
+        }
+
+        document.querySelectorAll('.sp-sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.getAttribute('data-sort');
+                if (key) sortRows(key);
+            });
+        });
             // ═══ Filtreleme ═══
             function applyFilter() {
                 const query = (els.q.value || '').trim().toLocaleLowerCase(trTR);
