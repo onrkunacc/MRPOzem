@@ -34,5 +34,7 @@ namespace CRMOzem.Core.Models
 
         // YENİ
         public ICollection<HospitalAylikIstatistik> AylikIstatistikler { get; set; } = new List<HospitalAylikIstatistik>();
+        public ICollection<FizikiSayimSnapshot> SayimSnapshots { get; set; } = new List<FizikiSayimSnapshot>();
+        public ICollection<SiparisTalep> SiparisTalepleri { get; set; } = new List<SiparisTalep>();
     }
 }

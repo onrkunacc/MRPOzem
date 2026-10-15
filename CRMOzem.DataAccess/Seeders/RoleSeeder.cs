@@ -25,7 +25,8 @@ namespace CRMOzem.DataAccess.Seeders
                 "IT",
                 "Aplikasyon",
                 "Lojistik",
-                "İstatistikGiris"
+                "İstatistikGiris",
+                "KotaTakip"
             };
 
             foreach (var role in roleNames)

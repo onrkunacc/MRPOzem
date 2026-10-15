@@ -64,8 +64,8 @@ namespace CRMOzem.Web.Controllers
                 return Redirect("/Admin/Admin/Index");
             if (roles.Contains("Muhasebe"))
                 return Redirect("/Muhasebe/Cari/Index");
-            if (roles.Contains("Finans"))
-                return Redirect("/Finans/Dashboard/Index");
+            if (roles.Contains("KotaTakip"))
+                return Redirect("/Finans/Kota/Index");
             if (roles.Contains("İnsan Kaynakları"))
                 return Redirect("/InsanKaynaklari/Leave/Index");
             if (roles.Contains("İstatistik") || roles.Contains("İstatistikYonetici")

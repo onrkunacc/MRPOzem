@@ -1,0 +1,285 @@
+﻿
+@model List<CRMOzem.Core.ViewModels.KotaRowVm>
+@using CRMOzem.Core.Enums
+@using CRMOzem.Core.ViewModels
+@{
+    ViewData["Title"] = "Kotalar";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var toplamProforma = Model.Sum(x => x.ProformaUsd);
+    var toplamGider    = Model.Sum(x => x.ToplamGiderUsd);
+    var toplamGelir    = Model.Sum(x => x.GelirUsd);
+    var toplamFark     = toplamGelir - toplamGider;
+    var farkPos        = toplamFark >= 0;
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-folder-open"></i></div>
+                <div>
+                    <h1>Kotalar</h1>
+                    <p>Toplam <span class="text-strong">@Model.Count</span> kota · tüm finansal özet</p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a href="@Url.Action("Index", "KotaDashboard", new { area = "Finans" })" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="@Url.Action("Create", "Kota", new { area = "Finans" })" class="kt-btn kt-btn-primary">
+                    <i class="fas fa-plus"></i> Yeni Kota
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @* TempData mesajları *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 20px; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-check-circle" style="color:var(--kt-pos);"></i>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 20px; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-exclamation-circle" style="color:var(--kt-neg);"></i>
+            <span>@TempData["Error"]</span>
+        </div>
+    }
+
+    @* ═════════ KPI MINI ÖZET ═════════ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Proforma</div>
+                <div class="kt-kpi-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@toplamProforma.ToString("N0")</div>
+        </div>
+        <div class="kt-kpi accent-neg">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gider</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-down"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@toplamGider.ToString("N0")</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gelir</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@toplamGelir.ToString("N0")</div>
+        </div>
+        <div class="kt-kpi @(farkPos ? "accent-pos" : "accent-warn")">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Brüt Fark</div>
+                <div class="kt-kpi-icon"><i class="fas @(farkPos ? "fa-chart-line" : "fa-triangle-exclamation")"></i></div>
+            </div>
+            <div class="kt-kpi-value" style="color:@(farkPos ? "var(--kt-pos)" : "var(--kt-neg)");">
+                @(farkPos ? "+" : "")$@toplamFark.ToString("N0")
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ ANA TABLO ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding: 18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between;">
+            <div class="kt-flex kt-gap-sm">
+                <input type="text" id="tableSearch" class="kt-input" placeholder="🔍 Hızlı ara (kod, isim, sorumlu, bölge)..." style="width:300px;" />
+                <select id="durumFilter" class="kt-input" style="width:160px;">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="3">Aktif</option>
+                    <option value="0">Yeni</option>
+                    <option value="1">Onayda</option>
+                    <option value="2">Bekleyen</option>
+                    <option value="4">Kapandı</option>
+                </select>
+            </div>
+            <div class="kt-flex kt-gap-sm">
+                <select id="sortBy" class="kt-input" style="width:180px;">
+                    <option value="brutFark">Brüt Fark (yüksek)</option>
+                    <option value="brutFarkAsc">Brüt Fark (düşük)</option>
+                    <option value="proforma">Proforma (yüksek)</option>
+                    <option value="kullanim">Kullanım %</option>
+                    <option value="isAdi">İsim (A-Z)</option>
+                </select>
+            </div>
+        </div>
+
+        @if (Model.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="kotaTable">
+                    <thead>
+                        <tr>
+                            <th>Kod</th>
+                            <th>İş Adı / Sorumlu</th>
+                            <th>Bölge</th>
+                            <th class="text-right">Proforma $</th>
+                            <th class="text-right">Abbott $</th>
+                            <th class="text-right">3rd Party $</th>
+                            <th class="text-right">Toplam Gider</th>
+                            <th class="text-right">Gelir</th>
+                            <th class="text-right">Brüt Fark</th>
+                            <th class="text-right">%</th>
+                            <th class="text-center">Durum</th>
+                            <th class="text-center" style="width:1%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var k in Model)
+                        {
+                            var pos = k.BrutFarkUsd >= 0;
+                            <tr data-search="@($"{k.KotaKodu} {k.IsAdi} {k.Sorumlu} {k.Bolge}".ToLower())"
+                                data-durum="@((int)k.Durum)"
+                                data-brutfark="@k.BrutFarkUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-proforma="@k.ProformaUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-kullanim="@k.KullanimYuzde.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-isadi="@k.IsAdi">
+                                <td>
+                                    @if (!string.IsNullOrEmpty(k.KotaKodu))
+                                    {
+                                        <span class="kt-code-badge">@k.KotaKodu</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td>
+                                    <div class="kt-cell-primary">@k.IsAdi</div>
+                                    @if (!string.IsNullOrEmpty(k.Sorumlu))
+                                    {
+                                        <div style="font-size:12px; color:var(--kt-ink-500); margin-top:2px;">
+                                            <i class="fas fa-user" style="font-size:10px; margin-right:4px;"></i>@k.Sorumlu
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(k.Bolge)) { <span class="kt-tag">@k.Bolge</span> }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-right kt-money-strong">$@k.ProformaUsd.ToString("N0")</td>
+                                <td class="text-right kt-money">@(k.AbbottGiderUsd > 0 ? $"${k.AbbottGiderUsd:N0}" : "—")</td>
+                                <td class="text-right kt-money">@(k.ThirdPartyGiderUsd > 0 ? $"${k.ThirdPartyGiderUsd:N0}" : "—")</td>
+                                <td class="text-right kt-money-neg">$@k.ToplamGiderUsd.ToString("N0")</td>
+                                <td class="text-right kt-money-pos">$@k.GelirUsd.ToString("N0")</td>
+                                <td class="text-right">
+                                    <span class="kt-delta-pill @(pos ? "pos" : "neg")">
+                                        <i class="fas fa-@(pos ? "caret-up" : "caret-down")"></i>
+                                        @(pos ? "+" : "")$@Math.Abs(k.BrutFarkUsd).ToString("N0")
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <span style="color:@(pos ? "var(--kt-pos)" : "var(--kt-neg)"); font-weight:700; font-size:13px;">
+                                        @(pos ? "+" : "")%@k.BrutFarkYuzde.ToString("N1")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @switch (k.Durum)
+                                    {
+                                        case KotaDurum.Aktif:          <span class="kt-badge kt-badge-success">Aktif</span> break;
+                                        case KotaDurum.YeniBaslayacak: <span class="kt-badge kt-badge-info">Yeni</span> break;
+                                        case KotaDurum.Onayda:         <span class="kt-badge kt-badge-warning">Onayda</span> break;
+                                        case KotaDurum.Bekleyen:       <span class="kt-badge kt-badge-secondary">Bekleyen</span> break;
+                                        case KotaDurum.Kapandi:        <span class="kt-badge kt-badge-danger">Kapandı</span> break;
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                        <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                           href="@Url.Action("Detay", "KotaHareket", new { area = "Finans", kotaId = k.KotaID })"
+                                           title="Hareketler">
+                                            <i class="fas fa-list-check"></i>
+                                        </a>
+                                        <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                           href="@Url.Action("Edit", "Kota", new { area = "Finans", id = k.KotaID })"
+                                           title="Düzenle">
+                                            <i class="fas fa-pen"></i>
+                                        </a>
+                                        <form method="post" action="@Url.Action("Delete", "Kota", new { area = "Finans", id = k.KotaID })" style="display:inline;"
+                                              onsubmit="return confirm('Bu kotayı silmek istediğinize emin misiniz?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost" style="color:var(--kt-neg);" title="Sil">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-right">TOPLAM</td>
+                            <td class="text-right">$@toplamProforma.ToString("N0")</td>
+                            <td class="text-right">$@Model.Sum(x => x.AbbottGiderUsd).ToString("N0")</td>
+                            <td class="text-right">$@Model.Sum(x => x.ThirdPartyGiderUsd).ToString("N0")</td>
+                            <td class="text-right kt-money-neg">$@toplamGider.ToString("N0")</td>
+                            <td class="text-right kt-money-pos">$@toplamGelir.ToString("N0")</td>
+                            <td class="text-right">
+                                <span class="kt-delta-pill @(farkPos ? "pos" : "neg")">
+                                    @(farkPos ? "+" : "")$@Math.Abs(toplamFark).ToString("N0")
+                                </span>
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-inbox"></i>
+                <p>Henüz kota eklenmemiş</p>
+                <a href="@Url.Action("Create", "Kota", new { area = "Finans" })" class="kt-btn kt-btn-primary" style="margin-top:14px;">
+                    <i class="fas fa-plus"></i> İlk Kotayı Oluştur
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+(function () {
+    const rows = () => document.querySelectorAll('#kotaTable tbody tr');
+
+    function applyFilters() {
+        const q = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+        const d = document.getElementById('durumFilter').value;
+        rows().forEach(tr => {
+            const okQ = !q || tr.dataset.search.includes(q);
+            const okD = !d || tr.dataset.durum === d;
+            tr.style.display = (okQ && okD) ? '' : 'none';
+        });
+    }
+
+    const s = document.getElementById('tableSearch');
+    const df = document.getElementById('durumFilter');
+    if (s) s.addEventListener('input', applyFilters);
+    if (df) df.addEventListener('change', applyFilters);
+
+    const sort = document.getElementById('sortBy');
+    if (sort) sort.addEventListener('change', () => {
+        const key = sort.value;
+        const tbody = document.querySelector('#kotaTable tbody');
+        const list = Array.from(tbody.querySelectorAll('tr'));
+        list.sort((a, b) => {
+            switch (key) {
+                case 'brutFark':    return parseFloat(b.dataset.brutfark) - parseFloat(a.dataset.brutfark);
+                case 'brutFarkAsc': return parseFloat(a.dataset.brutfark) - parseFloat(b.dataset.brutfark);
+                case 'proforma':    return parseFloat(b.dataset.proforma) - parseFloat(a.dataset.proforma);
+                case 'kullanim':    return parseFloat(b.dataset.kullanim) - parseFloat(a.dataset.kullanim);
+                case 'isAdi':       return a.dataset.isadi.localeCompare(b.dataset.isadi, 'tr');
+            }
+            return 0;
+        });
+        list.forEach(r => tbody.appendChild(r));
+    });
+})();
+</script>

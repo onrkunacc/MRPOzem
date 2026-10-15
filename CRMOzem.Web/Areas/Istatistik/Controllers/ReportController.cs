@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using CRMOzem.Business.Interfaces;
+using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
@@ -34,20 +35,19 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             _kayService = kayService;
         }
 
-        // ═══════════════════════════════════════════════════════════
-        // ANA RAPOR — Hastane bazlı kapsamlı analiz
-        // ═══════════════════════════════════════════════════════════
         [HttpGet]
-        public async Task<IActionResult> Index(int? hospitalId, CancellationToken ct)
+        public async Task<IActionResult> Index(int? hospitalId, DateTime? startDate, DateTime? endDate, CancellationToken ct)
         {
             try
             {
                 await LoadHospitalsAsync(hospitalId);
+                ViewBag.StartDate = startDate;
+                ViewBag.EndDate = endDate;
 
                 if (hospitalId == null || hospitalId <= 0)
                     return View(model: null);
 
-                var vm = await _kayService.BuildAsync(hospitalId.Value, ct);
+                var vm = await _kayService.BuildAsync(hospitalId.Value, startDate, endDate, ct);
                 return View(vm);
             }
             catch (Exception ex)
@@ -59,16 +59,16 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportExcel(int hospitalId, CancellationToken ct)
+        public async Task<IActionResult> ExportExcel(int hospitalId, DateTime? startDate, DateTime? endDate, CancellationToken ct)
         {
             try
             {
-                var vm = await _kayService.BuildAsync(hospitalId, ct);
+                var vm = await _kayService.BuildAsync(hospitalId, startDate, endDate, ct);
 
                 if (vm.Rows.Count == 0)
                 {
                     TempData["Warning"] = "Bu hastane için aktif test bulunamadı.";
-                    return RedirectToAction(nameof(Index), new { hospitalId });
+                    return RedirectToAction(nameof(Index), new { hospitalId, startDate, endDate });
                 }
 
                 using var wb = new XLWorkbook();
@@ -81,15 +81,23 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 ws.Cell("A1").Style.Font.FontSize = 14;
                 ws.Range("A1:I1").Merge();
 
-                ws.Cell("A2").Value = $"Rapor Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm}  •  Referans Ay: {vm.ReferenceMonthLabel}";
+                var periyotText = vm.IsPeriyotFiltreli
+                    ? $"Dönem: {vm.ReferenceMonthLabel}"
+                    : $"Referans Ay: {vm.ReferenceMonthLabel}";
+
+                ws.Cell("A2").Value = $"Rapor Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm}  •  {periyotText}";
                 ws.Cell("A2").Style.Font.Italic = true;
                 ws.Cell("A2").Style.Font.FontColor = XLColor.Gray;
                 ws.Range("A2:I2").Merge();
 
                 // Tablo başlıkları
+                var tuketimHeader = vm.IsPeriyotFiltreli ? "Aylık Ort. Tüketim" : "Geçen Ay Tüketim";
+                var gonderiHeader = vm.IsPeriyotFiltreli ? "Dönem Gönderilen" : "Toplam Gönderilen";
+                var kullanimHeader = vm.IsPeriyotFiltreli ? "Dönem Kullanılan" : "Toplam Kullanılan";
+
                 var headers = new[] {
-                    "Test Adı", "SUT Kodu", "Tip", "Toplam Gönderilen",
-                    "Toplam Kullanılan", "Stok", $"Geçen Ay Tüketim",
+                    "Test Adı", "SUT Kodu", "Tip", gonderiHeader,
+                    kullanimHeader, "Stok", tuketimHeader,
                     "Kaç Ay Yeter", "Durum"
                 };
                 for (int i = 0; i < headers.Length; i++)
@@ -102,7 +110,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 }
 
-                // Satırlar
                 int row = 5;
                 foreach (var r in vm.Rows)
                 {
@@ -141,32 +148,43 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 wb.SaveAs(stream);
                 stream.Position = 0;
 
-                var fileName = $"Rapor_{vm.HospitalName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                var periyotSuffix = vm.IsPeriyotFiltreli
+                    ? $"_{vm.StartDate:yyyyMM}_{vm.EndDate:yyyyMM}"
+                    : "";
+                var fileName = $"Rapor_{vm.HospitalName}{periyotSuffix}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
                 const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
                 return File(stream.ToArray(), contentType, fileName);
             }
             catch (Exception ex)
             {
                 TempData["Error"] = "Excel oluşturulamadı: " + ex.Message;
-                return RedirectToAction(nameof(Index), new { hospitalId });
+                return RedirectToAction(nameof(Index), new { hospitalId, startDate, endDate });
             }
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportPdf(int hospitalId, CancellationToken ct)
+        public async Task<IActionResult> ExportPdf(int hospitalId, DateTime? startDate, DateTime? endDate, CancellationToken ct)
         {
             try
             {
-                var vm = await _kayService.BuildAsync(hospitalId, ct);
+                var vm = await _kayService.BuildAsync(hospitalId, startDate, endDate, ct);
 
                 if (vm.Rows.Count == 0)
                 {
                     TempData["Warning"] = "Bu hastane için aktif test bulunamadı.";
-                    return RedirectToAction(nameof(Index), new { hospitalId });
+                    return RedirectToAction(nameof(Index), new { hospitalId, startDate, endDate });
                 }
 
                 QuestPDF.Settings.License = LicenseType.Community;
                 var culture = new CultureInfo("tr-TR");
+
+                var periyotText = vm.IsPeriyotFiltreli
+                    ? $"Dönem: {vm.ReferenceMonthLabel}"
+                    : $"Referans Ay: {vm.ReferenceMonthLabel}";
+
+                var tuketimHeader = vm.IsPeriyotFiltreli ? "Aylık Ort." : "Geçen Ay";
+                var gonderiHeader = vm.IsPeriyotFiltreli ? "Gönderilen" : "Gönderilen";
+                var kullanimHeader = vm.IsPeriyotFiltreli ? "Kullanılan" : "Kullanılan";
 
                 var document = Document.Create(container =>
                 {
@@ -180,7 +198,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                         {
                             col.Item().Text("Stok ve Tüketim Raporu").FontSize(16).SemiBold();
                             col.Item().Text(vm.HospitalName).FontSize(11).FontColor(Colors.Grey.Medium);
-                            col.Item().Text($"Referans Ay: {vm.ReferenceMonthLabel}  •  Toplam: {vm.ToplamTest} test  •  Kritik: {vm.KritikSayi}")
+                            col.Item().Text($"{periyotText}  •  Toplam: {vm.ToplamTest} test  •  Kritik: {vm.KritikSayi}")
                                 .FontSize(9).FontColor(Colors.Grey.Medium);
                         });
 
@@ -201,7 +219,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
                             table.Header(header =>
                             {
-                                string[] h = { "Test", "SUT", "Tip", "Gönderilen", "Kullanılan", "Stok", "Geçen Ay", "Kaç Ay", "Durum" };
+                                string[] h = { "Test", "SUT", "Tip", gonderiHeader, kullanimHeader, "Stok", tuketimHeader, "Kaç Ay", "Durum" };
                                 foreach (var t in h)
                                 {
                                     header.Cell().Element(HeaderCellStyle).AlignCenter().Text(t).FontSize(8.5f);
@@ -241,7 +259,10 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
                 });
 
                 var pdfBytes = document.GeneratePdf();
-                var pdfName = $"Rapor_{vm.HospitalName}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+                var periyotSuffix = vm.IsPeriyotFiltreli
+                    ? $"_{vm.StartDate:yyyyMM}_{vm.EndDate:yyyyMM}"
+                    : "";
+                var pdfName = $"Rapor_{vm.HospitalName}{periyotSuffix}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
                 return File(pdfBytes, "application/pdf", pdfName);
 
                 static IContainer HeaderCellStyle(IContainer container)
@@ -257,13 +278,10 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "PDF oluşturulamadı: " + ex.Message;
-                return RedirectToAction(nameof(Index), new { hospitalId });
+                return RedirectToAction(nameof(Index), new { hospitalId, startDate, endDate });
             }
         }
 
-        // ═══════════════════════════════════════════════════════════
-        // SUT KARŞILAŞTIRMA — DEĞİŞMEDİ
-        // ═══════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> SutKarsilastirma(int? hospitalId, int? year, int? month, int? ihaleYear, int? currentYear)
         {
@@ -298,9 +316,6 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             return View("SutKarsilastirma", vm);
         }
 
-        // ═══════════════════════════════════════════════════════════
-        // Helper
-        // ═══════════════════════════════════════════════════════════
         private async Task LoadHospitalsAsync(int? selectedHospitalId)
         {
             ViewBag.Hospitals = await _context.Hospitals.AsNoTracking()

@@ -43,8 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Finans\Controllers\" />
-    <Folder Include="Areas\Finans\Views\" />
     <Folder Include="wwwroot\uploads\temp\" />
   </ItemGroup>
 

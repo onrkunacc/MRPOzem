@@ -86,9 +86,16 @@ builder.Services.AddScoped<IHospitalIstatistikService, HospitalIstatistikService
 builder.Services.AddScoped<IShipmentTemplateService, ShipmentTemplateService>();
 builder.Services.AddScoped<IUsageTemplateService, UsageTemplateService>();
 builder.Services.AddScoped<IKacAyYeterService, KacAyYeterService>();
-
+builder.Services.AddScoped<IKotaHareketService, KotaHareketService>();
+builder.Services.AddScoped<ITcmbKurService, TcmbKurService>();
+builder.Services.AddScoped<ITedarikciService, TedarikciService>();
+builder.Services.AddScoped<IKotaService, KotaService>();
+builder.Services.AddScoped<IKotaDashboardService, KotaDashboardService>();
+// Stok API köprüsü
+builder.Services.AddHttpClient<IFizikiSayimApiClient, FizikiSayimApiClient>();
+builder.Services.AddScoped<IFizikiSayimSyncService, FizikiSayimSyncService>();
 builder.Services.AddMemoryCache();
-
+builder.Services.AddHttpClient();
 // Kimlik doğrulama ayarları
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -139,6 +146,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     await RoleSeeder.SeedRoleAsync(services);
     await UserSeeder.SeedUsersAsync(services);
+    await TedarikciSeeder.SeedAsync(services);   
 }
 
 //  Hata Yönetimi

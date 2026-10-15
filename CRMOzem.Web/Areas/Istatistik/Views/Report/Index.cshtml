@@ -7,6 +7,12 @@
     ViewData["Title"] = "Raporlama";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var hospitals = ViewBag.Hospitals as List<SelectListItem> ?? new List<SelectListItem>();
+    var startDate = ViewBag.StartDate as DateTime?;
+    var endDate = ViewBag.EndDate as DateTime?;
+    var startVal = startDate?.ToString("yyyy-MM-dd") ?? "";
+    var endVal = endDate?.ToString("yyyy-MM-dd") ?? "";
+    var periyotAktif = startDate.HasValue && endDate.HasValue;
+}
 }
 
 <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
@@ -372,11 +378,29 @@
             color: #1e293b;
             font-weight: 700;
         }
+
+    .rp-btn-quick {
+        background: rgba(255,255,255,.7);
+        border: 1.5px solid #cbd5e1;
+        color: #475569;
+        padding: .35rem .8rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: .8rem;
+        transition: all .15s;
+        cursor: pointer;
+    }
+
+        .rp-btn-quick:hover {
+            background: #0ea5e9;
+            color: #fff;
+            border-color: #0ea5e9;
+            transform: translateY(-1px);
+        }
 </style>
 
 <div class="rp-page">
 
-    <!-- ═══ BAŞLIK ═══ -->
     <div class="rp-header">
         <h1>📊 Raporlama</h1>
         <p>Hastane bazlı stok, tüketim ve kalan ay analizi — tüm testler tek tabloda.</p>
@@ -391,24 +415,60 @@
         <div class="alert alert-warning">@TempData["Warning"]</div>
     }
 
-    <!-- ═══ HASTANE SEÇİMİ ═══ -->
+    
+    <!-- ═══ HASTANE + DÖNEM SEÇİMİ ═══ -->
     <div class="rp-card">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-12 col-md-8 col-lg-6">
-                <label class="form-label fw-semibold">Hastane</label>
-                <select name="hospitalId" class="form-select" onchange="this.form.submit()" required>
-                    <option value="">— Hastane seçiniz —</option>
-                    @foreach (var h in hospitals)
-                    {
-                        <option value="@h.Value" selected="@h.Selected">@h.Text</option>
-                    }
-                </select>
+        <form method="get" id="filterForm">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label class="form-label fw-semibold">Hastane</label>
+                    <select name="hospitalId" class="form-select" id="hospitalSelect" required>
+                        <option value="">— Hastane seçiniz —</option>
+                        @foreach (var h in hospitals)
+                        {
+                            <option value="@h.Value" selected="@h.Selected">@h.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-semibold">Başlangıç</label>
+                    <input type="date" name="startDate" id="startDate" class="form-control" value="@startVal" />
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-semibold">Bitiş</label>
+                    <input type="date" name="endDate" id="endDate" class="form-control" value="@endVal" />
+                </div>
+
+                <div class="col-12 col-md-1">
+                    <button type="submit" class="rp-btn-grad w-100">
+                        <i class="fe fe-filter"></i> Uygula
+                    </button>
+                </div>
             </div>
-            <div class="col-12 col-md-4 col-lg-6">
-                <small class="text-muted">Hastane seçildiğinde rapor otomatik yüklenir.</small>
-            </div>
+
+            <!-- Hızlı butonlar -->
+          @*<div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                <small class="text-muted fw-semibold me-2">Hızlı seçim:</small>
+                <button type="button" class="rp-btn-quick" data-period="all">🕐 Tüm Zamanlar</button>
+                <button type="button" class="rp-btn-quick" data-period="3m">Son 3 Ay</button>
+                <button type="button" class="rp-btn-quick" data-period="6m">Son 6 Ay</button>
+                <button type="button" class="rp-btn-quick" data-period="12m">Son 12 Ay</button>
+                <button type="button" class="rp-btn-quick" data-period="thisyear">Bu Yıl</button>
+                <button type="button" class="rp-btn-quick" data-period="lastyear">Geçen Yıl</button>
+
+                @if (periyotAktif)
+                {
+                    <span class="ms-auto rp-info-pill" style="background: rgba(14,165,233,.15); border-color: #0ea5e9; color: #0369a1;">
+                        <i class="fe fe-calendar"></i>
+                        Dönem: <strong>@startDate.Value.ToString("dd.MM.yyyy") - @endDate.Value.ToString("dd.MM.yyyy")</strong>
+                    </span>
+                }
+            </div> *@
         </form>
     </div>
+ 
 
     @if (Model == null)
     {
@@ -472,9 +532,18 @@
                 <span class="rp-info-pill">
                     <i class="fe fe-home"></i> <strong>@Model.HospitalName</strong>
                 </span>
-                <span class="rp-info-pill">
-                    <i class="fe fe-calendar"></i> Referans: <strong>@Model.ReferenceMonthLabel</strong>
-                </span>
+                @if (Model.IsPeriyotFiltreli)
+                {
+                    <span class="rp-info-pill" style="background: rgba(14,165,233,.15); border-color: #0ea5e9;">
+                        <i class="fe fe-calendar"></i> Dönem: <strong>@Model.ReferenceMonthLabel</strong>
+                    </span>
+                }
+                else
+                {
+                    <span class="rp-info-pill">
+                        <i class="fe fe-calendar"></i> Referans: <strong>@Model.ReferenceMonthLabel</strong>
+                    </span>
+                }
                 @if (Model.VeriYokSayi > 0)
                 {
                     <span class="rp-info-pill" style="background: rgba(148,163,184,.15);">
@@ -482,14 +551,20 @@
                     </span>
                 }
             </div>
-            <div class="d-flex gap-2">
-                <a asp-action="ExportExcel" asp-route-hospitalId="@Model.HospitalID" class="rp-btn-excel">
-                    <i class="fe fe-download"></i> Excel
-                </a>
-                <a asp-action="ExportPdf" asp-route-hospitalId="@Model.HospitalID" class="rp-btn-pdf">
-                    <i class="fe fe-file-text"></i> PDF
-                </a>
-            </div>
+            <a asp-action="ExportExcel"
+               asp-route-hospitalId="@Model.HospitalID"
+               asp-route-startDate="@(Model.StartDate?.ToString("yyyy-MM-dd"))"
+               asp-route-endDate="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+               class="rp-btn-excel">
+                <i class="fe fe-download"></i> Excel
+            </a>
+            <a asp-action="ExportPdf"
+               asp-route-hospitalId="@Model.HospitalID"
+               asp-route-startDate="@(Model.StartDate?.ToString("yyyy-MM-dd"))"
+               asp-route-endDate="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+               class="rp-btn-pdf">
+                <i class="fe fe-file-text"></i> PDF
+            </a>
         </div>
 
         <div class="mt-3 row g-2">
@@ -558,7 +633,9 @@
                         <th class="text-end" style="width:120px;">Toplam Gönderilen</th>
                         <th class="text-end" style="width:120px;">Toplam Kullanılan</th>
                         <th class="text-end" style="width:110px;">Stok</th>
-                        <th class="text-end" style="width:110px;">Geçen Ay Tüketim</th>
+                        <th class="text-end" style="width:110px;">
+                            @(Model.IsPeriyotFiltreli ? "Aylık Ort. Tüketim" : "Geçen Ay Tüketim")
+                        </th>
                         <th class="text-center" style="width:110px;">Kaç Ay Yeter</th>
                         <th class="text-center" style="width:120px;">Durum</th>
                     </tr>
@@ -688,6 +765,60 @@
     <script>
         (function () {
             const trTR = 'tr-TR';
+   
+            const hospitalSel = document.getElementById('hospitalSelect');
+            const startInput = document.getElementById('startDate');
+            const endInput = document.getElementById('endDate');
+            const filterForm = document.getElementById('filterForm');
+
+            function pad(n) { return n.toString().padStart(2, '0'); }
+            function fmt(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+            document.querySelectorAll('.rp-btn-quick').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const period = btn.getAttribute('data-period');
+                    const now = new Date();
+                    let start = null, end = null;
+
+                    switch (period) {
+                        case 'all':
+                            start = ''; end = '';
+                            break;
+                        case '3m':
+                            end = fmt(now);
+                            start = fmt(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+                            break;
+                        case '6m':
+                            end = fmt(now);
+                            start = fmt(new Date(now.getFullYear(), now.getMonth() - 5, 1));
+                            break;
+                        case '12m':
+                            end = fmt(now);
+                            start = fmt(new Date(now.getFullYear(), now.getMonth() - 11, 1));
+                            break;
+                        case 'thisyear':
+                            start = fmt(new Date(now.getFullYear(), 0, 1));
+                            end = fmt(now);
+                            break;
+                        case 'lastyear':
+                            start = fmt(new Date(now.getFullYear() - 1, 0, 1));
+                            end = fmt(new Date(now.getFullYear() - 1, 11, 31));
+                            break;
+                    }
+
+                    startInput.value = start;
+                    endInput.value = end;
+
+                    if (hospitalSel.value) {
+                        filterForm.submit();
+                    }
+                });
+            });
+
+            // Hastane değişince otomatik submit (mevcut değerleri koru)
+            hospitalSel?.addEventListener('change', () => {
+                if (hospitalSel.value) filterForm.submit();
+            });
             const q = document.getElementById('q');
             const filterDurum = document.getElementById('filterDurum');
             const filterTip = document.getElementById('filterTip');

@@ -123,9 +123,9 @@ namespace CRMOzem.Business.Services
             int colCount = worksheet.Dimension.End.Column;
 
             // Başlık satırından kolon indekslerini tespit et
-            var (sutCol, nameCol, countCol) = DetectColumns(worksheet, colCount, isShipment: false);
+            var (headerRow, sutCol, nameCol, countCol) = DetectColumns(worksheet, colCount, isShipment: false);
 
-            for (int row = 2; row <= rowCount; row++)
+            for (int row = headerRow + 1; row <= rowCount; row++)
             {
                 var sutCode = sutCol > 0 ? worksheet.Cells[row, sutCol].Text?.Trim() : null;
                 var testName = nameCol > 0 ? worksheet.Cells[row, nameCol].Text?.Trim() : null;
@@ -262,9 +262,9 @@ namespace CRMOzem.Business.Services
             int rowCount = worksheet.Dimension.End.Row;
             int colCount = worksheet.Dimension.End.Column;
 
-            var (sutCol, nameCol, countCol) = DetectColumns(worksheet, colCount, isShipment: true);
+            var (headerRow, sutCol, nameCol, countCol) = DetectColumns(worksheet, colCount, isShipment: true);
 
-            for (int row = 2; row <= rowCount; row++)
+            for (int row = headerRow + 1; row <= rowCount; row++)
             {
                 var sutCode = sutCol > 0 ? worksheet.Cells[row, sutCol].Text?.Trim() : null;
                 var testName = nameCol > 0 ? worksheet.Cells[row, nameCol].Text?.Trim() : null;
@@ -380,40 +380,43 @@ namespace CRMOzem.Business.Services
         // ═══════════════════════════════════════════════════════════
         // Kolon başlıklarını tespit et (esnek, farklı şablon versiyonları için)
         // ═══════════════════════════════════════════════════════════
-        private static (int sutCol, int nameCol, int countCol) DetectColumns(
-            ExcelWorksheet ws, int colCount, bool isShipment)
+        private static (int headerRow, int sutCol, int nameCol, int countCol) DetectColumns(
+      ExcelWorksheet ws, int colCount, bool isShipment)
         {
-            int sutCol = 0, nameCol = 0, countCol = 0;
+            int rowCount = ws.Dimension.End.Row;
+            int maxSearchRow = Math.Min(10, rowCount);  // ilk 10 satırda başlık ara
 
-            for (int c = 1; c <= colCount; c++)
+            // 1'den 10'a kadar her satırı başlık olarak dene
+            for (int r = 1; r <= maxSearchRow; r++)
             {
-                var header = (ws.Cells[1, c].Text ?? "").Trim().ToLowerInvariant();
-                if (string.IsNullOrEmpty(header)) continue;
+                int sutCol = 0, nameCol = 0, countCol = 0;
 
-                if (sutCol == 0 && (header.Contains("sut") || header.Contains("kod") || header.Contains("referans")))
-                    sutCol = c;
-                else if (nameCol == 0 && (header.Contains("test") && header.Contains("ad")))
-                    nameCol = c;
-                else if (nameCol == 0 && header == "test")
-                    nameCol = c;
-                else if (countCol == 0 && (header.Contains("miktar") || header.Contains("adet") ||
-                    header.Contains("say") || header.Contains("kullan") || header.Contains("gönder")))
-                    countCol = c;
+                for (int c = 1; c <= colCount; c++)
+                {
+                    var header = (ws.Cells[r, c].Text ?? "").Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(header)) continue;
+
+                    if (sutCol == 0 && (header.Contains("sut") || header.Contains("kod") || header.Contains("referans")))
+                        sutCol = c;
+                    else if (nameCol == 0 && header.Contains("test") && header.Contains("ad"))
+                        nameCol = c;
+                    else if (nameCol == 0 && header == "test")
+                        nameCol = c;
+                    else if (countCol == 0 && (header.Contains("miktar") || header.Contains("adet") ||
+                        header.Contains("say") || header.Contains("kullan") || header.Contains("gönder") ||
+                        header.Contains("gonder")))
+                        countCol = c;
+                }
+
+                // En az miktar + (SUT veya isim) kolonu bulunduysa geçerli başlık satırıdır
+                if (countCol > 0 && (sutCol > 0 || nameCol > 0))
+                {
+                    return (r, sutCol, nameCol, countCol);
+                }
             }
 
-            // Başlık tespiti başarısızsa eski format (kolon 1 = ad, kolon 2 = miktar)
-            if (sutCol == 0 && nameCol == 0 && countCol == 0)
-            {
-                nameCol = 1;
-                countCol = 2;
-            }
-            // Sadece 2 kolon: ad+miktar (eski format)
-            else if (sutCol == 0 && nameCol > 0 && countCol > 0)
-            {
-                // Devam et, SUT yok, sadece isimle eşleşecek
-            }
-
-            return (sutCol, nameCol, countCol);
+            // Hiç başlık bulunamadıysa — eski format varsayımı: satır 1 başlık, 2'den veri
+            return (1, 0, 1, 2);
         }
     }
 }

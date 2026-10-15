@@ -1,0 +1,293 @@
+﻿@model CRMOzem.Core.ViewModels.KotaHareketDetayVm
+@using CRMOzem.Core.Enums
+@using CRMOzem.Core.ViewModels
+@{
+    ViewData["Title"] = "Kota Hareketleri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var k = Model.Kota;
+    var toplamGider = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gider).Sum(h => h.TutarUsd);
+    var toplamGelir = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gelir).Sum(h => h.TutarUsd);
+    var brutFark    = toplamGelir - toplamGider;
+    var pos         = brutFark >= 0;
+    var kullanim    = k.ProformaTutarUsd > 0 ? (toplamGider / k.ProformaTutarUsd) * 100 : 0;
+    var kullanimCls = kullanim > 100 ? "neg" : kullanim > 80 ? "warn" : "pos";
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    @* ═════════ HERO HEADER ═════════ *@
+    <div class="kt-card" style="padding:0; overflow:hidden; margin-bottom:20px;">
+        <div style="padding: 28px 32px; background: linear-gradient(135deg, var(--kt-ink-900) 0%, #1e293b 100%); color:#fff;">
+            <div class="kt-flex-between">
+                <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                    @if (!string.IsNullOrEmpty(k.KotaKodu))
+                    {
+                        <span class="kt-code-badge primary" style="font-size:14px; padding:6px 12px;">@k.KotaKodu</span>
+                    }
+                    <div>
+                        <h1 style="font-size:22px; font-weight:700; margin:0; color:#fff; letter-spacing:-0.015em;">@k.IsAdi</h1>
+                        <div style="margin-top:6px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:13px; color:#cbd5e1;">
+                            @if (!string.IsNullOrEmpty(k.Bolge))
+                            {
+                                <span><i class="fas fa-map-marker-alt" style="margin-right:5px;"></i>@k.Bolge</span>
+                            }
+                            @if (!string.IsNullOrEmpty(k.Sorumlu))
+                            {
+                                <span><i class="fas fa-user" style="margin-right:5px;"></i>@k.Sorumlu</span>
+                            }
+                            @if (k.BaslamaTarihi.HasValue || k.BitisTarihi.HasValue)
+                            {
+                                <span>
+                                    <i class="fas fa-calendar" style="margin-right:5px;"></i>
+                                    @(k.BaslamaTarihi?.ToString("dd.MM.yyyy") ?? "—") → @(k.BitisTarihi?.ToString("dd.MM.yyyy") ?? "—")
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    @switch (k.Durum)
+                    {
+                        case KotaDurum.Aktif:
+                            <span class="kt-badge kt-badge-success" style="padding:6px 14px; font-size:12.5px;"><i class="fas fa-circle-check"></i> Aktif</span>
+                            break;
+                        case KotaDurum.YeniBaslayacak:
+                            <span class="kt-badge kt-badge-info" style="padding:6px 14px; font-size:12.5px;"><i class="fas fa-circle-plus"></i> Yeni Başlayacak</span>
+                            break;
+                        case KotaDurum.Onayda:
+                            <span class="kt-badge kt-badge-warning" style="padding:6px 14px; font-size:12.5px;"><i class="fas fa-hourglass"></i> Onayda</span>
+                            break;
+                        case KotaDurum.Bekleyen:
+                            <span class="kt-badge kt-badge-secondary" style="padding:6px 14px; font-size:12.5px;"><i class="fas fa-pause"></i> Bekleyen</span>
+                            break;
+                        case KotaDurum.Kapandi:
+                            <span class="kt-badge kt-badge-danger" style="padding:6px 14px; font-size:12.5px;"><i class="fas fa-lock"></i> Kapandı</span>
+                            break;
+                    }
+                    <a href="@Url.Action("Index", "Kota", new { area = "Finans" })" class="kt-btn" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">
+                        <i class="fas fa-arrow-left"></i> Kotalar
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @* Alt şerit: proforma + progress *@
+        <div style="padding: 20px 32px; background:#fff;">
+            <div class="kt-flex-between" style="margin-bottom:10px;">
+                <div>
+                    <div style="font-size:11px; font-weight:600; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.05em;">
+                        Toplam Proforma
+                    </div>
+                    <div style="font-size:30px; font-weight:800; color:var(--kt-ink-900); letter-spacing:-0.025em; font-variant-numeric: tabular-nums;">
+                        $@k.ProformaTutarUsd.ToString("N0")
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px; font-weight:600; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.05em;">
+                        Kullanım
+                    </div>
+                    <div style="font-size:22px; font-weight:700; color:@(kullanim > 100 ? "var(--kt-neg)" : kullanim > 80 ? "var(--kt-warn)" : "var(--kt-pos)");">
+                        %@kullanim.ToString("N1")
+                    </div>
+                </div>
+            </div>
+            <div class="kt-progress">
+                <div class="kt-progress-bar @kullanimCls" style="width:@(Math.Min(kullanim, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+            </div>
+            <div class="kt-flex-between" style="margin-top:6px; font-size:12px; color:var(--kt-ink-500);">
+                <span>Harcanan: $@toplamGider.ToString("N0")</span>
+                <span>Kalan: $@((k.ProformaTutarUsd - toplamGider).ToString("N0"))</span>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ KPI ═════════ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-neg">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gider</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-down"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@toplamGider.ToString("N0")</div>
+            <div class="kt-kpi-foot">@Model.Hareketler.Count(h => h.Tur == KotaHareketTuru.Gider) hareket</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gelir</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@toplamGelir.ToString("N0")</div>
+            <div class="kt-kpi-foot">@Model.Hareketler.Count(h => h.Tur == KotaHareketTuru.Gelir) hareket</div>
+        </div>
+        <div class="kt-kpi @(pos ? "accent-pos" : "accent-warn")">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Brüt Fark</div>
+                <div class="kt-kpi-icon"><i class="fas @(pos ? "fa-chart-line" : "fa-triangle-exclamation")"></i></div>
+            </div>
+            <div class="kt-kpi-value" style="color:@(pos ? "var(--kt-pos)" : "var(--kt-neg)");">
+                @(pos ? "+" : "")$@brutFark.ToString("N0")
+            </div>
+        </div>
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Hareket</div>
+                <div class="kt-kpi-icon"><i class="fas fa-list"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.Hareketler.Count</div>
+            <div class="kt-kpi-foot">kayıt</div>
+        </div>
+    </div>
+
+    @* ═════════ İŞLEM BUTONLARI ═════════ *@
+    <div class="kt-card" style="padding:14px 20px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <a class="kt-btn kt-btn-primary" href="@Url.Action("Create", "KotaHareket", new { area = "Finans", kotaId = k.KotaID })">
+            <i class="fas fa-plus"></i> Yeni Hareket
+        </a>
+        <a class="kt-btn kt-btn-ghost" href="@Url.Action("Edit", "Kota", new { area = "Finans", id = k.KotaID })">
+            <i class="fas fa-pen"></i> Kotayı Düzenle
+        </a>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+            <input type="text" id="hareketSearch" class="kt-input" placeholder="🔍 Hareket ara..." style="width:220px;" />
+            <select id="turFilter" class="kt-input" style="width:140px;">
+                <option value="">Tümü</option>
+                <option value="0">Giderler</option>
+                <option value="1">Gelirler</option>
+            </select>
+        </div>
+    </div>
+
+    @* ═════════ HAREKETLER TABLOSU ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border);">
+            <div class="kt-flex kt-gap-md">
+                <div class="kt-section-icon"><i class="fas fa-list-check"></i></div>
+                <div>
+                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Hareketler</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">Gider ve gelir kayıtları — kronolojik</div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Hareketler.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="hareketTable">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Tür</th>
+                            <th>Tedarikçi / Müşteri</th>
+                            <th>Grup</th>
+                            @if (Model.Hareketler.Any(h => h.HospitalID.HasValue))
+                            {
+                                <th>Hastane</th>
+                            }
+                            <th>Açıklama</th>
+                            <th class="text-right">Tutar (USD)</th>
+                            <th class="text-right">Tutar (TL)</th>
+                            <th class="text-center" style="width:1%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.Hareketler.OrderByDescending(x => x.Tarih))
+                        {
+                            var gider = h.Tur == KotaHareketTuru.Gider;
+                            <tr data-search="@($"{h.Tarih:dd.MM.yyyy} {h.TedarikciAdi} {h.Aciklama} {h.HospitalName}".ToLower())"
+                                data-tur="@((int)h.Tur)">
+                                <td style="white-space:nowrap;">
+                                    <strong>@h.Tarih.ToString("dd.MM.yyyy")</strong>
+                                </td>
+                                <td>
+                                    @if (gider)
+                                    {
+                                        <span class="kt-badge kt-badge-danger"><i class="fas fa-arrow-down"></i> Gider</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="kt-badge kt-badge-success"><i class="fas fa-arrow-up"></i> Gelir</span>
+                                    }
+                                </td>
+                                <td class="kt-cell-primary">@(h.TedarikciAdi ?? "—")</td>
+                                <td>
+                                    @if (h.TedarikciGrup.HasValue)
+                                    {
+                                        <span class="kt-tag">@h.TedarikciGrup.Value</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                @if (Model.Hareketler.Any(x => x.HospitalID.HasValue))
+                                {
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(h.HospitalName))
+                                        {
+                                            <span style="font-size:12px; color:var(--kt-ink-700);">@h.HospitalName</span>
+                                        }
+                                        else { <span class="text-muted">—</span> }
+                                    </td>
+                                }
+                                <td style="max-width:300px; color:var(--kt-ink-500); font-size:12.5px;">
+                                    @(string.IsNullOrEmpty(h.Aciklama) ? "—" : h.Aciklama)
+                                </td>
+                                <td class="text-right">
+                                    <span class="@(gider ? "kt-money-neg" : "kt-money-pos")" style="font-size:14px;">
+                                        @(gider ? "-" : "+")$@h.TutarUsd.ToString("N2")
+                                    </span>
+                                </td>
+                                <td class="text-right kt-money-muted" style="font-size:12.5px;">
+                                    @(h.TutarTl.HasValue ? $"₺{h.TutarTl.Value:N2}" : "—")
+                                </td>
+                                <td class="text-center">
+                                    <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                        <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                           href="@Url.Action("Edit", "KotaHareket", new { area = "Finans", id = h.ID })" title="Düzenle">
+                                            <i class="fas fa-pen"></i>
+                                        </a>
+                                        <form method="post" action="@Url.Action("Delete", "KotaHareket", new { area = "Finans", id = h.ID })" style="display:inline;"
+                                              onsubmit="return confirm('Bu hareketi silmek istediğinize emin misiniz?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost" style="color:var(--kt-neg);" title="Sil">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-receipt"></i>
+                <p>Henüz bu kota için hareket girilmemiş</p>
+                <a class="kt-btn kt-btn-primary" href="@Url.Action("Create", "KotaHareket", new { area = "Finans", kotaId = k.KotaID })" style="margin-top:14px;">
+                    <i class="fas fa-plus"></i> İlk Hareketi Ekle
+                </a>
+            </div>
+        }
+    </div>
+
+</div>
+
+<script>
+(function () {
+    function applyFilters() {
+        const q = (document.getElementById('hareketSearch').value || '').trim().toLowerCase();
+        const t = document.getElementById('turFilter').value;
+        document.querySelectorAll('#hareketTable tbody tr').forEach(tr => {
+            const okQ = !q || tr.dataset.search.includes(q);
+            const okT = !t || tr.dataset.tur === t;
+            tr.style.display = (okQ && okT) ? '' : 'none';
+        });
+    }
+    const s = document.getElementById('hareketSearch');
+    const tf = document.getElementById('turFilter');
+    if (s) s.addEventListener('input', applyFilters);
+    if (tf) tf.addEventListener('change', applyFilters);
+})();
+</script>

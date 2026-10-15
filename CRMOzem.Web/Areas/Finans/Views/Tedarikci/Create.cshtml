@@ -1,0 +1,83 @@
+﻿@model CRMOzem.Core.ViewModels.TedarikciCreateVm
+@using CRMOzem.Core.Models
+@{
+    ViewData["Title"] = "Yeni Tedarikçi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    <div class="kt-header">
+        <div class="kt-header-content">
+            <div class="kt-header-icon">➕</div>
+            <div style="flex: 1;">
+                <h1>Yeni Tedarikçi</h1>
+                <p>Kota hareketlerinde kullanılabilecek yeni bir tedarikçi ekleyin.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="kt-card">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Sira" value="0" />
+
+            <div class="kt-section">
+                <div class="kt-section-icon">🏢</div>
+                <div>
+                    <h5 class="kt-section-title">Tedarikçi Bilgileri</h5>
+                    <small class="kt-section-desc">Firma adı, grup ve durum bilgileri</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-8">
+                    <label class="kt-label">Ad <span class="req">*</span></label>
+                    <input asp-for="Ad" class="kt-input" placeholder="Örn: MikroEI, XYZ Kimya, Abbott" />
+                    <span asp-validation-for="Ad" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Grup <span class="req">*</span></label>
+                    <select asp-for="Grup" class="kt-select">
+                        <option value="Abbott">🔴 Abbott</option>
+                        <option value="ThirdParty">🟠 3rd Party</option>
+                        <option value="Ozem">🟢 Özem</option>
+                        <option value="Diger">⚫ Diğer</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="kt-label">Açıklama</label>
+                    <textarea asp-for="Aciklama" class="kt-textarea" rows="3" placeholder="Notlar, iletişim bilgisi vb..."></textarea>
+                </div>
+
+                <div class="col-12">
+                    <div style="background: linear-gradient(135deg, #ecfdf5, #ffffff); border: 1.5px solid #d1fae5; border-radius: 12px; padding: 1rem; display:flex; align-items:center; gap:1rem;">
+                        <div style="width:44px; height:44px; background:linear-gradient(135deg,var(--kt-success),var(--kt-success-dark)); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.2rem;">
+                            ✓
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; color:var(--kt-gray-900);">Aktif Durum</div>
+                            <small class="text-muted">Aktif tedarikçiler fatura girişinde seçilebilir</small>
+                        </div>
+                        <div class="form-check form-switch" style="transform:scale(1.3);">
+                            <input asp-for="Aktif" type="checkbox" class="form-check-input" role="switch" checked />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fa fa-arrow-left"></i> Geri
+                </a>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="fa fa-save"></i> Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

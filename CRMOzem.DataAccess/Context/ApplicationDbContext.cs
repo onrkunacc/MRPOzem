@@ -49,7 +49,14 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<HospitalBirim> HospitalBirimler { get; set; }
 
         public DbSet<HospitalAylikIstatistik> HospitalAylikIstatistikler => Set<HospitalAylikIstatistik>();
-
+        public DbSet<Kota> Kotalar { get; set; }
+        public DbSet<KotaHareket> KotaHareketleri { get; set; }
+        public DbSet<Tedarikci> Tedarikciler { get; set; }
+        public DbSet<TcmbKur> TcmbKurlari { get; set; }
+        public DbSet<KotaHospital> KotaHospitalleri { get; set; }
+        public DbSet<FizikiSayimSnapshot> FizikiSayimSnapshotlari { get; set; } = null!;
+        public DbSet<SiparisTalep> SiparisTalepler { get; set; } = null!;
+        public DbSet<SiparisTalepKalem> SiparisTalepKalemleri { get; set; } = null!;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         
@@ -343,6 +350,91 @@ namespace CRMOzem.DataAccess.Context
                  .HasDefaultValue(TestGirisTipi.Adet);
             });
 
+            // ═══════════════════════════════════════════════
+            // KOTA TAKİP MODÜLÜ
+            // ═══════════════════════════════════════════════
+            builder.Entity<Kota>(e =>
+            {
+                e.ToTable("Kotalar", "ozem");
+                e.HasKey(x => x.KotaID);
+                e.HasIndex(x => x.KotaKodu);
+                e.HasIndex(x => x.Durum);
+
+                e.Property(x => x.ProformaTutarUsd).HasPrecision(18, 2);
+                e.Property(x => x.Durum).HasConversion<string>().HasMaxLength(30);
+
+                e.Ignore(x => x.AylikTutarUsd);  // hesaplanan, DB'de saklanmaz
+            });
+
+            builder.Entity<Tedarikci>(e =>
+            {
+                e.ToTable("Tedarikciler", "ozem");
+                e.HasKey(x => x.TedarikciID);
+                e.HasIndex(x => x.Ad);
+                e.Property(x => x.Grup).HasConversion<string>().HasMaxLength(30);
+            });
+
+            builder.Entity<KotaHareket>(e =>
+            {
+                e.ToTable("KotaHareketleri", "ozem");
+                e.HasKey(x => x.KotaHareketID);
+                e.HasIndex(x => new { x.KotaID, x.Yil, x.Ay });
+                e.HasIndex(x => x.TedarikciID);
+
+                e.Property(x => x.Tutar).HasPrecision(18, 2);
+                e.Property(x => x.Kur).HasPrecision(18, 6);
+                e.Property(x => x.TLKarsiligi).HasPrecision(18, 2);
+                e.Property(x => x.UsdKarsiligi).HasPrecision(18, 2);
+                e.Property(x => x.HareketTuru).HasConversion<string>().HasMaxLength(20);
+
+                e.HasOne(x => x.Kota)
+                    .WithMany(k => k.Hareketler)
+                    .HasForeignKey(x => x.KotaID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.Tedarikci)
+                    .WithMany(t => t.Hareketler)
+                    .HasForeignKey(x => x.TedarikciID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<TcmbKur>(e =>
+            {
+                e.ToTable("TcmbKurlari", "ozem");
+                e.HasKey(x => x.TcmbKurID);
+                e.HasIndex(x => x.Tarih).IsUnique();
+
+                e.Property(x => x.UsdAlis).HasPrecision(18, 6);
+                e.Property(x => x.UsdSatis).HasPrecision(18, 6);
+                e.Property(x => x.EurAlis).HasPrecision(18, 6);
+                e.Property(x => x.EurSatis).HasPrecision(18, 6);
+                e.Property(x => x.UsdEfektifAlis).HasPrecision(18, 6);
+                e.Property(x => x.UsdEfektifSatis).HasPrecision(18, 6);
+            });
+
+            builder.Entity<KotaHospital>(e =>
+            {
+                e.ToTable("KotaHospitalleri", "ozem");
+                e.HasKey(x => x.KotaHospitalID);
+                e.HasIndex(x => new { x.KotaID, x.HospitalID }).IsUnique(); // Aynı hastane bir kotada 1 kez
+
+                e.HasOne(x => x.Kota)
+                    .WithMany(k => k.Hastaneler)
+                    .HasForeignKey(x => x.KotaID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.Hospital)
+                    .WithMany()
+                    .HasForeignKey(x => x.HospitalID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // KotaHareket'e HospitalID FK ekle (nullable, SetNull davranışı)
+            builder.Entity<KotaHareket>()
+                .HasOne(x => x.Hospital)
+                .WithMany()
+                .HasForeignKey(x => x.HospitalID)
+                .OnDelete(DeleteBehavior.SetNull);
 
         }
     }

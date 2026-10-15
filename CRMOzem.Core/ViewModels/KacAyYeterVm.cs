@@ -7,7 +7,22 @@ namespace CRMOzem.Core.ViewModels
         public int HospitalID { get; set; }
         public string HospitalName { get; set; } = "";
         public DateTime ReportDate { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// Dönem seçili değilse: "Geçen ay" etiketi
+        /// Dönem seçiliyse: "01.01.2026 - 30.09.2026" gibi
+        /// </summary>
         public string ReferenceMonthLabel { get; set; } = "";
+
+        // ── DÖNEM FİLTRESİ (opsiyonel) ──
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+
+        /// <summary>Dönem seçiliyse kaç ay olduğunu gösterir</summary>
+        public int? PeriyotAySayisi { get; set; }
+
+        /// <summary>Dönem seçili mi</summary>
+        public bool IsPeriyotFiltreli => StartDate.HasValue && EndDate.HasValue;
 
         public List<KacAyYeterRowVm> Rows { get; set; } = new();
 
@@ -33,10 +48,13 @@ namespace CRMOzem.Core.ViewModels
         public int ToplamKullanilan { get; set; }
         public int Stok => ToplamGonderilen - ToplamKullanilan;
 
-        /// <summary>Geçen ayın tüketimi (referans)</summary>
+        /// <summary>
+        /// Dönem seçili değilse: geçen ayın tüketimi
+        /// Dönem seçiliyse: dönem içindeki aylık ortalama tüketim (yuvarlanmış)
+        /// </summary>
         public int GecenAyTuketim { get; set; }
 
-        /// <summary>Kaç ay yeter — geçen ayın tüketimine göre</summary>
+        /// <summary>Kaç ay yeter — referans tüketime göre</summary>
         public decimal? KacAyYeter
         {
             get
@@ -63,7 +81,7 @@ namespace CRMOzem.Core.ViewModels
             get
             {
                 if (GecenAyTuketim <= 0 && Stok <= 0) return StokDurum.VeriYok;
-                if (GecenAyTuketim <= 0) return StokDurum.VeriYok; // tüketim verisi yoksa hesaplanamaz
+                if (GecenAyTuketim <= 0) return StokDurum.VeriYok;
 
                 var ay = (decimal)Stok / GecenAyTuketim;
                 if (Stok <= 0) return StokDurum.Kritik;
@@ -86,8 +104,8 @@ namespace CRMOzem.Core.ViewModels
     public enum StokDurum
     {
         VeriYok = 0,
-        Kritik = 1,    // < 1 ay
-        Uyari = 2,     // 1-2 ay
-        Iyi = 3        // ≥ 2 ay
+        Kritik = 1,
+        Uyari = 2,
+        Iyi = 3
     }
 }

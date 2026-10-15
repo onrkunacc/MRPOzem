@@ -1,0 +1,541 @@
+﻿@model CRMOzem.Core.ViewModels.KotaDashboardVm
+@using CRMOzem.Core.Enums
+@using CRMOzem.Core.ViewModels
+@{
+    ViewData["Title"] = "Kota Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var filter = Model.Filter ?? new KotaDashboardFilterVm();
+    var kar = Model.KarZararUsd;
+    var karPozitif = kar >= 0;
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <h1>Kota Dashboard</h1>
+                    <p>Tüm kotaların finansal özeti · <span class="text-strong">@filter.PeriyotText</span></p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <button type="button" class="kt-btn kt-btn-ghost" id="btnToggleFilter">
+                    <i class="fas fa-sliders-h"></i> Filtre
+                </button>
+                <a class="kt-btn kt-btn-ghost"
+                   href="@Url.Action("ExportExcel", "KotaDashboard", new { area = "Finans", startDate = filter.StartDate?.ToString("yyyy-MM-dd"), endDate = filter.EndDate?.ToString("yyyy-MM-dd"), bolge = filter.Bolge, durum = filter.Durum.HasValue ? (int?)filter.Durum.Value : null, tedarikciGrup = filter.TedarikciGrup.HasValue ? (int?)filter.TedarikciGrup.Value : null, kotaId = filter.KotaId })">
+                    <i class="fas fa-file-excel"></i> Excel
+                </a>
+                <a class="kt-btn kt-btn-ghost"
+                   href="@Url.Action("ExportPdf", "KotaDashboard", new { area = "Finans", startDate = filter.StartDate?.ToString("yyyy-MM-dd"), endDate = filter.EndDate?.ToString("yyyy-MM-dd"), bolge = filter.Bolge, durum = filter.Durum.HasValue ? (int?)filter.Durum.Value : null, tedarikciGrup = filter.TedarikciGrup.HasValue ? (int?)filter.TedarikciGrup.Value : null, kotaId = filter.KotaId })">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <a class="kt-btn kt-btn-dark" href="@Url.Action("Index", "Kota", new { area = "Finans" })">
+                    <i class="fas fa-list"></i> Tüm Kotalar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ FILTER PANEL ═════════ *@
+    <div class="kt-card" id="filterPanel" style="display:@(filter.IsFiltered ? "block" : "none");">
+        <div class="kt-section-title compact">
+            <div class="kt-section-icon"><i class="fas fa-filter"></i></div>
+            <h3>Filtreleme</h3>
+        </div>
+        <form method="get" action="@Url.Action("Index", "KotaDashboard", new { area = "Finans" })" id="filterForm">
+            <div class="kt-chip-row" style="margin-bottom:16px;">
+                <button type="button" class="kt-chip" data-period="thisMonth">Bu Ay</button>
+                <button type="button" class="kt-chip" data-period="last3">Son 3 Ay</button>
+                <button type="button" class="kt-chip" data-period="last6">Son 6 Ay</button>
+                <button type="button" class="kt-chip" data-period="last12">Son 12 Ay</button>
+                <button type="button" class="kt-chip" data-period="thisYear">Bu Yıl</button>
+                <button type="button" class="kt-chip" data-period="lastYear">Geçen Yıl</button>
+                <button type="button" class="kt-chip" data-period="all">Tüm Zamanlar</button>
+            </div>
+            <div class="kt-form-grid">
+                <div class="kt-form-group">
+                    <label class="kt-label">Başlangıç</label>
+                    <input type="date" name="startDate" id="startDate" value="@(filter.StartDate?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+                <div class="kt-form-group">
+                    <label class="kt-label">Bitiş</label>
+                    <input type="date" name="endDate" id="endDate" value="@(filter.EndDate?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+                <div class="kt-form-group">
+                    <label class="kt-label">Bölge</label>
+                    <select name="bolge" class="kt-input">
+                        <option value="">Tümü</option>
+                        @if (Model.MevcutBolgeler != null && Model.MevcutBolgeler.Any())
+                        {
+                            foreach (var b in Model.MevcutBolgeler)
+                            {
+                                <option value="@b" selected="@(filter.Bolge == b)">@b</option>
+                            }
+                        }
+                        else
+                        {
+                            foreach (var b in new[] { "İzmir", "Aydın", "Isparta", "Denizli", "Burdur", "Manisa" })
+                            {
+                                <option value="@b" selected="@(filter.Bolge == b)">@b</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="kt-form-group">
+                    <label class="kt-label">Durum</label>
+                    <select name="durum" class="kt-input">
+                        <option value="">Tümü</option>
+                        <option value="0" selected="@(filter.Durum == KotaDurum.YeniBaslayacak)">Yeni Başlayacak</option>
+                        <option value="1" selected="@(filter.Durum == KotaDurum.Onayda)">Onayda</option>
+                        <option value="2" selected="@(filter.Durum == KotaDurum.Bekleyen)">Bekleyen</option>
+                        <option value="3" selected="@(filter.Durum == KotaDurum.Aktif)">Aktif</option>
+                        <option value="4" selected="@(filter.Durum == KotaDurum.Kapandi)">Kapandı</option>
+                    </select>
+                </div>
+                <div class="kt-form-group">
+                    <label class="kt-label">Tedarikçi Grubu</label>
+                    <select name="tedarikciGrup" class="kt-input">
+                        <option value="">Tümü</option>
+                        <option value="0" selected="@(filter.TedarikciGrup == CRMOzem.Core.Enums.TedarikciGrup.Abbott)">Abbott</option>
+                        <option value="1" selected="@(filter.TedarikciGrup == CRMOzem.Core.Enums.TedarikciGrup.ThirdParty)">3rd Party</option>
+                        <option value="2" selected="@(filter.TedarikciGrup == CRMOzem.Core.Enums.TedarikciGrup.Ozem)">Özem</option>
+                        <option value="3" selected="@(filter.TedarikciGrup == CRMOzem.Core.Enums.TedarikciGrup.Diger)">Diğer</option>
+                    </select>
+                </div>
+                <div class="kt-form-group">
+                    <label class="kt-label">Kota</label>
+                    <select name="kotaId" class="kt-input">
+                        <option value="">Tümü</option>
+                        @if (Model.MevcutKotalar != null)
+                        {
+                            foreach (var k in Model.MevcutKotalar)
+                            {
+                                <option value="@k.KotaID" selected="@(filter.KotaId == k.KotaID)">
+                                    @(string.IsNullOrEmpty(k.KotaKodu) ? k.IsAdi : $"{k.KotaKodu} — {k.IsAdi}")
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:18px;">
+                <button type="submit" class="kt-btn kt-btn-primary"><i class="fas fa-search"></i> Uygula</button>
+                <a href="@Url.Action("Index", "KotaDashboard", new { area = "Finans" })" class="kt-btn kt-btn-secondary"><i class="fas fa-times"></i> Temizle</a>
+            </div>
+        </form>
+    </div>
+
+    @* ═════════ KPI ROW ═════════ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Proforma</div>
+                <div class="kt-kpi-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@Model.ToplamProformaUsd.ToString("N0")</div>
+            <div class="kt-kpi-foot">@Model.ToplamKotaSayisi aktif + geçmiş kota</div>
+        </div>
+
+        <div class="kt-kpi accent-neg">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gider</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-down"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@Model.ToplamGiderUsd.ToString("N0")</div>
+            <div class="kt-kpi-foot">
+                Abbott $@Model.AbbottGiderUsd.ToString("N0")
+                · 3rd $@Model.ThirdPartyGiderUsd.ToString("N0")
+            </div>
+        </div>
+
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Gelir</div>
+                <div class="kt-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+            </div>
+            <div class="kt-kpi-value">$@Model.ToplamGelirUsd.ToString("N0")</div>
+            <div class="kt-kpi-foot">
+                @if (Model.BuAyGelirDegisim.HasValue)
+                {
+                    var poz = Model.BuAyGelirDegisim.Value >= 0;
+                    <span class="kt-delta-pill @(poz ? "pos" : "neg")">
+                        <i class="fas fa-@(poz ? "arrow-up" : "arrow-down")"></i>
+                        %@Math.Abs(Model.BuAyGelirDegisim.Value).ToString("N1") (bu ay)
+                    </span>
+                }
+                else { <span>fatura edilen</span> }
+            </div>
+        </div>
+
+        <div class="kt-kpi @(karPozitif ? "accent-pos" : "accent-warn")">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Brüt Fark (Kar/Zarar)</div>
+                <div class="kt-kpi-icon"><i class="fas @(karPozitif ? "fa-chart-line" : "fa-triangle-exclamation")"></i></div>
+            </div>
+            <div class="kt-kpi-value" style="color: @(karPozitif ? "var(--kt-pos)" : "var(--kt-neg)");">
+                @(karPozitif ? "+" : "")$@kar.ToString("N0")
+            </div>
+            <div class="kt-kpi-foot">
+                Kalan proforma: $@Model.KalanUsd.ToString("N0")
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ ANA TABLO — KOTA SATIRLARI ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding: 20px 24px 14px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="kt-section-icon"><i class="fas fa-table-list"></i></div>
+                <div>
+                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Kota Satırları</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">
+                        @Model.KotaSatirlari.Count kota
+                        · tıkla → finansal detaylar
+                    </div>
+                </div>
+            </div>
+            <div class="kt-flex kt-gap-sm">
+                <input type="text" id="tableSearch" class="kt-input" placeholder="🔍 Hızlı ara..." style="width:220px;" />
+                <select id="sortBy" class="kt-input" style="width:180px;">
+                    <option value="brutFark">Brüt Fark (yüksek)</option>
+                    <option value="brutFarkAsc">Brüt Fark (düşük)</option>
+                    <option value="proforma">Proforma (yüksek)</option>
+                    <option value="kullanim">Kullanım %</option>
+                    <option value="isAdi">İsim</option>
+                </select>
+            </div>
+        </div>
+
+        @if (Model.KotaSatirlari != null && Model.KotaSatirlari.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="kotaTable">
+                    <thead>
+                        <tr>
+                            <th>Kod</th>
+                            <th>İş Adı / Sorumlu</th>
+                            <th>Bölge</th>
+                            <th class="text-right">Proforma $</th>
+                            <th class="text-right">Abbott $</th>
+                            <th class="text-right">3rd Party $</th>
+                            <th class="text-right">Toplam Gider</th>
+                            <th class="text-right">Gelir</th>
+                            <th class="text-right">Brüt Fark</th>
+                            <th class="text-right">%</th>
+                            <th class="text-center">Durum</th>
+                            <th class="text-center" style="width:1%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var k in Model.KotaSatirlari)
+                        {
+                            var pos = k.BrutFarkUsd >= 0;
+                            <tr data-search="@($"{k.KotaKodu} {k.IsAdi} {k.Sorumlu} {k.Bolge}".ToLower())"
+                                data-brutfark="@k.BrutFarkUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-proforma="@k.ProformaUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-kullanim="@k.KullanimYuzde.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-isadi="@k.IsAdi">
+                                <td>
+                                    @if (!string.IsNullOrEmpty(k.KotaKodu))
+                                    {
+                                        <span class="kt-code-badge">@k.KotaKodu</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="kt-cell-primary">@k.IsAdi</div>
+                                    @if (!string.IsNullOrEmpty(k.Sorumlu))
+                                    {
+                                        <div style="font-size:12px; color:var(--kt-ink-500); margin-top:2px;">
+                                            <i class="fas fa-user" style="font-size:10px; margin-right:4px;"></i>@k.Sorumlu
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(k.Bolge))
+                                    {
+                                        <span class="kt-tag">@k.Bolge</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-right kt-money-strong">$@k.ProformaUsd.ToString("N0")</td>
+                                <td class="text-right kt-money">
+                                    @(k.AbbottGiderUsd > 0 ? $"${k.AbbottGiderUsd:N0}" : "—")
+                                </td>
+                                <td class="text-right kt-money">
+                                    @(k.ThirdPartyGiderUsd > 0 ? $"${k.ThirdPartyGiderUsd:N0}" : "—")
+                                </td>
+                                <td class="text-right kt-money-neg">$@k.ToplamGiderUsd.ToString("N0")</td>
+                                <td class="text-right kt-money-pos">$@k.GelirUsd.ToString("N0")</td>
+                                <td class="text-right">
+                                    <span class="kt-delta-pill @(pos ? "pos" : "neg")">
+                                        <i class="fas fa-@(pos ? "caret-up" : "caret-down")"></i>
+                                        @(pos ? "+" : "")$@Math.Abs(k.BrutFarkUsd).ToString("N0")
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <span style="color: @(pos ? "var(--kt-pos)" : "var(--kt-neg)"); font-weight:700; font-size:13px;">
+                                        @(pos ? "+" : "")%@k.BrutFarkYuzde.ToString("N1")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @switch (k.Durum)
+                                    {
+                                        case KotaDurum.Aktif:          <span class="kt-badge kt-badge-success">Aktif</span> break;
+                                        case KotaDurum.YeniBaslayacak: <span class="kt-badge kt-badge-info">Yeni</span> break;
+                                        case KotaDurum.Onayda:         <span class="kt-badge kt-badge-warning">Onayda</span> break;
+                                        case KotaDurum.Bekleyen:       <span class="kt-badge kt-badge-secondary">Bekleyen</span> break;
+                                        case KotaDurum.Kapandi:        <span class="kt-badge kt-badge-danger">Kapandı</span> break;
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                        <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost btn-detay"
+                                                data-kota-id="@k.KotaID" data-kota-adi="@k.IsAdi" data-kota-kodu="@k.KotaKodu"
+                                                title="Hızlı detay">
+                                            <i class="fas fa-chart-pie"></i>
+                                        </button>
+                                        <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                           href="@Url.Action("Detay", "KotaHareket", new { area = "Finans", kotaId = k.KotaID })"
+                                           title="Hareketler">
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-right">TOPLAM</td>
+                            <td class="text-right">$@Model.KotaSatirlari.Sum(x => x.ProformaUsd).ToString("N0")</td>
+                            <td class="text-right">$@Model.KotaSatirlari.Sum(x => x.AbbottGiderUsd).ToString("N0")</td>
+                            <td class="text-right">$@Model.KotaSatirlari.Sum(x => x.ThirdPartyGiderUsd).ToString("N0")</td>
+                            <td class="text-right kt-money-neg">$@Model.KotaSatirlari.Sum(x => x.ToplamGiderUsd).ToString("N0")</td>
+                            <td class="text-right kt-money-pos">$@Model.KotaSatirlari.Sum(x => x.GelirUsd).ToString("N0")</td>
+                            @{
+                                var tFark = Model.KotaSatirlari.Sum(x => x.BrutFarkUsd);
+                                var tPos = tFark >= 0;
+                            }
+                            <td class="text-right">
+                                <span class="kt-delta-pill @(tPos ? "pos" : "neg")">
+                                    @(tPos ? "+" : "")$@Math.Abs(tFark).ToString("N0")
+                                </span>
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-inbox"></i>
+                <p>Filtreye uygun kota bulunamadı</p>
+            </div>
+        }
+    </div>
+
+    @* ═════════ ALT GRAFİKLER ═════════ *@
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;" class="kt-two-col">
+        <div class="kt-card">
+            <div class="kt-section-title compact">
+                <div class="kt-section-icon"><i class="fas fa-chart-area"></i></div>
+                <h3>Aylık Trend — Gider vs Gelir</h3>
+            </div>
+            <div id="chartAylikTrend" style="min-height:300px;"></div>
+        </div>
+
+        <div class="kt-card">
+            <div class="kt-section-title compact">
+                <div class="kt-section-icon"><i class="fas fa-chart-pie"></i></div>
+                <h3>Gider Dağılımı</h3>
+            </div>
+            <div id="chartGiderDagilim" style="min-height:300px;"></div>
+        </div>
+    </div>
+
+</div>
+
+@* ═════════ KOTA DETAY MODAL ═════════ *@
+<div class="kt-modal-backdrop" id="kotaDetayModal">
+    <div class="kt-modal" onclick="event.stopPropagation()">
+        <div class="kt-modal-head">
+            <h3 class="kt-modal-title">
+                <span id="modalKotaKodu" class="kt-code-badge primary"></span>
+                <span id="modalKotaAdi"></span>
+            </h3>
+            <button type="button" class="kt-modal-close" onclick="closeKotaModal()">×</button>
+        </div>
+        <div class="kt-modal-body" id="modalBody">
+            <div class="kt-empty"><i class="fas fa-spinner fa-spin"></i><p>Yükleniyor...</p></div>
+        </div>
+        <div class="kt-modal-foot">
+            <button type="button" class="kt-btn kt-btn-secondary" onclick="closeKotaModal()">Kapat</button>
+            <a id="modalHareketLink" class="kt-btn kt-btn-primary" href="#">
+                <i class="fas fa-arrow-right"></i> Hareketlere Git
+            </a>
+        </div>
+    </div>
+</div>
+
+@* ═════════ SCRIPTS ═════════ *@
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(function () {
+    'use strict';
+
+    // ── FILTER TOGGLE ──
+    const btnFilter = document.getElementById('btnToggleFilter');
+    const pnl = document.getElementById('filterPanel');
+    if (btnFilter && pnl) {
+        btnFilter.addEventListener('click', () => {
+            pnl.style.display = (pnl.style.display === 'none' || !pnl.style.display) ? 'block' : 'none';
+        });
+    }
+
+    // ── QUICK PERIODS ──
+    document.querySelectorAll('.kt-chip[data-period]').forEach(c => {
+        c.addEventListener('click', () => {
+            const p = c.getAttribute('data-period');
+            const today = new Date();
+            let s = null, e = null;
+            switch (p) {
+                case 'thisMonth': s = new Date(today.getFullYear(), today.getMonth(), 1); e = today; break;
+                case 'last3':     s = new Date(today.getFullYear(), today.getMonth() - 2, 1); e = today; break;
+                case 'last6':     s = new Date(today.getFullYear(), today.getMonth() - 5, 1); e = today; break;
+                case 'last12':    s = new Date(today.getFullYear(), today.getMonth() - 11, 1); e = today; break;
+                case 'thisYear':  s = new Date(today.getFullYear(), 0, 1); e = today; break;
+                case 'lastYear':  s = new Date(today.getFullYear() - 1, 0, 1); e = new Date(today.getFullYear() - 1, 11, 31); break;
+                case 'all':       document.getElementById('startDate').value = ''; document.getElementById('endDate').value = ''; document.getElementById('filterForm').submit(); return;
+            }
+            const pad = n => n < 10 ? '0' + n : '' + n;
+            const fmt = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            document.getElementById('startDate').value = fmt(s);
+            document.getElementById('endDate').value = fmt(e);
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // ── TABLE SEARCH ──
+    const search = document.getElementById('tableSearch');
+    if (search) {
+        search.addEventListener('input', () => {
+            const q = search.value.trim().toLowerCase();
+            document.querySelectorAll('#kotaTable tbody tr').forEach(tr => {
+                tr.style.display = tr.dataset.search.includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    // ── TABLE SORT ──
+    const sort = document.getElementById('sortBy');
+    if (sort) {
+        sort.addEventListener('change', () => {
+            const key = sort.value;
+            const tbody = document.querySelector('#kotaTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                switch (key) {
+                    case 'brutFark':    return parseFloat(b.dataset.brutfark) - parseFloat(a.dataset.brutfark);
+                    case 'brutFarkAsc': return parseFloat(a.dataset.brutfark) - parseFloat(b.dataset.brutfark);
+                    case 'proforma':    return parseFloat(b.dataset.proforma) - parseFloat(a.dataset.proforma);
+                    case 'kullanim':    return parseFloat(b.dataset.kullanim) - parseFloat(a.dataset.kullanim);
+                    case 'isAdi':       return a.dataset.isadi.localeCompare(b.dataset.isadi, 'tr');
+                }
+                return 0;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        });
+    }
+
+    // ── MODAL ──
+    window.closeKotaModal = function () {
+        document.getElementById('kotaDetayModal').classList.remove('open');
+    };
+    document.getElementById('kotaDetayModal').addEventListener('click', closeKotaModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeKotaModal(); });
+
+    document.querySelectorAll('.btn-detay').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.kotaId;
+            document.getElementById('modalKotaKodu').textContent = btn.dataset.kotaKodu || '—';
+            document.getElementById('modalKotaAdi').textContent = btn.dataset.kotaAdi || '';
+            document.getElementById('modalHareketLink').href = '@Url.Action("Detay", "KotaHareket", new { area = "Finans" })?kotaId=' + id;
+            document.getElementById('modalBody').innerHTML = '<div class="kt-empty"><i class="fas fa-spinner fa-spin"></i><p>Yükleniyor...</p></div>';
+            document.getElementById('kotaDetayModal').classList.add('open');
+            try {
+                const res = await fetch('@Url.Action("KotaDetayPartial", "KotaDashboard", new { area = "Finans" })?id=' + id);
+                document.getElementById('modalBody').innerHTML = await res.text();
+            } catch (err) {
+                document.getElementById('modalBody').innerHTML = '<div class="kt-empty"><i class="fas fa-exclamation-circle"></i><p>Yüklenemedi</p></div>';
+            }
+        });
+    });
+
+    // ── CHARTS ──
+    const commonGrid = { borderColor: '#e2e8f0', strokeDashArray: 4 };
+    const commonTooltip = { theme: 'light', y: { formatter: v => '$' + Number(v).toLocaleString('tr-TR') } };
+
+    @if (Model.AylikTrend != null && Model.AylikTrend.Any())
+    {
+        <text>
+        new ApexCharts(document.querySelector("#chartAylikTrend"), {
+            chart: { type: 'area', height: 300, fontFamily: 'inherit', toolbar: { show: false }, foreColor: '#64748b' },
+            series: [
+                { name: 'Gider', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GiderUsd))) },
+                { name: 'Gelir', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GelirUsd))) }
+            ],
+            colors: ['#dc2626', '#059669'],
+            stroke: { curve: 'smooth', width: 2.5 },
+            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.02 } },
+            xaxis: { categories: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.AyLabel))) },
+            yaxis: { labels: { formatter: v => (v / 1000).toFixed(0) + 'K' } },
+            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' },
+            grid: commonGrid, tooltip: commonTooltip, dataLabels: { enabled: false }
+        }).render();
+        </text>
+    }
+    else
+    {
+        <text>document.querySelector("#chartAylikTrend").innerHTML = '<div class="kt-empty"><i class="fas fa-chart-area"></i><p>Veri yok</p></div>';</text>
+    }
+
+    @{ var total = Model.AbbottGiderUsd + Model.ThirdPartyGiderUsd + Model.DigerGiderUsd; }
+    @if (total > 0)
+    {
+        <text>
+        new ApexCharts(document.querySelector("#chartGiderDagilim"), {
+            chart: { type: 'donut', height: 300, fontFamily: 'inherit', foreColor: '#64748b' },
+            series: [@Model.AbbottGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture), @Model.ThirdPartyGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture), @Model.DigerGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)],
+            labels: ['Abbott', '3rd Party', 'Diğer'],
+            colors: ['#4f46e5', '#d97706', '#64748b'],
+            legend: { position: 'bottom', fontSize: '12px' },
+            plotOptions: { pie: { donut: { size: '72%', labels: { show: true, total: { show: true, label: 'Toplam', formatter: w => '$' + w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString('tr-TR') } } } } },
+            tooltip: commonTooltip, dataLabels: { formatter: v => v.toFixed(1) + '%' }
+        }).render();
+        </text>
+    }
+    else
+    {
+        <text>document.querySelector("#chartGiderDagilim").innerHTML = '<div class="kt-empty"><i class="fas fa-chart-pie"></i><p>Veri yok</p></div>';</text>
+    }
+})();
+</script>
+
+<style>
+@@media (max-width: 992px) { .kt-two-col { grid-template-columns: 1fr !important; } }
+</style>

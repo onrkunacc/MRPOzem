@@ -1,0 +1,914 @@
+﻿@model CRMOzem.Core.ViewModels.KotaCreateVm
+@using CRMOzem.Core.Models
+
+@{
+    ViewData["Title"] = "Yeni Kota";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var secilenIdler = Model?.SecilenHastaneIdler ?? new List<int>();
+}
+
+<style>
+    /* ═══════════════════════════════════════════════
+       KOTA CREATE - MODERN DESIGN SYSTEM
+       ═══════════════════════════════════════════════ */
+    :root {
+        --kt-primary: #6366f1;
+        --kt-primary-dark: #4f46e5;
+        --kt-success: #10b981;
+        --kt-danger: #ef4444;
+        --kt-warning: #f59e0b;
+        --kt-info: #0ea5e9;
+        --kt-gray-50: #f8fafc;
+        --kt-gray-100: #f1f5f9;
+        --kt-gray-200: #e2e8f0;
+        --kt-gray-400: #94a3b8;
+        --kt-gray-600: #475569;
+        --kt-gray-900: #0f172a;
+    }
+
+    .kt-page {
+        padding: 1.25rem 0;
+    }
+
+    /* ═══ HEADER ═══ */
+    .kt-header {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%);
+        color: #fff;
+        padding: 2rem 1.75rem;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 40px rgba(99,102,241,.28);
+        position: relative;
+        overflow: hidden;
+    }
+    .kt-header::before {
+        content: '';
+        position: absolute;
+        top: -100px; right: -80px;
+        width: 320px; height: 320px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.08);
+    }
+    .kt-header::after {
+        content: '';
+        position: absolute;
+        bottom: -60px; left: 20%;
+        width: 200px; height: 200px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.05);
+    }
+    .kt-header-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .kt-header h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+    }
+    .kt-header p {
+        margin: .4rem 0 0;
+        opacity: .93;
+        font-size: .92rem;
+    }
+    .kt-header-icon {
+        width: 60px; height: 60px;
+        border-radius: 18px;
+        background: rgba(255,255,255,.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem;
+        backdrop-filter: blur(10px);
+    }
+
+    /* ═══ FORM CARD ═══ */
+    .kt-form-card {
+        background: #fff;
+        border: 1px solid var(--kt-gray-200);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,.04);
+    }
+
+    /* ═══ SECTION TITLE ═══ */
+    .kt-section {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: 1rem 1.15rem;
+        background: linear-gradient(90deg, #eef2ff 0%, #f8fafc 100%);
+        border-left: 4px solid var(--kt-primary);
+        border-radius: 10px;
+        margin-bottom: 1.25rem;
+    }
+    .kt-section-icon {
+        width: 40px; height: 40px;
+        background: linear-gradient(135deg, var(--kt-primary), var(--kt-primary-dark));
+        color: #fff;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+    .kt-section-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--kt-gray-900);
+        letter-spacing: .01em;
+    }
+    .kt-section-desc {
+        margin: 0;
+        font-size: .78rem;
+        color: var(--kt-gray-600);
+    }
+
+    .kt-section.section-money {
+        background: linear-gradient(90deg, #fefce8 0%, #f8fafc 100%);
+        border-left-color: var(--kt-warning);
+    }
+    .kt-section.section-money .kt-section-icon {
+        background: linear-gradient(135deg, var(--kt-warning), #d97706);
+    }
+
+    .kt-section.section-hospital {
+        background: linear-gradient(90deg, #ecfdf5 0%, #f8fafc 100%);
+        border-left-color: var(--kt-success);
+    }
+    .kt-section.section-hospital .kt-section-icon {
+        background: linear-gradient(135deg, var(--kt-success), #059669);
+    }
+
+    /* ═══ LABEL & INPUT ═══ */
+    .kt-label {
+        font-size: .78rem;
+        font-weight: 700;
+        color: var(--kt-gray-600);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: .4rem;
+        display: block;
+    }
+    .kt-label .req {
+        color: var(--kt-danger);
+        margin-left: 2px;
+    }
+
+    .kt-input, .kt-select, .kt-textarea {
+        width: 100%;
+        padding: .7rem .95rem;
+        border: 1.5px solid var(--kt-gray-200);
+        border-radius: 10px;
+        font-size: .95rem;
+        color: var(--kt-gray-900);
+        background: #fff;
+        transition: all .15s;
+        font-family: inherit;
+    }
+    .kt-input:hover, .kt-select:hover, .kt-textarea:hover {
+        border-color: #cbd5e1;
+    }
+    .kt-input:focus, .kt-select:focus, .kt-textarea:focus {
+        border-color: var(--kt-primary);
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+    }
+
+    /* Modern SELECT */
+    .kt-select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px;
+        padding-right: 40px;
+        cursor: pointer;
+    }
+    .kt-select:focus {
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+    }
+
+    /* Input group (para birimi) */
+    .kt-input-group {
+        display: flex;
+        align-items: stretch;
+        border: 1.5px solid var(--kt-gray-200);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: all .15s;
+    }
+    .kt-input-group:focus-within {
+        border-color: var(--kt-primary);
+        box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+    }
+    .kt-input-group-prefix {
+        padding: .7rem 1rem;
+        background: linear-gradient(135deg, var(--kt-warning), #d97706);
+        color: #fff;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+    }
+    .kt-input-group input {
+        border: none;
+        flex: 1;
+        padding: .7rem .95rem;
+        font-size: .95rem;
+        outline: none;
+    }
+
+    .kt-hint {
+        font-size: .75rem;
+        color: var(--kt-gray-400);
+        margin-top: .35rem;
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+    }
+
+    /* ═══ HASTANE PICKER ═══ */
+    .hospital-picker {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+        border: 1.5px solid #d1fae5;
+        border-radius: 14px;
+        padding: 1rem;
+    }
+
+    .hospital-toolbar {
+        display: flex;
+        gap: .5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: .85rem;
+    }
+    .hospital-search {
+        flex: 1;
+        min-width: 200px;
+        padding: .55rem .85rem .55rem 2.25rem;
+        border: 1.5px solid #d1fae5;
+        border-radius: 10px;
+        background: #fff url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3e%3ccircle cx='11' cy='11' r='8'/%3e%3cline x1='21' y1='21' x2='16.65' y2='16.65'/%3e%3c/svg%3e") no-repeat 10px center;
+        font-size: .87rem;
+    }
+    .hospital-search:focus {
+        outline: none;
+        border-color: var(--kt-success);
+        box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+    }
+
+    .btn-mini {
+        padding: .5rem .85rem;
+        border-radius: 8px;
+        font-size: .8rem;
+        font-weight: 600;
+        border: 1.5px solid transparent;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        transition: all .15s;
+    }
+    .btn-mini-outline {
+        background: #fff;
+        border-color: var(--kt-gray-200);
+        color: var(--kt-gray-600);
+    }
+    .btn-mini-outline:hover {
+        border-color: var(--kt-primary);
+        color: var(--kt-primary);
+    }
+    .btn-mini-success {
+        background: linear-gradient(135deg, var(--kt-success), #059669);
+        color: #fff;
+        border: none;
+        box-shadow: 0 3px 12px rgba(16,185,129,.3);
+    }
+    .btn-mini-success:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 16px rgba(16,185,129,.4);
+    }
+
+    .badge-selected {
+        margin-left: auto;
+        background: linear-gradient(135deg, var(--kt-primary), var(--kt-primary-dark));
+        color: #fff;
+        padding: .35rem .75rem;
+        border-radius: 999px;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .hospital-list {
+        max-height: 320px;
+        overflow-y: auto;
+        padding: .35rem;
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #d1fae5;
+    }
+    .hospital-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    .hospital-list::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+    .hospital-list::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 3px;
+    }
+
+    .hospital-item {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        padding: .65rem .85rem;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: .3rem;
+        background: #fff;
+        border: 1.5px solid var(--kt-gray-200);
+        transition: all .15s;
+        position: relative;
+    }
+    .hospital-item:hover {
+        border-color: var(--kt-success);
+        background: #f0fdf4;
+        transform: translateX(2px);
+    }
+    .hospital-item input[type="checkbox"] {
+        width: 18px; height: 18px;
+        accent-color: var(--kt-success);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .hospital-item span {
+        color: var(--kt-gray-900);
+        font-size: .92rem;
+    }
+    .hospital-item:has(input:checked) {
+        background: #ecfdf5;
+        border-color: var(--kt-success);
+        box-shadow: 0 2px 8px rgba(16,185,129,.15);
+    }
+    .hospital-item:has(input:checked) span {
+        color: #047857;
+        font-weight: 600;
+    }
+    .hospital-item:has(input:checked)::after {
+        content: '✓';
+        position: absolute;
+        right: 12px;
+        color: var(--kt-success);
+        font-weight: 700;
+    }
+    .hospital-item.yeni-eklendi {
+        animation: pulseGreen 2.5s ease;
+    }
+    @@keyframes pulseGreen {
+        0%, 100% { background: #fff; border-color: var(--kt-gray-200); }
+        30%, 70% { background: #d1fae5; border-color: var(--kt-success); transform: scale(1.02); }
+    }
+    .hospital-empty {
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: var(--kt-gray-400);
+    }
+    .hospital-empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: .5rem;
+    }
+
+    /* ═══ ACTION BUTTONS ═══ */
+    .kt-actions {
+        display: flex;
+        gap: .75rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--kt-gray-100);
+    }
+    .kt-btn {
+        padding: .8rem 1.75rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: .95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all .18s;
+    }
+    .kt-btn-primary {
+        background: linear-gradient(135deg, var(--kt-primary), var(--kt-primary-dark));
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(99,102,241,.35);
+    }
+    .kt-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(99,102,241,.45);
+        color: #fff;
+    }
+    .kt-btn-ghost {
+        background: var(--kt-gray-100);
+        color: var(--kt-gray-600);
+        border: 1.5px solid var(--kt-gray-200);
+    }
+    .kt-btn-ghost:hover {
+        background: var(--kt-gray-200);
+        color: var(--kt-gray-900);
+    }
+
+    /* ═══ MODAL — kendi tasarım ═══ */
+    .modal-yeni-hastane {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(15,23,42,.65);
+        backdrop-filter: blur(6px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        animation: fadeIn .2s ease;
+    }
+    .modal-yeni-hastane.active {
+        display: flex;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .modal-yeni-content {
+        background: #fff;
+        border-radius: 20px;
+        max-width: 500px;
+        width: 100%;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        animation: slideUp .25s ease;
+    }
+    @@keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-yeni-header {
+        background: linear-gradient(135deg, var(--kt-success), #059669);
+        color: #fff;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .modal-yeni-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: flex; align-items: center; gap: .5rem;
+    }
+    .modal-yeni-close {
+        background: rgba(255,255,255,.2);
+        border: none;
+        color: #fff;
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .modal-yeni-close:hover {
+        background: rgba(255,255,255,.35);
+    }
+    .modal-yeni-body {
+        padding: 1.75rem 1.5rem;
+    }
+    .modal-yeni-footer {
+        padding: 1rem 1.5rem;
+        background: var(--kt-gray-50);
+        display: flex;
+        justify-content: flex-end;
+        gap: .5rem;
+    }
+    .modal-error {
+        display: none;
+        padding: .7rem 1rem;
+        background: #fee2e2;
+        color: #991b1b;
+        border-radius: 10px;
+        margin-top: .75rem;
+        font-size: .85rem;
+    }
+    .modal-error.active { display: block; }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .kt-form-card { padding: 1.25rem; }
+        .kt-header { padding: 1.5rem 1.25rem; }
+        .kt-header h1 { font-size: 1.3rem; }
+    }
+</style>
+
+<div class="kt-page">
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="kt-header">
+        <div class="kt-header-content">
+            <div class="kt-header-icon">➕</div>
+            <div style="flex: 1;">
+                <h1>Yeni Kota Oluştur</h1>
+                <p>Proforma bilgilerini, süreleri ve kotaya dahil hastaneleri girin. Tarih değerleri boş bırakılırsa ay sayısı otomatik hesaplanır.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ FORM ═══ -->
+    <div class="kt-form-card">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <!-- ═══ GENEL BİLGİLER ═══ -->
+            <div class="kt-section">
+                <div class="kt-section-icon">📋</div>
+                <div>
+                    <h5 class="kt-section-title">Genel Bilgiler</h5>
+                    <small class="kt-section-desc">Kotanın kimlik bilgileri ve mevcut durumu</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-8">
+                    <label class="kt-label">İş Adı <span class="req">*</span></label>
+                    <input type="text" name="IsAdi" value="@Model.IsAdi" class="kt-input"
+                           placeholder="Örn: İzmir İSM İlçeler" required />
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Kota Kodu</label>
+                    <input type="text" name="KotaKodu" value="@Model.KotaKodu" class="kt-input"
+                           placeholder="Q-00400577" />
+                </div>
+
+                <div class="col-6 col-md-4">
+                    <label class="kt-label">Bölge</label>
+                    <select name="Bolge" class="kt-select">
+                        <option value="">— Bölge seçiniz —</option>
+                        <option value="İzmir" selected="@(Model.Bolge == "İzmir")">İzmir</option>
+                        <option value="Aydın" selected="@(Model.Bolge == "Aydın")">Aydın</option>
+                        <option value="Isparta" selected="@(Model.Bolge == "Isparta")">Isparta</option>
+                        <option value="Denizli" selected="@(Model.Bolge == "Denizli")">Denizli</option>
+                        <option value="Burdur" selected="@(Model.Bolge == "Burdur")">Burdur</option>
+                        <option value="Manisa" selected="@(Model.Bolge == "Manisa")">Manisa</option>
+                        <option value="Diğer" selected="@(Model.Bolge == "Diğer")">Diğer</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-4">
+                    <label class="kt-label">Durum <span class="req">*</span></label>
+                    <select name="Durum" class="kt-select">
+                        <option value="0" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.YeniBaslayacak)">🆕 Yeni Başlayacak</option>
+                        <option value="1" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Onayda)">⏳ Onayda</option>
+                        <option value="2" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Bekleyen)">⏸️ Bekleyen</option>
+                        <option value="3" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Aktif)">✅ Aktif</option>
+                        <option value="4" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Kapandi)">🔒 Kapandı</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Sorumlu</label>
+                    <input type="text" name="Sorumlu" value="@Model.Sorumlu" class="kt-input"
+                           placeholder="Örn: Erkan TARA" />
+                </div>
+            </div>
+
+            <!-- ═══ HASTANELER ═══ -->
+            <div class="kt-section section-hospital">
+                <div class="kt-section-icon">🏥</div>
+                <div style="flex: 1;">
+                    <h5 class="kt-section-title">Kotaya Dahil Hastaneler</h5>
+                    <small class="kt-section-desc">Fatura girerken bu listedeki hastaneler seçilebilecek</small>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="hospital-picker">
+                        <div class="hospital-toolbar">
+                            <input type="text" id="hospitalSearch" class="hospital-search"
+                                   placeholder="Hastane ara..." />
+                            <button type="button" class="btn-mini btn-mini-outline" id="btnSelectAll">
+                                <i class="fe fe-check-square"></i> Tümü
+                            </button>
+                            <button type="button" class="btn-mini btn-mini-outline" id="btnClearAll">
+                                <i class="fe fe-x-square"></i> Temizle
+                            </button>
+                            <button type="button" class="btn-mini btn-mini-success" id="btnYeniHastane">
+                                <i class="fe fe-plus"></i> Yeni Hastane
+                            </button>
+                            <span class="badge-selected" id="secilenSayi">0 seçili</span>
+                        </div>
+
+                        <div class="hospital-list" id="hospitalList">
+                            @if (!hospitals.Any())
+                            {
+                                <div class="hospital-empty" id="hospitalEmpty">
+                                    <div class="hospital-empty-icon">🏥</div>
+                                    <div>Sistemde hastane yok</div>
+                                    <small><strong>"+ Yeni Hastane"</strong> ile hızlıca ekleyebilirsiniz</small>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var h in hospitals)
+                                {
+                                    var isSecili = secilenIdler.Contains((int)h.HospitalID);
+                                    <label class="hospital-item" data-name="@h.HospitalName.ToString().ToLowerInvariant()">
+                                        <input type="checkbox" name="SecilenHastaneIdler" value="@h.HospitalID"
+                                               class="hospital-check" @(isSecili ? "checked" : "") />
+                                        <span>@h.HospitalName</span>
+                                    </label>
+                                }
+                            }
+                        </div>
+                        <div class="kt-hint mt-2">
+                            💡 Bu kotaya dahil olan hastaneleri işaretleyin. Listede yoksa yukarıdaki <strong>"+ Yeni Hastane"</strong> butonu ile ekleyin.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ PROFORMA & SÜRE ═══ -->
+            <div class="kt-section section-money">
+                <div class="kt-section-icon">💵</div>
+                <div>
+                    <h5 class="kt-section-title">Proforma & Süre</h5>
+                    <small class="kt-section-desc">USD bazında proforma tutarı ve ihale süresi</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Proforma Tarihi</label>
+                    <input type="date" name="ProformaTarihi"
+                           value="@(Model.ProformaTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Proforma Tutarı (USD)</label>
+                    <div class="kt-input-group">
+                        <div class="kt-input-group-prefix">$</div>
+                        <input type="number" step="0.01" name="ProformaTutarUsd"
+                               value="@Model.ProformaTutarUsd" placeholder="Örn: 2459629.18" />
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Süre (Ay)</label>
+                    <input type="number" name="AySayisi" value="@Model.AySayisi"
+                           class="kt-input" placeholder="Örn: 36" />
+                    <div class="kt-hint">Boş bırakılırsa tarihlerden otomatik hesaplanır.</div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="kt-label">Başlama Tarihi</label>
+                    <input type="date" name="BaslamaTarihi"
+                           value="@(Model.BaslamaTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="kt-label">Bitiş Tarihi</label>
+                    <input type="date" name="BitisTarihi"
+                           value="@(Model.BitisTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12">
+                    <label class="kt-label">Açıklama</label>
+                    <textarea name="Aciklama" class="kt-textarea" rows="3"
+                              placeholder="Notlar, özel durumlar, hatırlatmalar...">@Model.Aciklama</textarea>
+                </div>
+            </div>
+
+            <!-- ═══ ACTIONS ═══ -->
+            <div class="kt-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fa fa-arrow-left"></i> Geri
+                </a>
+                <button type="submit" class="kt-btn kt-btn-primary">
+                    <i class="fa fa-save"></i> Kotayı Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     YENİ HASTANE MODAL — FORM DIŞINDA!
+     ═══════════════════════════════════════════════ -->
+<div class="modal-yeni-hastane" id="modalYeniHastane">
+    <div class="modal-yeni-content">
+        <div class="modal-yeni-header">
+            <h5>🏥 Yeni Hastane Ekle</h5>
+            <button type="button" class="modal-yeni-close" id="modalCloseX">×</button>
+        </div>
+        <div class="modal-yeni-body">
+            <label class="kt-label">Hastane Adı <span class="req">*</span></label>
+            <input type="text" id="yeniHastaneAd" class="kt-input"
+                   placeholder="Örn: Bergama Devlet Hastanesi" maxlength="200"
+                   autocomplete="off" />
+            <div class="kt-hint">
+                <i class="fe fe-info"></i> Enter tuşu ile hızlıca kaydedebilirsiniz.
+            </div>
+            <div class="modal-error" id="yeniHastaneHata"></div>
+        </div>
+        <div class="modal-yeni-footer">
+            <button type="button" class="kt-btn kt-btn-ghost" id="modalCloseBtn"
+                    style="padding: .6rem 1.25rem;">
+                İptal
+            </button>
+            <button type="button" class="kt-btn" id="btnHastaneKaydet"
+                    style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: .6rem 1.5rem; box-shadow: 0 4px 12px rgba(16,185,129,.35);">
+                <i class="fe fe-save"></i> Kaydet ve Seç
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ═══ DOM elemanları ═══
+        const list = document.getElementById('hospitalList');
+        const search = document.getElementById('hospitalSearch');
+        const btnAll = document.getElementById('btnSelectAll');
+        const btnClear = document.getElementById('btnClearAll');
+        const btnYeni = document.getElementById('btnYeniHastane');
+        const btnKaydet = document.getElementById('btnHastaneKaydet');
+        const sayiBadge = document.getElementById('secilenSayi');
+        const modal = document.getElementById('modalYeniHastane');
+        const yeniAd = document.getElementById('yeniHastaneAd');
+        const hata = document.getElementById('yeniHastaneHata');
+        const empty = document.getElementById('hospitalEmpty');
+        const modalCloseX = document.getElementById('modalCloseX');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        function getItems() { return list.querySelectorAll('.hospital-item'); }
+        function getChecks() { return list.querySelectorAll('.hospital-check'); }
+
+        function updateSayi() {
+            const secili = Array.from(getChecks()).filter(c => c.checked).length;
+            sayiBadge.textContent = secili + ' seçili';
+        }
+
+        function bindItemEvents(item) {
+            const cb = item.querySelector('.hospital-check');
+            if (cb) cb.addEventListener('change', updateSayi);
+        }
+
+        // ═══ Arama ═══
+        search.addEventListener('input', () => {
+            const q = search.value.toLowerCase().trim();
+            getItems().forEach(item => {
+                const name = item.dataset.name || '';
+                item.style.display = (!q || name.includes(q)) ? '' : 'none';
+            });
+        });
+
+        // ═══ Toplu seçim ═══
+        btnAll.addEventListener('click', () => {
+            getItems().forEach(item => {
+                if (item.style.display !== 'none') {
+                    const cb = item.querySelector('.hospital-check');
+                    if (cb) cb.checked = true;
+                }
+            });
+            updateSayi();
+        });
+
+        btnClear.addEventListener('click', () => {
+            getChecks().forEach(c => c.checked = false);
+            updateSayi();
+        });
+
+        getItems().forEach(bindItemEvents);
+        updateSayi();
+
+        // ═══ MODAL AÇMA/KAPAMA ═══
+        function openModal() {
+            hata.classList.remove('active');
+            yeniAd.value = '';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => yeniAd.focus(), 100);
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        btnYeni.addEventListener('click', openModal);
+        modalCloseX.addEventListener('click', closeModal);
+        modalCloseBtn.addEventListener('click', closeModal);
+
+        // Modal arka planına tıklayınca kapat
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // ESC ile kapat
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+
+        // Enter ile kaydet
+        yeniAd.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnKaydet.click();
+            }
+        });
+
+        // ═══ HASTANE KAYDET (AJAX) ═══
+        btnKaydet.addEventListener('click', async () => {
+            const ad = yeniAd.value.trim();
+            if (!ad) {
+                hata.textContent = '⚠️ Hastane adı boş olamaz.';
+                hata.classList.add('active');
+                yeniAd.focus();
+                return;
+            }
+
+            btnKaydet.disabled = true;
+            const orig = btnKaydet.innerHTML;
+            btnKaydet.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const formData = new FormData();
+                formData.append('hospitalName', ad);
+                formData.append('__RequestVerificationToken', token);
+
+                const res = await fetch('@Url.Action("AddHospitalAjax", "Kota", new { area = "Finans" })', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error('Sunucu hatası (HTTP ' + res.status + ')');
+
+                const data = await res.json();
+
+                if (!data.success) {
+                    hata.textContent = '❌ ' + (data.message || 'Hata oluştu.');
+                    hata.classList.add('active');
+                    return;
+                }
+
+                // Boş listeyi gizle
+                if (empty) empty.style.display = 'none';
+
+                // Zaten varsa → mevcut olanı işaretle
+                let existing = list.querySelector('.hospital-check[value="' + data.hospitalId + '"]');
+                if (existing) {
+                    existing.checked = true;
+                    const item = existing.closest('.hospital-item');
+                    item.classList.add('yeni-eklendi');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => item.classList.remove('yeni-eklendi'), 2500);
+                } else {
+                    // Yeni item ekle
+                    const label = document.createElement('label');
+                    label.className = 'hospital-item yeni-eklendi';
+                    label.dataset.name = data.hospitalName.toLowerCase();
+                    label.innerHTML =
+                        '<input type="checkbox" name="SecilenHastaneIdler" value="' + data.hospitalId + '" class="hospital-check" checked />' +
+                        '<span>' + data.hospitalName + '</span>';
+                    list.prepend(label);
+                    bindItemEvents(label);
+                    label.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => label.classList.remove('yeni-eklendi'), 2500);
+                }
+
+                updateSayi();
+                closeModal();
+            } catch (err) {
+                hata.textContent = '❌ Sunucu hatası: ' + err.message;
+                hata.classList.add('active');
+            } finally {
+                btnKaydet.disabled = false;
+                btnKaydet.innerHTML = orig;
+            }
+        });
+    })();
+</script>

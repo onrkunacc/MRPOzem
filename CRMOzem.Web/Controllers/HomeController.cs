@@ -34,7 +34,29 @@ namespace CRMOzem.Web.Controllers
 
             return View();
         }
+        [HttpGet]
+        public async Task<IActionResult> TestSyncStok(
+            [FromServices] IFizikiSayimSyncService sync,
+            [FromServices] IFizikiSayimApiClient api,
+            int? hospitalId,
+            CancellationToken ct)
+        {
+            // Önce ping
+            var ping = await api.PingAsync(ct);
+            if (!ping) return Json(new { success = false, message = "Ping baþarýsýz — API key veya URL yanlýþ" });
 
+            // Sync et
+            var sonuc = await sync.SyncAsync(hospitalId, ct);
+            return Json(sonuc);
+        }
+        [HttpGet]
+        public async Task<IActionResult> TestEslesme(
+            [FromServices] IFizikiSayimSyncService sync,
+            CancellationToken ct)
+        {
+            var rapor = await sync.TestEslesmeAsync(ct);
+            return Json(rapor);
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetTotalExpense()

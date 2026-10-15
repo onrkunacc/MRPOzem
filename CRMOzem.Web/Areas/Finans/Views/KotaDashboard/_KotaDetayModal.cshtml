@@ -1,0 +1,148 @@
+﻿@model CRMOzem.Core.ViewModels.KotaDetayModalVm
+@using CRMOzem.Core.Enums
+@{
+    var brutFark = Model.GelirUsd - Model.ToplamGiderUsd;
+    var pos = brutFark >= 0;
+    var kullanim = Model.KullanimYuzde;
+    var kullanimClass = kullanim > 100 ? "neg" : kullanim > 80 ? "warn" : "pos";
+}
+
+ 
+<div class="kt-flex-between" style="margin-bottom:16px;">
+    <div class="kt-flex kt-gap-md" style="flex-wrap:wrap;">
+        @if (!string.IsNullOrEmpty(Model.Sorumlu))
+        {
+            <span class="text-muted"><i class="fas fa-user" style="margin-right:5px;"></i>@Model.Sorumlu</span>
+        }
+        @if (!string.IsNullOrEmpty(Model.Bolge))
+        {
+            <span class="kt-tag">@Model.Bolge</span>
+        }
+        @if (Model.BaslamaTarihi.HasValue || Model.BitisTarihi.HasValue)
+        {
+            <span class="text-muted">
+                <i class="fas fa-calendar" style="margin-right:5px;"></i>
+                @(Model.BaslamaTarihi?.ToString("dd.MM.yyyy") ?? "—") → @(Model.BitisTarihi?.ToString("dd.MM.yyyy") ?? "—")
+            </span>
+        }
+        @switch (Model.Durum)
+        {
+            case KotaDurum.Aktif:          <span class="kt-badge kt-badge-success">Aktif</span> break;
+            case KotaDurum.YeniBaslayacak: <span class="kt-badge kt-badge-info">Yeni</span> break;
+            case KotaDurum.Onayda:         <span class="kt-badge kt-badge-warning">Onayda</span> break;
+            case KotaDurum.Bekleyen:       <span class="kt-badge kt-badge-secondary">Bekleyen</span> break;
+            case KotaDurum.Kapandi:        <span class="kt-badge kt-badge-danger">Kapandı</span> break;
+        }
+    </div>
+</div>
+
+
+<div class="kt-kpi-grid" style="margin-bottom:20px;">
+    <div class="kt-kpi accent-primary" style="padding:14px 16px;">
+        <div class="kt-kpi-label">Proforma</div>
+        <div class="kt-kpi-value" style="font-size:20px;">$@Model.ProformaUsd.ToString("N0")</div>
+    </div>
+    <div class="kt-kpi accent-neg" style="padding:14px 16px;">
+        <div class="kt-kpi-label">Toplam Gider</div>
+        <div class="kt-kpi-value" style="font-size:20px;">$@Model.ToplamGiderUsd.ToString("N0")</div>
+    </div>
+    <div class="kt-kpi accent-pos" style="padding:14px 16px;">
+        <div class="kt-kpi-label">Gelir</div>
+        <div class="kt-kpi-value" style="font-size:20px;">$@Model.GelirUsd.ToString("N0")</div>
+    </div>
+    <div class="kt-kpi @(pos ? "accent-pos" : "accent-warn")" style="padding:14px 16px;">
+        <div class="kt-kpi-label">Brüt Fark</div>
+        <div class="kt-kpi-value" style="font-size:20px; color:@(pos ? "var(--kt-pos)" : "var(--kt-neg)");">
+            @(pos ? "+" : "")$@brutFark.ToString("N0")
+        </div>
+    </div>
+</div>
+
+
+<div style="margin-bottom:20px;">
+    <div class="kt-flex-between" style="margin-bottom:6px;">
+        <span class="kt-label">Proforma Kullanımı</span>
+        <span class="text-strong">%@kullanim.ToString("N1")</span>
+    </div>
+    <div class="kt-progress">
+        <div class="kt-progress-bar @kullanimClass" style="width:@(Math.Min(kullanim, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+    </div>
+    <div class="kt-flex-between" style="margin-top:6px; font-size:11.5px; color:var(--kt-ink-500);">
+        <span>$@Model.ToplamGiderUsd.ToString("N0") / $@Model.ProformaUsd.ToString("N0")</span>
+        <span>Kalan: $@((Model.ProformaUsd - Model.ToplamGiderUsd).ToString("N0"))</span>
+    </div>
+</div>
+
+
+<div class="kt-card" style="padding:16px; margin-bottom:16px;">
+    <div class="kt-section-title compact">
+        <div class="kt-section-icon"><i class="fas fa-tags"></i></div>
+        <h3>Gider Kırılımı</h3>
+    </div>
+    <table class="kt-table" style="margin:-4px 0;">
+        <tbody>
+            <tr>
+                <td style="width:60%;"><strong>Abbott</strong></td>
+                <td class="text-right kt-money">$@Model.AbbottGiderUsd.ToString("N0")</td>
+                <td class="text-right" style="width:70px;">
+                    @{ var abb = Model.ToplamGiderUsd > 0 ? (Model.AbbottGiderUsd / Model.ToplamGiderUsd) * 100 : 0; }
+                    <span class="text-muted">%@abb.ToString("N1")</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>3rd Party</strong></td>
+                <td class="text-right kt-money">$@Model.ThirdPartyGiderUsd.ToString("N0")</td>
+                <td class="text-right">
+                    @{ var tp = Model.ToplamGiderUsd > 0 ? (Model.ThirdPartyGiderUsd / Model.ToplamGiderUsd) * 100 : 0; }
+                    <span class="text-muted">%@tp.ToString("N1")</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Diğer</strong></td>
+                <td class="text-right kt-money">$@Model.DigerGiderUsd.ToString("N0")</td>
+                <td class="text-right">
+                    @{ var dg = Model.ToplamGiderUsd > 0 ? (Model.DigerGiderUsd / Model.ToplamGiderUsd) * 100 : 0; }
+                    <span class="text-muted">%@dg.ToString("N1")</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+<div class="kt-card" style="padding:16px;">
+    <div class="kt-section-title compact">
+        <div class="kt-section-icon"><i class="fas fa-chart-column"></i></div>
+        <h3>Aylık Hareket</h3>
+    </div>
+    <div id="modalChartTrend" style="min-height:260px;"></div>
+</div>
+
+<script>
+(function () {
+    @if (Model.AylikTrend != null && Model.AylikTrend.Any())
+    {
+        <text>
+        new ApexCharts(document.querySelector("#modalChartTrend"), {
+            chart: { type: 'bar', height: 260, fontFamily: 'inherit', toolbar: { show: false }, foreColor: '#64748b' },
+            series: [
+                { name: 'Gider', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GiderUsd))) },
+                { name: 'Gelir', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GelirUsd))) }
+            ],
+            colors: ['#dc2626', '#059669'],
+            plotOptions: { bar: { columnWidth: '58%', borderRadius: 4 } },
+            xaxis: { categories: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.AyLabel))) },
+            yaxis: { labels: { formatter: v => (v / 1000).toFixed(0) + 'K' } },
+            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' },
+            grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
+            tooltip: { theme: 'light', y: { formatter: v => '$' + Number(v).toLocaleString('tr-TR') } },
+            dataLabels: { enabled: false }
+        }).render();
+        </text>
+    }
+    else
+    {
+        <text>document.querySelector("#modalChartTrend").innerHTML = '<div class="kt-empty"><i class="fas fa-chart-column"></i><p>Henüz hareket yok</p></div>';</text>
+    }
+})();
+</script>

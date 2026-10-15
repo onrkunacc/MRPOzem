@@ -1,0 +1,298 @@
+﻿@model CRMOzem.Core.ViewModels.KotaEditVm
+@using CRMOzem.Core.Models
+
+@{
+    ViewData["Title"] = "Kota Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var secilenIdler = Model?.SecilenHastaneIdler ?? new List<int>();
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    <div class="kt-header theme-warning">
+        <div class="kt-header-content">
+            <div class="kt-header-icon">✏️</div>
+            <div style="flex: 1;">
+                <h1>Kota Düzenle</h1>
+                <p>Mevcut kota bilgilerini güncelleyin. Değişiklikler tüm hareketleri etkilemez.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="kt-card">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="KotaID" value="@Model.KotaID" />
+
+            <div class="kt-section">
+                <div class="kt-section-icon">📋</div>
+                <div>
+                    <h5 class="kt-section-title">Genel Bilgiler</h5>
+                    <small class="kt-section-desc">Kotanın kimlik bilgileri ve mevcut durumu</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-8">
+                    <label class="kt-label">İş Adı <span class="req">*</span></label>
+                    <input type="text" name="IsAdi" value="@Model.IsAdi" class="kt-input" required />
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Kota Kodu</label>
+                    <input type="text" name="KotaKodu" value="@Model.KotaKodu" class="kt-input" />
+                </div>
+
+                <div class="col-6 col-md-4">
+                    <label class="kt-label">Bölge</label>
+                    <select name="Bolge" class="kt-select">
+                        <option value="">— Bölge seçiniz —</option>
+                        <option value="İzmir" selected="@(Model.Bolge == "İzmir")">İzmir</option>
+                        <option value="Aydın" selected="@(Model.Bolge == "Aydın")">Aydın</option>
+                        <option value="Isparta" selected="@(Model.Bolge == "Isparta")">Isparta</option>
+                        <option value="Denizli" selected="@(Model.Bolge == "Denizli")">Denizli</option>
+                        <option value="Burdur" selected="@(Model.Bolge == "Burdur")">Burdur</option>
+                        <option value="Manisa" selected="@(Model.Bolge == "Manisa")">Manisa</option>
+                        <option value="Diğer" selected="@(Model.Bolge == "Diğer")">Diğer</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-4">
+                    <label class="kt-label">Durum <span class="req">*</span></label>
+                    <select name="Durum" class="kt-select">
+                        <option value="0" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.YeniBaslayacak)">🆕 Yeni Başlayacak</option>
+                        <option value="1" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Onayda)">⏳ Onayda</option>
+                        <option value="2" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Bekleyen)">⏸️ Bekleyen</option>
+                        <option value="3" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Aktif)">✅ Aktif</option>
+                        <option value="4" selected="@(Model.Durum == CRMOzem.Core.Enums.KotaDurum.Kapandi)">🔒 Kapandı</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Sorumlu</label>
+                    <input type="text" name="Sorumlu" value="@Model.Sorumlu" class="kt-input" />
+                </div>
+            </div>
+
+            <div class="kt-section section-hospital">
+                <div class="kt-section-icon">🏥</div>
+                <div>
+                    <h5 class="kt-section-title">Kotaya Dahil Hastaneler</h5>
+                    <small class="kt-section-desc">Fatura girerken bu listedeki hastaneler seçilebilecek</small>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="hospital-picker">
+                        <div class="hospital-toolbar">
+                            <input type="text" id="hospitalSearch" class="hospital-search" placeholder="Hastane ara..." />
+                            <button type="button" class="btn-mini btn-mini-outline" id="btnSelectAll">
+                                <i class="fe fe-check-square"></i> Tümü
+                            </button>
+                            <button type="button" class="btn-mini btn-mini-outline" id="btnClearAll">
+                                <i class="fe fe-x-square"></i> Temizle
+                            </button>
+                            <button type="button" class="btn-mini btn-mini-success" id="btnYeniHastane">
+                                <i class="fe fe-plus"></i> Yeni Hastane
+                            </button>
+                            <span class="badge-selected" id="secilenSayi">0 seçili</span>
+                        </div>
+
+                        <div class="hospital-list" id="hospitalList">
+                            @if (!hospitals.Any())
+                            {
+                                <div class="hospital-empty" id="hospitalEmpty">
+                                    <div style="font-size:2.5rem;">🏥</div>
+                                    <div>Sistemde hastane yok</div>
+                                    <small><strong>"+ Yeni Hastane"</strong> ile hızlıca ekleyebilirsiniz</small>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var h in hospitals)
+                                {
+                                    var isSecili = secilenIdler.Contains((int)h.HospitalID);
+                                    <label class="hospital-item" data-name="@h.HospitalName.ToString().ToLowerInvariant()">
+                                        <input type="checkbox" name="SecilenHastaneIdler" value="@h.HospitalID"
+                                               class="hospital-check" @(isSecili ? "checked" : "") />
+                                        <span>@h.HospitalName</span>
+                                    </label>
+                                }
+                            }
+                        </div>
+                        <div class="kt-hint mt-2">💡 Fatura girerken hangi hastaneye ait olduğu seçilebilecek.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-section section-money">
+                <div class="kt-section-icon">💵</div>
+                <div>
+                    <h5 class="kt-section-title">Proforma & Süre</h5>
+                    <small class="kt-section-desc">USD bazında proforma tutarı ve ihale süresi</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Proforma Tarihi</label>
+                    <input type="date" name="ProformaTarihi" value="@(Model.ProformaTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Proforma Tutarı (USD)</label>
+                    <div class="kt-input-group">
+                        <div class="kt-input-group-prefix">$</div>
+                        <input type="number" step="0.01" name="ProformaTutarUsd" value="@Model.ProformaTutarUsd" />
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="kt-label">Süre (Ay)</label>
+                    <input type="number" name="AySayisi" value="@Model.AySayisi" class="kt-input" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="kt-label">Başlama Tarihi</label>
+                    <input type="date" name="BaslamaTarihi" value="@(Model.BaslamaTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="kt-label">Bitiş Tarihi</label>
+                    <input type="date" name="BitisTarihi" value="@(Model.BitisTarihi?.ToString("yyyy-MM-dd"))" class="kt-input" />
+                </div>
+
+                <div class="col-12">
+                    <label class="kt-label">Açıklama</label>
+                    <textarea name="Aciklama" class="kt-textarea" rows="3">@Model.Aciklama</textarea>
+                </div>
+            </div>
+
+            <div class="kt-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fa fa-arrow-left"></i> Geri
+                </a>
+                <button type="submit" class="kt-btn kt-btn-warning">
+                    <i class="fa fa-save"></i> Güncelle
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- YENİ HASTANE MODAL -->
+<div class="kt-modal" id="modalYeniHastane">
+    <div class="kt-modal-content">
+        <div class="kt-modal-header">
+            <h5 style="margin:0;font-size:1.1rem;font-weight:700;">🏥 Yeni Hastane Ekle</h5>
+            <button type="button" class="kt-modal-close" id="modalCloseX">×</button>
+        </div>
+        <div class="kt-modal-body">
+            <label class="kt-label">Hastane Adı <span class="req">*</span></label>
+            <input type="text" id="yeniHastaneAd" class="kt-input" placeholder="Örn: Bergama Devlet Hastanesi" maxlength="200" autocomplete="off" />
+            <div class="kt-hint"><i class="fe fe-info"></i> Enter tuşu ile hızlıca kaydedebilirsiniz.</div>
+            <div class="modal-error" id="yeniHastaneHata"></div>
+        </div>
+        <div class="kt-modal-footer">
+            <button type="button" class="kt-btn kt-btn-ghost kt-btn-sm" id="modalCloseBtn">İptal</button>
+            <button type="button" class="kt-btn kt-btn-success kt-btn-sm" id="btnHastaneKaydet">
+                <i class="fe fe-save"></i> Kaydet ve Seç
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const list = document.getElementById('hospitalList');
+        const search = document.getElementById('hospitalSearch');
+        const btnAll = document.getElementById('btnSelectAll');
+        const btnClear = document.getElementById('btnClearAll');
+        const btnYeni = document.getElementById('btnYeniHastane');
+        const btnKaydet = document.getElementById('btnHastaneKaydet');
+        const sayiBadge = document.getElementById('secilenSayi');
+        const modal = document.getElementById('modalYeniHastane');
+        const yeniAd = document.getElementById('yeniHastaneAd');
+        const hata = document.getElementById('yeniHastaneHata');
+        const empty = document.getElementById('hospitalEmpty');
+        const modalCloseX = document.getElementById('modalCloseX');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        function getItems() { return list.querySelectorAll('.hospital-item'); }
+        function getChecks() { return list.querySelectorAll('.hospital-check'); }
+        function updateSayi() { sayiBadge.textContent = Array.from(getChecks()).filter(c => c.checked).length + ' seçili'; }
+        function bindItemEvents(item) {
+            const cb = item.querySelector('.hospital-check');
+            if (cb) cb.addEventListener('change', updateSayi);
+        }
+
+        search.addEventListener('input', () => {
+            const q = search.value.toLowerCase().trim();
+            getItems().forEach(item => {
+                item.style.display = (!q || (item.dataset.name || '').includes(q)) ? '' : 'none';
+            });
+        });
+        btnAll.addEventListener('click', () => {
+            getItems().forEach(i => { if (i.style.display !== 'none') { const cb = i.querySelector('.hospital-check'); if (cb) cb.checked = true; } });
+            updateSayi();
+        });
+        btnClear.addEventListener('click', () => { getChecks().forEach(c => c.checked = false); updateSayi(); });
+        getItems().forEach(bindItemEvents);
+        updateSayi();
+
+        function openModal() { hata.classList.remove('active'); yeniAd.value = ''; modal.classList.add('active'); document.body.style.overflow = 'hidden'; setTimeout(() => yeniAd.focus(), 100); }
+        function closeModal() { modal.classList.remove('active'); document.body.style.overflow = ''; }
+        btnYeni.addEventListener('click', openModal);
+        modalCloseX.addEventListener('click', closeModal);
+        modalCloseBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('active')) closeModal(); });
+        yeniAd.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); btnKaydet.click(); } });
+
+        btnKaydet.addEventListener('click', async () => {
+            const ad = yeniAd.value.trim();
+            if (!ad) { hata.textContent = '⚠️ Hastane adı boş olamaz.'; hata.classList.add('active'); yeniAd.focus(); return; }
+            btnKaydet.disabled = true;
+            const orig = btnKaydet.innerHTML;
+            btnKaydet.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const formData = new FormData();
+                formData.append('hospitalName', ad);
+                formData.append('__RequestVerificationToken', token);
+                const res = await fetch('@Url.Action("AddHospitalAjax", "Kota", new { area = "Finans" })', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (!data.success) { hata.textContent = '❌ ' + (data.message || 'Hata oluştu.'); hata.classList.add('active'); return; }
+                if (empty) empty.style.display = 'none';
+                let existing = list.querySelector('.hospital-check[value="' + data.hospitalId + '"]');
+                if (existing) {
+                    existing.checked = true;
+                    const item = existing.closest('.hospital-item');
+                    item.classList.add('yeni-eklendi');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => item.classList.remove('yeni-eklendi'), 2500);
+                } else {
+                    const label = document.createElement('label');
+                    label.className = 'hospital-item yeni-eklendi';
+                    label.dataset.name = data.hospitalName.toLowerCase();
+                    label.innerHTML = '<input type="checkbox" name="SecilenHastaneIdler" value="' + data.hospitalId + '" class="hospital-check" checked /><span>' + data.hospitalName + '</span>';
+                    list.prepend(label);
+                    bindItemEvents(label);
+                    label.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => label.classList.remove('yeni-eklendi'), 2500);
+                }
+                updateSayi();
+                closeModal();
+            } catch (err) {
+                hata.textContent = '❌ Sunucu hatası: ' + err.message; hata.classList.add('active');
+            } finally {
+                btnKaydet.disabled = false; btnKaydet.innerHTML = orig;
+            }
+        });
+    })();
+</script>

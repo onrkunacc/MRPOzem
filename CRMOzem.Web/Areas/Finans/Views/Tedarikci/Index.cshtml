@@ -1,0 +1,130 @@
+﻿@model List<CRMOzem.Core.ViewModels.TedarikciListVm>
+@using CRMOzem.Core.Enums
+@using CRMOzem.Core.Models
+@{
+    ViewData["Title"] = "Tedarikçiler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+    <div class="kt-header">
+        <div class="kt-header-content">
+            <div class="kt-header-icon">🏢</div>
+            <div style="flex: 1;">
+                <h1>Tedarikçiler</h1>
+                <p>Kota hareketlerinde kullanılacak tedarikçi firmalar.</p>
+            </div>
+            <a asp-action="Create" class="kt-header-btn">
+                <i class="fe fe-plus"></i> Yeni Tedarikçi
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" style="border-radius:12px;"><i class="fe fe-check-circle me-1"></i> @TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger" style="border-radius:12px;"><i class="fe fe-alert-circle me-1"></i> @TempData["Error"]</div>
+    }
+
+    <div class="kt-table-wrap">
+        <div class="table-responsive">
+            <table class="kt-table">
+                <thead>
+                    <tr>
+                        <th>Ad</th>
+                        <th style="width:130px;">Grup</th>
+                        <th>Açıklama</th>
+                        <th style="width:120px;" class="text-center">Hareket Sayısı</th>
+                        <th style="width:110px;" class="text-center">Durum</th>
+                        <th style="width:180px;" class="text-end">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:3rem 1rem;">
+                                <div style="font-size:2.5rem; opacity:.4;">🏢</div>
+                                <div class="text-muted mt-2">Henüz tedarikçi eklenmemiş</div>
+                                <a asp-action="Create" class="kt-btn kt-btn-primary mt-3">
+                                    <i class="fe fe-plus"></i> İlk Tedarikçiyi Ekle
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var t in Model)
+                        {
+                            var grupClass = t.Grup switch
+                            {
+                                TedarikciGrup.Abbott => "kt-badge-grad-danger",
+                                TedarikciGrup.ThirdParty => "kt-badge-grad-warning",
+                                TedarikciGrup.Ozem => "kt-badge-grad-success",
+                                _ => "kt-badge-gray"
+                            };
+                            var grupText = t.Grup switch
+                            {
+                                TedarikciGrup.Abbott => "Abbott",
+                                TedarikciGrup.ThirdParty => "3rd Party",
+                                TedarikciGrup.Ozem => "Özem",
+                                _ => "Diğer"
+                            };
+
+                            <tr style="opacity:@(t.Aktif ? "1" : ".55");">
+                                <td class="fw-bold">@t.Ad</td>
+                                <td><span class="kt-badge @grupClass">@grupText</span></td>
+                                <td><small class="text-muted">@(t.Aciklama ?? "—")</small></td>
+                                <td class="text-center">
+                                    <span class="kt-badge kt-badge-gray">@t.HareketSayisi</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (t.Aktif)
+                                    {
+                                        <span class="kt-badge kt-badge-success">✓ Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="kt-badge kt-badge-gray">⊘ Pasif</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@t.TedarikciID"
+                                       style="background:linear-gradient(135deg,var(--kt-warning),var(--kt-warning-dark)); color:#fff; padding:.4rem .55rem; border-radius:8px; text-decoration:none; margin-right:4px;"
+                                       title="Düzenle">
+                                        <i class="fa fa-edit"></i>
+                                    </a>
+                                    <form method="post" asp-action="ToggleActive" asp-route-id="@t.TedarikciID" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                style="background:@(t.Aktif ? "linear-gradient(135deg,#94a3b8,#64748b)" : "linear-gradient(135deg,var(--kt-success),var(--kt-success-dark))"); color:#fff; padding:.4rem .55rem; border-radius:8px; border:none; margin-right:4px;"
+                                                title="@(t.Aktif ? "Pasifleştir" : "Aktifleştir")">
+                                            <i class="fa @(t.Aktif ? "fa-times" : "fa-check")"></i>
+                                        </button>
+                                    </form>
+                                    @if (t.HareketSayisi == 0)
+                                    {
+                                        <form method="post" asp-action="Delete" asp-route-id="@t.TedarikciID" class="d-inline"
+                                              onsubmit="return confirm('Bu tedarikçiyi silmek istediğinize emin misiniz?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    style="background:linear-gradient(135deg,var(--kt-danger),var(--kt-danger-dark)); color:#fff; padding:.4rem .55rem; border-radius:8px; border:none;"
+                                                    title="Sil">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

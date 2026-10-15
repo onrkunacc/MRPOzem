@@ -38,6 +38,8 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             return View();
         }
 
+        
+
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> GetKpis(int? hospitalId, DateTime? startDate, DateTime? endDate, CancellationToken ct)
@@ -61,12 +63,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         public async Task<IActionResult> GetByHospital(DateTime? startDate, DateTime? endDate, int take = 12, CancellationToken ct = default)
             => Json(await _service.GetByHospitalAsync(startDate, endDate, take, ct));
 
-        // ---------------------------
-        // EXCEL ŞABLONLARI
-        // wwwroot/templates klasörüne koy:
-        // - IstatistikSablon.xlsx
-        // - GonderimSablon.xlsx
-        // ---------------------------
+        
 
 
         [HttpGet]
@@ -98,7 +95,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
             if (hospital == null) return NotFound("Hastane bulunamadı.");
 
-            // Hastanenin aktif testlerini şablondan al
+          
             var activeTests = await _context.TestTemplates.AsNoTracking()
                 .Include(t => t.Test)
                 .Where(t => t.HospitalID == hospitalId && t.IsActive)

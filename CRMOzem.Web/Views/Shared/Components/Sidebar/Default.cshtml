@@ -40,7 +40,7 @@
 
             </ul>
         </li>
-       @*  <li class="nav-item dropdown">
+        @*  <li class="nav-item dropdown">
             <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#izin-menu">
                 <i class="fe fe-file-text fe-16"></i>
                 <span class="ml-3 item-text">İzin</span>
@@ -124,7 +124,14 @@
                         <span class="ml-1 item-text">Grafikler</span>
                     </a>
                 </li>
+
             </ul>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Finans" asp-controller="KotaDashboard" asp-action="Index">
+                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <span class="ml-3 item-text">Kota Dashboard</span>
+            </a>
         </li>
 
       
@@ -341,12 +348,38 @@
         </li>
 
     }
-    @if (Model.Contains("Finans"))
+    @if (User.IsInRole("Yönetici") || User.IsInRole("KotaTakip"))
     {
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#kota-menu">
+                <i class="fe fe-target fe-16"></i>
+                <span class="ml-3 item-text">Kota Takip</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="kota-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="Kota" asp-action="Index">
+                        <i class="fe fe-folder fe-14"></i>
+                        <span class="ml-1 item-text">Kotalar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="Kota" asp-action="Create">
+                        <i class="fe fe-plus-circle fe-14"></i>
+                        <span class="ml-1 item-text">Kota Oluştur</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Finans" asp-controller="Tedarikci" asp-action="Index">
+                        <i class="fe fe-users fe-14"></i>
+                        <span class="ml-1 item-text">Tedarikçiler</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
         <li class="nav-item">
-            <a class="nav-link" asp-area="Finans" asp-controller="Raporlar" asp-action="Index">
-                <i class="fe fe-pie-chart fe-16"></i>
-                <span class="ml-3 item-text">Finans Raporları</span>
+            <a class="nav-link" asp-area="Finans" asp-controller="KotaDashboard" asp-action="Index">
+                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <span class="ml-3 item-text">Kota Dashboard</span>
             </a>
         </li>
     }
@@ -442,9 +475,9 @@
                         <span class="ml-1 item-text">Toplu İstatistik Giriş</span>
                     </a>
                 </li>
+
              
 
-    
             </ul>
         </li>
 
@@ -494,7 +527,7 @@
                         <span class="ml-1 item-text">Hastane Test Seti</span>
                     </a>
                 </li>
-            
+
             </ul>
         </li>
         <li class="nav-item">
@@ -513,7 +546,7 @@
     }
     @if (Model.Contains("İhale"))
     {
-      @*   <li class="nav-item">
+        @*   <li class="nav-item">
             <a class="nav-link" asp-area="" asp-controller="FileTransferWeb" asp-action="Index">
                 <i class="fe fe-upload fe-16"></i>
                 <span class="ml-3 item-text">İhale Dosya Yükle</span>
@@ -538,9 +571,9 @@
             </a>
         </li>
     }
- 
+
     @if (Model.Contains("IT"))
-    { 
+    {
         <li class="nav-item nav-section">
             <span class="nav-section-text">Envanter & Zimmet</span>
         </li>
