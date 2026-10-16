@@ -43,6 +43,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Areas\Lojistik\Data\" />
+    <Folder Include="Areas\Lojistik\Models\" />
     <Folder Include="wwwroot\uploads\temp\" />
   </ItemGroup>
 

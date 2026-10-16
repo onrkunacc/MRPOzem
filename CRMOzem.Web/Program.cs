@@ -17,10 +17,7 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ─────────────────────────────────────────────────────────────
-// Data Protection — Cookie/Token şifreleme anahtarlarını sabitle
-// Bu olmadan her app restart'ta oturumlar düşer.
-// ─────────────────────────────────────────────────────────────
+
 var keysPath = Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys");
 Directory.CreateDirectory(keysPath);
 
@@ -60,7 +57,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
-//  Servisleri Ekliyoruz
+//  Servisler
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IExpenseReportService, ExpenseReportService>();
 builder.Services.AddScoped<IReportService, ReportService>();
@@ -91,7 +88,9 @@ builder.Services.AddScoped<ITcmbKurService, TcmbKurService>();
 builder.Services.AddScoped<ITedarikciService, TedarikciService>();
 builder.Services.AddScoped<IKotaService, KotaService>();
 builder.Services.AddScoped<IKotaDashboardService, KotaDashboardService>();
-// Stok API köprüsü
+builder.Services.AddScoped<IStokHesaplamaService, StokHesaplamaService>();
+builder.Services.AddHttpClient<ISiparisApiClient, SiparisApiClient>();
+builder.Services.AddScoped<ISiparisSyncService, SiparisSyncService>();
 builder.Services.AddHttpClient<IFizikiSayimApiClient, FizikiSayimApiClient>();
 builder.Services.AddScoped<IFizikiSayimSyncService, FizikiSayimSyncService>();
 builder.Services.AddMemoryCache();
@@ -103,7 +102,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied"; 
 });
 
-// Şifre Gereksinimlerini Düzenliyoruz
+// Şifre Gereksinimleri (IdentityOptions)
 builder.Services.Configure<IdentityOptions>(options =>
 {
     options.Password.RequireDigit = false;

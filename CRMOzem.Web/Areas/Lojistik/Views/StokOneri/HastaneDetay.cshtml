@@ -1,0 +1,277 @@
+﻿@model CRMOzem.Core.ViewModels.HastaneStokPaneliVm
+@using CRMOzem.Core.Enums
+@{
+    ViewData["Title"] = $"Stok Paneli — {Model.HospitalName}";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-hospital"></i></div>
+                <div>
+                    <h1>@Model.HospitalName</h1>
+                    <p>
+                        Sayım #@Model.SonSayimNo · @Model.SonSayimTarihi?.ToString("dd.MM.yyyy")
+                        @if (Model.GunlerdenSayimdanBeri.HasValue)
+                        {
+                            <span class="text-muted"> · @Model.GunlerdenSayimdanBeri gün önce</span>
+                        }
+                        · @Model.ToplamUrun reaktif analiz edildi
+                    </p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index")">
+                    <i class="fas fa-arrow-left"></i> Hastaneler
+                </a>
+                <form method="get" action="@Url.Action("HastaneDetay")" style="display:inline-flex; gap:6px; align-items:center;">
+                    <input type="hidden" name="id" value="@Model.HospitalID" />
+                    <label class="kt-label" style="margin:0;">Hedef (ay):</label>
+                    <select name="runwayAy" class="kt-input" style="width:90px;" onchange="this.form.submit()">
+                        <option value="1" selected="@(Model.HedefRunwayAy == 1)">1</option>
+                        <option value="2" selected="@(Model.HedefRunwayAy == 2)">2</option>
+                        <option value="3" selected="@(Model.HedefRunwayAy == 3)">3</option>
+                        <option value="4" selected="@(Model.HedefRunwayAy == 4)">4</option>
+                        <option value="6" selected="@(Model.HedefRunwayAy == 6)">6</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ KPI ═════════ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-neg">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Kritik</div>
+                <div class="kt-kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.KritikSayisi</div>
+            <div class="kt-kpi-foot">&lt; 30 gün yetecek</div>
+        </div>
+        <div class="kt-kpi accent-warn">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Düşük</div>
+                <div class="kt-kpi-icon"><i class="fas fa-clock"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.DusukSayisi</div>
+            <div class="kt-kpi-foot">30-60 gün</div>
+        </div>
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">İzlemede</div>
+                <div class="kt-kpi-icon"><i class="fas fa-eye"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.IzlemedeSayisi</div>
+            <div class="kt-kpi-foot">60-90 gün</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Sağlıklı</div>
+                <div class="kt-kpi-icon"><i class="fas fa-check-circle"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.SaglikliSayisi</div>
+            <div class="kt-kpi-foot">90+ gün yetecek</div>
+        </div>
+    </div>
+
+    @* ═════════ ÖNERİ ÖZETİ ═════════ *@
+    @if (Model.OnerilenToplamTest > 0)
+    {
+        <div class="kt-card" style="border-left:4px solid var(--kt-primary);">
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                <div style="font-size:36px; color:var(--kt-primary);">
+                    <i class="fas fa-boxes-packing"></i>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    <div style="font-size:12px; font-weight:600; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.05em;">
+                        Önerilen Toplam Sipariş (@Model.HedefRunwayAy ay runway için)
+                    </div>
+                    <div style="font-size:28px; font-weight:800; color:var(--kt-ink-900); font-variant-numeric: tabular-nums;">
+                        @Model.OnerilenToplamTest.ToString("N0") test
+                    </div>
+                    <div style="font-size:13px; color:var(--kt-ink-500);">
+                        ≈ @Model.OnerilenToplamKutu kutu · @Model.Satirlar.Count(s => s.OnerilenTest > 0) ürüne dağıtılmış
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ═════════ SATIRLAR ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="kt-section-icon"><i class="fas fa-flask-vial"></i></div>
+            <div>
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Reaktif Analizi</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">Kritik olanlar üstte · tıkla → hesaplama ayrıntısı</div>
+            </div>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+                <input type="text" id="satirSearch" class="kt-input" placeholder="🔍 Ürün ara..." style="width:220px;" />
+                <select id="durumFilter" class="kt-input" style="width:150px;">
+                    <option value="">Tüm durumlar</option>
+                    <option value="1">Sadece Kritik</option>
+                    <option value="2">Düşük</option>
+                    <option value="3">İzlemede</option>
+                    <option value="4">Sağlıklı</option>
+                </select>
+            </div>
+        </div>
+
+        @if (Model.Satirlar.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="satirTable">
+                    <thead>
+                        <tr>
+                            <th>Ürün</th>
+                            <th>Kod</th>
+                            <th class="text-right">Sayım Stok</th>
+                            <th class="text-right">+ Gönderim</th>
+                            <th class="text-right">− Kullanım</th>
+                            <th class="text-right">Güncel Stok</th>
+                            <th class="text-right">Aylık Ort.</th>
+                            <th class="text-right">Runway</th>
+                            <th class="text-right">Önerilen</th>
+                            <th class="text-center">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.Satirlar)
+                        {
+                            var durumCls = s.Durum switch
+                            {
+                                StokDurumu.Kritik   => "kt-badge-danger",
+                                StokDurumu.Dusuk    => "kt-badge-warning",
+                                StokDurumu.Izlemede => "kt-badge-info",
+                                StokDurumu.Saglikli => "kt-badge-success",
+                                StokDurumu.Durgun   => "kt-badge-secondary",
+                                _ => "kt-badge-secondary"
+                            };
+                            var durumIcon = s.Durum switch
+                            {
+                                StokDurumu.Kritik   => "fa-triangle-exclamation",
+                                StokDurumu.Dusuk    => "fa-clock",
+                                StokDurumu.Izlemede => "fa-eye",
+                                StokDurumu.Saglikli => "fa-check-circle",
+                                StokDurumu.Durgun   => "fa-pause",
+                                _ => "fa-circle-question"
+                            };
+                            var runwayText = s.RunwayGun >= 9999 ? "∞"
+                                           : s.RunwayGun > 365 ? "> 1 yıl"
+                                           : $"{s.RunwayGun} gün";
+                            var runwayColor = s.Durum == StokDurumu.Kritik ? "var(--kt-neg)"
+                                           : s.Durum == StokDurumu.Dusuk ? "var(--kt-warn)"
+                                           : "var(--kt-ink-700)";
+                            <tr data-search="@($"{s.TestAdi} {s.ProductName} {s.ReferenceNumber}".ToLower())"
+                                data-durum="@((int)s.Durum)"
+                                title="@s.HesaplamaOzeti">
+                                <td>
+                                    <div class="kt-cell-primary">@s.TestAdi</div>
+                                    @if (!string.IsNullOrEmpty(s.ProductName) && s.ProductName != s.TestAdi)
+                                    {
+                                        <div style="font-size:11.5px; color:var(--kt-ink-500);">@s.ProductName</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(s.ReferenceNumber))
+                                    {
+                                        <span class="kt-code-badge ghost">@s.ReferenceNumber</span>
+                                    }
+                                </td>
+                                <td class="text-right kt-money">@s.SonSayimTestCount.ToString("N0")</td>
+                                <td class="text-right kt-money-pos">
+                                    @(s.SayimdanSonraGonderim > 0 ? $"+{s.SayimdanSonraGonderim:N0}" : "—")
+                                </td>
+                                <td class="text-right kt-money-neg">
+                                    @(s.SayimdanSonraKullanim > 0 ? $"−{s.SayimdanSonraKullanim:N0}" : "—")
+                                </td>
+                                <td class="text-right kt-money-strong"
+                                    style="color:@(s.HesapGuncelStok < 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
+                                    @s.HesapGuncelStok.ToString("N0")
+                                </td>
+                                <td class="text-right">
+                                    @s.OrtalamaAylikKullanim.ToString("N1")
+                                    <div style="font-size:10.5px; color:var(--kt-ink-400);">son 3 ay / 3</div>
+                                </td>
+                                <td class="text-right">
+                                    <span style="color:@runwayColor; font-weight:600;">@runwayText</span>
+                                </td>
+                                <td class="text-right">
+                                    @if (s.OnerilenTest > 0)
+                                    {
+                                        <strong>@s.OnerilenTest.ToString("N0")</strong>
+                                        <div style="font-size:11px; color:var(--kt-ink-500);">
+                                            = @s.OnerilenKutu kutu
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="kt-badge @durumCls">
+                                        <i class="fas @durumIcon"></i> @s.Durum
+                                    </span>
+                                    @if (s.Uyarilar.Any())
+                                    {
+                                        <div style="margin-top:4px; font-size:10px; color:var(--kt-warn);"
+                                             title="@string.Join(" | ", s.Uyarilar)">
+                                            <i class="fas fa-triangle-exclamation"></i> @s.Uyarilar.Count uyarı
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-flask-vial"></i>
+                <p>Bu hastane için analiz edilebilir reaktif bulunamadı</p>
+                <p style="font-size:12px; margin-top:8px;">
+                    Önce fiziki sayım yapılmış ve Test eşleşmesi mevcut olmalı.
+                </p>
+            </div>
+        }
+    </div>
+
+    <div class="kt-card" style="padding:14px 20px; background:var(--kt-bg); border-style:dashed;">
+        <div style="font-size:12.5px; color:var(--kt-ink-500); line-height:1.5;">
+            <strong style="color:var(--kt-ink-700);">Not:</strong>
+            Hesaplama <strong>@Model.SonSayimTarihi?.ToString("MMMM yyyy")</strong> sayım bazlıdır.
+            Sayım ayından sonraki gönderim ve kullanım esas alınır.
+            Aylık ortalama tüketim <strong>son 3 ay</strong>daki istatistiklerden hesaplanır.
+            Önerilen miktar: hedef runway (<strong>@Model.HedefRunwayAy ay</strong>) için gerekli olan toplam, mevcut stoktan düşülmüş hâli — kutu başı test sayısına göre yukarı yuvarlanır.
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    function applyFilters() {
+        var q = (document.getElementById('satirSearch').value || '').trim().toLowerCase();
+        var d = document.getElementById('durumFilter').value;
+        document.querySelectorAll('#satirTable tbody tr').forEach(function (tr) {
+            var okQ = !q || tr.dataset.search.includes(q);
+            var okD = !d || tr.dataset.durum === d;
+            tr.style.display = (okQ && okD) ? '' : 'none';
+        });
+    }
+    var s = document.getElementById('satirSearch');
+    var f = document.getElementById('durumFilter');
+    if (s) s.addEventListener('input', applyFilters);
+    if (f) f.addEventListener('change', applyFilters);
+})();
+</script>

@@ -49,6 +49,7 @@ namespace CRMOzem.Web.Controllers
             var sonuc = await sync.SyncAsync(hospitalId, ct);
             return Json(sonuc);
         }
+
         [HttpGet]
         public async Task<IActionResult> TestEslesme(
             [FromServices] IFizikiSayimSyncService sync,
@@ -56,6 +57,16 @@ namespace CRMOzem.Web.Controllers
         {
             var rapor = await sync.TestEslesmeAsync(ct);
             return Json(rapor);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> TestSyncSiparis(
+            [FromServices] ISiparisSyncService sync,
+            CancellationToken ct)
+        {
+            var sonuc = await sync.SyncAsync(ct);
+            return Json(sonuc);
         }
 
         [HttpGet]

@@ -1,0 +1,120 @@
+﻿@{
+    ViewData["Title"] = "Stok Önerileri — Hastane Seçimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic>;
+}
+
+@await Html.PartialAsync("_KotaDesignSystem")
+
+<div class="kt-page">
+
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-boxes-stacked"></i></div>
+                <div>
+                    <h1>Stok Önerileri</h1>
+                    <p>Hastane bazlı reaktif stok analizi ve sipariş önerileri</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="kt-card kt-card-flush">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <input type="text" id="hospitalSearch" class="kt-input" placeholder="🔍 Hastane ara..." style="width:300px;" />
+            <span style="margin-left:auto; color:var(--kt-ink-500); font-size:13px;">
+                @hospitals?.Count() hastane
+            </span>
+        </div>
+
+        @if (hospitals != null && hospitals.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="hospitalTable">
+                    <thead>
+                        <tr>
+                            <th>Hastane</th>
+                            <th class="text-center">Analiz Edilebilir Ürün</th>
+                            <th class="text-center">Son Fiziki Sayım</th>
+                            <th class="text-center">Durum</th>
+                            <th class="text-center" style="width:1%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in hospitals)
+                        {
+                            var sonSayim = h.SonSayim as DateTime?;
+                            var gunler = sonSayim.HasValue ? (int)(DateTime.Now - sonSayim.Value).TotalDays : (int?)null;
+                            var durumCls = h.SnapshotSayisi == 0 ? "kt-badge-secondary"
+                                        : gunler.HasValue && gunler > 120 ? "kt-badge-warning"
+                                        : "kt-badge-success";
+                            var durumText = h.SnapshotSayisi == 0 ? "Veri yok"
+                                        : gunler.HasValue && gunler > 120 ? "Sayım eski"
+                                        : "Hazır";
+                            <tr data-search="@h.HospitalName.ToLower()">
+                                <td class="kt-cell-primary">@h.HospitalName</td>
+                                <td class="text-center">
+                                    @if (h.SnapshotSayisi > 0)
+                                    {
+                                        <span class="kt-code-badge ghost">@h.SnapshotSayisi reaktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (sonSayim.HasValue)
+                                    {
+                                        <div style="font-size:12.5px;">@sonSayim.Value.ToString("dd.MM.yyyy")</div>
+                                        <div style="font-size:11px; color:var(--kt-ink-500);">@gunler gün önce</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="kt-badge @durumCls">@durumText</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (h.SnapshotSayisi > 0)
+                                    {
+                                        <a href="@Url.Action("HastaneDetay", new { id = h.HospitalID })"
+                                           class="kt-btn kt-btn-sm kt-btn-primary">
+                                            <i class="fas fa-arrow-right"></i> Analiz Et
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" style="font-size:11.5px;">önce fiziki sayım gerekli</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-hospital"></i>
+                <p>Henüz hastane kaydı yok</p>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    (function () {
+        var s = document.getElementById('hospitalSearch');
+        if (s) s.addEventListener('input', function () {
+            var q = s.value.trim().toLowerCase();
+            document.querySelectorAll('#hospitalTable tbody tr').forEach(function (tr) {
+                tr.style.display = tr.dataset.search.includes(q) ? '' : 'none';
+            });
+        });
+    })();
+</script>

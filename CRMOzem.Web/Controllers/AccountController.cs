@@ -83,7 +83,7 @@ namespace CRMOzem.Web.Controllers
                 return Redirect("/Istatistik/Report/Index");
 
             if (await _userManager.IsInRoleAsync(user, "Lojistik"))
-                return Redirect("/Istatistik/Shipment/Index");
+                return Redirect("/Lojistik/StokOneri/Index");
 
             if (await _userManager.IsInRoleAsync(user, "İstatistikGiris"))
                 return Redirect("/Istatistik/Usage/Create");

@@ -62,7 +62,7 @@ namespace CRMOzem.Business.Helpers
         public static string TespitAciklamasi(string? productName, string? productType, UrunTipi tespit)
         {
             var pn = productName ?? "(boş)";
-            var pt = productType ?? "(boş)";7
+            var pt = productType ?? "(boş)";
             return $"Ad='{pn}', Tip='{pt}' → {tespit}";
         }
     }
