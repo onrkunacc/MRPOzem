@@ -1,0 +1,474 @@
+﻿@using CRMOzem.Core.Models
+@model CRMOzem.Core.ViewModels.Dogrulama.DogrulamaIndexVm
+@{
+    ViewData["Title"] = "Sipariş Doğrulama";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string RenkClass(DogrulamaRengi r) => r switch
+    {
+        DogrulamaRengi.Kirmizi => "kt-badge-danger",
+        DogrulamaRengi.Sari => "kt-badge-warning",
+        DogrulamaRengi.Yesil => "kt-badge-success",
+        _ => "kt-badge-secondary"
+    };
+    string RenkText(DogrulamaRengi r) => r switch
+    {
+        DogrulamaRengi.Kirmizi => "Kritik",
+        DogrulamaRengi.Sari => "İzlemede",
+        DogrulamaRengi.Yesil => "Normal",
+        _ => "Veri yok"
+    };
+    string RenkColor(DogrulamaRengi r) => r switch
+    {
+        DogrulamaRengi.Kirmizi => "#dc2626",
+        DogrulamaRengi.Sari => "#f59e0b",
+        DogrulamaRengi.Yesil => "#16a34a",
+        _ => "#94a3b8"
+    };
+    string DurumBadge(SiparisTalepDurumu d) => d switch
+    {
+        SiparisTalepDurumu.Beklemede => "kt-badge-warning",
+        SiparisTalepDurumu.OnaylandiAynen => "kt-badge-success",
+        SiparisTalepDurumu.OnaylandiDuzeltildi => "kt-badge-primary",
+        SiparisTalepDurumu.Reddedildi => "kt-badge-danger",
+        SiparisTalepDurumu.Gonderildi => "kt-badge-secondary",
+        _ => "kt-badge-secondary"
+    };
+    string DurumText(SiparisTalepDurumu d) => d switch
+    {
+        SiparisTalepDurumu.Beklemede => "Bekliyor",
+        SiparisTalepDurumu.OnaylandiAynen => "Onaylandı (aynen)",
+        SiparisTalepDurumu.OnaylandiDuzeltildi => "Onaylandı (düzeltildi)",
+        SiparisTalepDurumu.Reddedildi => "Reddedildi",
+        SiparisTalepDurumu.Gonderildi => "Gönderildi",
+        _ => d.ToString()
+    };
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    /* Satır başı renk şeridi */
+    .dg-row {
+        position: relative;
+        transition: background 0.15s;
+    }
+
+        .dg-row:hover {
+            background: var(--kt-bg) !important;
+        }
+
+        .dg-row td:first-child {
+            position: relative;
+        }
+
+            .dg-row td:first-child::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 8px;
+                bottom: 8px;
+                width: 3px;
+                background: var(--row-color, transparent);
+                border-radius: 2px;
+            }
+
+    /* Renk dağılımı mini bar */
+    .dg-renk-bar {
+        display: inline-flex;
+        height: 6px;
+        width: 80px;
+        border-radius: 3px;
+        overflow: hidden;
+        vertical-align: middle;
+        background: #e2e8f0;
+    }
+
+        .dg-renk-bar span {
+            height: 100%;
+            display: inline-block;
+        }
+
+    /* Fark % göstergesi */
+    .dg-fark {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Sticky toplu onay bar */
+    .dg-sticky-action {
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        background: #fff;
+        border-top: 2px solid var(--kt-primary);
+        padding: 12px 20px;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        display: none;
+    }
+
+        .dg-sticky-action.active {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+    .dg-donem-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-shield-halved"></i></div>
+                <div>
+                    <h1>Sipariş Doğrulama</h1>
+                    <p>Hastane siparişlerini stok + istatistik + sayım verisiyle karşılaştır, onayla</p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index", "HospitalEslesmesi")">
+                    <i class="fas fa-link"></i> Hastane Eşleştirme
+                </a>
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index", "StokOneri")">
+                    <i class="fas fa-boxes-stacked"></i> Stok Önerileri
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 20px;">
+            <i class="fas fa-check-circle" style="color:var(--kt-pos); margin-right:8px;"></i>@TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 20px;">
+            <i class="fas fa-exclamation-circle" style="color:var(--kt-neg); margin-right:8px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═════════ ÖZET ROZETLERİ ═════════ *@
+    <div class="kt-stats-grid">
+        <div class="kt-stat" style="cursor:pointer;" onclick="window.location='?Durum=0'">
+            <div class="kt-stat-icon" style="background:var(--kt-warn);"><i class="fas fa-hourglass-half"></i></div>
+            <div>
+                <div class="kt-stat-label">Bekleyen</div>
+                <div class="kt-stat-value">@Model.ToplamBekleyen</div>
+            </div>
+        </div>
+        <div class="kt-stat" style="cursor:pointer;" onclick="window.location='?EnKotuRenk=3'">
+            <div class="kt-stat-icon" style="background:var(--kt-neg);"><i class="fas fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="kt-stat-label">Kritik sapma</div>
+                <div class="kt-stat-value">@Model.ToplamKirmizi</div>
+            </div>
+        </div>
+        <div class="kt-stat" style="cursor:pointer;" onclick="window.location='?EnKotuRenk=2'">
+            <div class="kt-stat-icon" style="background:#f59e0b;"><i class="fas fa-circle-exclamation"></i></div>
+            <div>
+                <div class="kt-stat-label">İzlemede</div>
+                <div class="kt-stat-value">@Model.ToplamSari</div>
+            </div>
+        </div>
+        <div class="kt-stat">
+            <div class="kt-stat-icon" style="background:var(--kt-pos);"><i class="fas fa-check-double"></i></div>
+            <div>
+                <div class="kt-stat-label">Onaylanan</div>
+                <div class="kt-stat-value">@(Model.ToplamOnaylananAynen + Model.ToplamOnaylananDuzeltildi)</div>
+            </div>
+        </div>
+        <div class="kt-stat">
+            <div class="kt-stat-icon" style="background:var(--kt-ink-500);"><i class="fas fa-ban"></i></div>
+            <div>
+                <div class="kt-stat-label">Reddedilen</div>
+                <div class="kt-stat-value">@Model.ToplamReddedilen</div>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ FİLTRE ═════════ *@
+    <div class="kt-card" style="padding:14px 20px;">
+        <form method="get" style="display:flex; flex-wrap:wrap; gap:12px; align-items:end;">
+            <div>
+                <label class="kt-label">Durum</label>
+                <select name="Durum" class="kt-input" style="width:180px;">
+                    <option value="">Tümü</option>
+                    @foreach (var d in Enum.GetValues<SiparisTalepDurumu>())
+                    {
+                        <option value="@((int)d)" selected="@(Model.Filtre.Durum == d)">@DurumText(d)</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="kt-label">Dönem</label>
+                <select name="Donem" class="kt-input" style="width:140px;">
+                    <option value="">Tümü</option>
+                    @foreach (var d in Model.Filtre.Donemler)
+                    {
+                        <option value="@d.Value" selected="@d.Selected">@d.Text</option>
+                    }
+                </select>
+            </div>
+            <div style="flex:1; min-width:220px;">
+                <label class="kt-label">Hastane</label>
+                <select name="HospitalID" class="kt-input" style="width:100%;">
+                    <option value="">Tümü</option>
+                    @foreach (var h in Model.Filtre.Hastaneler)
+                    {
+                        <option value="@h.Value" selected="@h.Selected">@h.Text</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="kt-label">En kötü renk</label>
+                <select name="EnKotuRenk" class="kt-input" style="width:140px;">
+                    <option value="">Tümü</option>
+                    <option value="@((int)DogrulamaRengi.Kirmizi)" selected="@(Model.Filtre.EnKotuRenk == DogrulamaRengi.Kirmizi)">Kritik</option>
+                    <option value="@((int)DogrulamaRengi.Sari)" selected="@(Model.Filtre.EnKotuRenk == DogrulamaRengi.Sari)">İzlemede</option>
+                    <option value="@((int)DogrulamaRengi.Yesil)" selected="@(Model.Filtre.EnKotuRenk == DogrulamaRengi.Yesil)">Normal</option>
+                </select>
+            </div>
+            <button type="submit" class="kt-btn kt-btn-primary">
+                <i class="fas fa-filter"></i> Filtrele
+            </button>
+            <a href="@Url.Action("Index")" class="kt-btn kt-btn-ghost">Sıfırla</a>
+        </form>
+    </div>
+
+    @* ═════════ TALEPLER TABLOSU ═════════ *@
+    <form id="topluForm" method="post" action="@Url.Action("TopluOnaylaAynen")">
+        @Html.AntiForgeryToken()
+
+        <div class="kt-card kt-card-flush">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">
+                        @Model.Satirlar.Count talep listeleniyor
+                    </div>
+                    <div style="font-size:11.5px; color:var(--kt-ink-500); margin-top:2px;">
+                        Satıra tıkla → detay · onaylamadan önce incele
+                    </div>
+                </div>
+                <div style="font-size:11.5px; color:var(--kt-ink-500); display:flex; align-items:center; gap:14px;">
+                    <span><span class="kt-badge kt-badge-danger" style="padding:2px 6px;">■</span> Kritik</span>
+                    <span><span class="kt-badge kt-badge-warning" style="padding:2px 6px;">■</span> İzlemede</span>
+                    <span><span class="kt-badge kt-badge-success" style="padding:2px 6px;">■</span> Normal</span>
+                </div>
+            </div>
+
+            @if (!Model.Satirlar.Any())
+            {
+                <div class="kt-empty">
+                    <i class="fas fa-inbox"></i>
+                    <p>Seçili kritere uygun talep yok</p>
+                    <p style="font-size:12px; color:var(--kt-ink-500); margin-top:4px;">
+                        Filtre varsa <a href="@Url.Action("Index")">sıfırla</a> ·
+                        Yeni sipariş yoksa PHP tarafında bekleyen (status=1) sipariş olmayabilir
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="kt-table-wrap">
+                    <table class="kt-table">
+                        <thead>
+                            <tr>
+                                <th style="width:1%;">
+                                    <input type="checkbox" id="chkAll" title="Tümünü seç" />
+                                </th>
+                                <th>Hastane</th>
+                                <th class="text-center">Dönem</th>
+                                <th class="text-center">Durum</th>
+                                <th class="text-center">En kötü</th>
+                                <th class="text-center">Renk dağılımı</th>
+                                <th class="text-end">Kalem</th>
+                                <th class="text-end">Talep</th>
+                                <th class="text-end">Öneri</th>
+                                <th class="text-end">Fark</th>
+                                <th class="text-center">Tarih</th>
+                                <th class="text-center" style="width:1%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Satirlar)
+                            {
+                                var toplamRenk = s.KirmiziSayisi + s.SariSayisi + s.YesilSayisi + s.VeriYokSayisi;
+                                var rowColor = RenkColor(s.EnKotuRenk);
+                                <tr class="dg-row" style="--row-color: @rowColor;">
+                                    <td>
+                                        @if (s.Durum == SiparisTalepDurumu.Beklemede)
+                                        {
+                                            <input type="checkbox" name="talepIds" value="@s.TalepID" class="chkRow" onclick="event.stopPropagation()" />
+                                        }
+                                    </td>
+                                    <td style="padding-left:12px;">
+                                        <a href="@Url.Action("Detay", new { id = s.TalepID })" style="color:inherit; text-decoration:none;">
+                                            <div style="font-weight:600; color:var(--kt-ink-900); font-size:13.5px;">@s.HospitalName</div>
+                                            @if (!string.IsNullOrWhiteSpace(s.ExternalRefNo))
+                                            {
+                                                <div style="font-size:10.5px; color:var(--kt-ink-500); margin-top:2px;">
+                                                    <i class="fas fa-hashtag" style="font-size:9px;"></i> PHP #@s.ExternalRefNo
+                                                </div>
+                                            }
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!string.IsNullOrWhiteSpace(s.HedefDonem))
+                                        {
+                                            <span class="dg-donem-badge">@s.HedefDonem</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--kt-ink-400);">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="kt-badge @DurumBadge(s.Durum)">@DurumText(s.Durum)</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="kt-badge @RenkClass(s.EnKotuRenk)">@RenkText(s.EnKotuRenk)</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (toplamRenk > 0)
+                                        {
+                                            <div style="display:inline-flex; align-items:center; gap:6px;">
+                                                <span class="dg-renk-bar" title="K:@s.KirmiziSayisi · S:@s.SariSayisi · Y:@s.YesilSayisi · ?:@s.VeriYokSayisi">
+                                                    @if (s.KirmiziSayisi > 0)
+                                                    {
+                                                        <span style="background:#dc2626; width:@((s.KirmiziSayisi * 100 / toplamRenk))%;"></span>
+                                                    }
+                                                    @if (s.SariSayisi > 0)
+                                                    {
+                                                        <span style="background:#f59e0b; width:@((s.SariSayisi * 100 / toplamRenk))%;"></span>
+                                                    }
+                                                    @if (s.YesilSayisi > 0)
+                                                    {
+                                                        <span style="background:#16a34a; width:@((s.YesilSayisi * 100 / toplamRenk))%;"></span>
+                                                    }
+                                                    @if (s.VeriYokSayisi > 0)
+                                                    {
+                                                        <span style="background:#94a3b8; width:@((s.VeriYokSayisi * 100 / toplamRenk))%;"></span>
+                                                    }
+                                                </span>
+                                                <span style="font-size:11px; color:var(--kt-ink-500);">
+                                                    @(s.KirmiziSayisi + s.SariSayisi)/@toplamRenk
+                                                </span>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <span style="font-weight:600; color:var(--kt-ink-700);">@s.KalemSayisi</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong style="font-variant-numeric: tabular-nums;">@s.ToplamTalepTest.ToString("N0")</strong>
+                                        <div style="font-size:10.5px; color:var(--kt-ink-500);">test</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span style="color:var(--kt-primary); font-weight:600; font-variant-numeric: tabular-nums;">
+                                            @s.ToplamOneriTest.ToString("N0")
+                                        </span>
+                                        <div style="font-size:10.5px; color:var(--kt-ink-500);">test</div>
+                                    </td>
+                                    <td class="text-end">
+                                        @if (s.ToplamTalepTest > 0)
+                                        {
+                                            var farkClr = s.FarkYuzde > 10 ? "var(--kt-pos)"
+                                                       : s.FarkYuzde < -10 ? "var(--kt-neg)"
+                                                       : "var(--kt-ink-700)";
+                                            var arrow = s.FarkYuzde > 0 ? "▲" : s.FarkYuzde < 0 ? "▼" : "●";
+                                            <span class="dg-fark" style="color:@farkClr;">
+                                                <span style="font-size:9px;">@arrow</span>
+                                                @($"{Math.Abs(s.FarkYuzde):0.0}%")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--kt-ink-400);">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-center" style="font-size:11.5px; color:var(--kt-ink-500);">
+                                        @s.TalepTarihi.ToString("dd.MM.yyyy")
+                                        <div style="font-size:10.5px;">@s.TalepTarihi.ToString("HH:mm")</div>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="@Url.Action("Detay", new { id = s.TalepID })" class="kt-btn kt-btn-sm kt-btn-primary">
+                                            İncele <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        @* Sticky toplu onay bar — satır seçildiğinde çıkar *@
+        <div id="stickyBar" class="dg-sticky-action">
+            <div>
+                <strong><span id="secilenSayi">0</span></strong> talep seçildi
+                <span style="font-size:11.5px; color:var(--kt-ink-500); margin-left:8px;">
+                    (Toplu aynen onay — hastanenin istediği miktarları aynen onaylar)
+                </span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="document.querySelectorAll('.chkRow').forEach(c=>c.checked=false); refreshCount();">
+                    Seçimi Temizle
+                </button>
+                <button type="submit" class="kt-btn kt-btn-primary" id="btnTopluOnay"
+                        onclick="return confirm('Seçili talepleri AYNEN onaylamak istiyor musun?');">
+                    <i class="fas fa-check-double"></i> Toplu Aynen Onayla
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    (function () {
+        const chkAll = document.getElementById('chkAll');
+        const btnTopluOnay = document.getElementById('btnTopluOnay');
+        const secilenSayi = document.getElementById('secilenSayi');
+        const stickyBar = document.getElementById('stickyBar');
+
+        function refreshCount() {
+            const cnt = document.querySelectorAll('.chkRow:checked').length;
+            secilenSayi.textContent = cnt;
+            if (cnt > 0) {
+                stickyBar.classList.add('active');
+                btnTopluOnay.disabled = false;
+            } else {
+                stickyBar.classList.remove('active');
+                btnTopluOnay.disabled = true;
+            }
+        }
+
+        if (chkAll) {
+            chkAll.addEventListener('change', function () {
+                document.querySelectorAll('.chkRow').forEach(c => c.checked = chkAll.checked);
+                refreshCount();
+            });
+        }
+        document.querySelectorAll('.chkRow').forEach(c =>
+            c.addEventListener('change', refreshCount));
+        refreshCount();
+    })();
+</script>

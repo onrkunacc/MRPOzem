@@ -40,22 +40,6 @@
 
             </ul>
         </li>
-        @*  <li class="nav-item dropdown">
-            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#izin-menu">
-                <i class="fe fe-file-text fe-16"></i>
-                <span class="ml-3 item-text">İzin</span>
-            </a>
-            <ul class="collapse list-unstyled pl-4 w-100" id="ik-menu">
-                <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="" asp-controller="LeaveRequest" asp-action="MyLeaves">
-                        <i class="fe fe-list fe-14"></i>
-                        <span class="ml-1 item-text">Eğitimlerim</span>
-                    </a>
-                </li>
-
-            </ul>
-        </li> *@
-
     }
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
@@ -133,9 +117,6 @@
                 <span class="ml-3 item-text">Kota Dashboard</span>
             </a>
         </li>
-
-      
-        
 
         <!-- ═══ 🔬 OPERASYON ════════════════════════════════ -->
         <li class="sidebar-group-title">
@@ -215,6 +196,40 @@
             </ul>
         </li>
 
+        @* ★ YENİ: Lojistik grubu — Yönetici bu modülü sidebar'dan ulaşabilsin *@
+        <li class="nav-item dropdown">
+            <a class="dropdown-toggle nav-link" data-toggle="collapse" aria-expanded="false" href="#lojistik-yon-menu">
+                <i class="fe fe-send fe-16"></i>
+                <span class="ml-3 item-text">Lojistik</span>
+            </a>
+            <ul class="collapse list-unstyled pl-4 w-100" id="lojistik-yon-menu">
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Dogrulama" asp-action="Index">
+                        <i class="fe fe-shield fe-14"></i>
+                        <span class="ml-1 item-text">Sipariş Doğrulama</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="HospitalEslesmesi" asp-action="Index">
+                        <i class="fe fe-link fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Eşleştirme</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="StokOneri" asp-action="Index">
+                        <i class="fe fe-package fe-14"></i>
+                        <span class="ml-1 item-text">Stok Öneri</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-area="Lojistik" asp-controller="Dashboard" asp-action="Index">
+                        <i class="fe fe-grid fe-16"></i>
+                        <span class="ml-3 item-text">Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- ═══ 📁 DOKÜMANTASYON ════════════════════════════ -->
         <li class="sidebar-group-title">
             <span class="group-icon">📁</span>
@@ -227,13 +242,6 @@
                 <span class="ml-3 item-text">Evraklar</span>
             </a>
         </li>
-
-        @* <li class="nav-item">
-        <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Training" asp-action="Report">
-            <i class="fe fe-award fe-16"></i>
-            <span class="ml-3 item-text">Eğitim Raporu</span>
-        </a>
-    </li> *@
     }
 
     @if (Model.Contains("Muhasebe"))
@@ -475,9 +483,6 @@
                         <span class="ml-1 item-text">Toplu İstatistik Giriş</span>
                     </a>
                 </li>
-
-             
-
             </ul>
         </li>
 
@@ -546,18 +551,6 @@
     }
     @if (Model.Contains("İhale"))
     {
-        @*   <li class="nav-item">
-            <a class="nav-link" asp-area="" asp-controller="FileTransferWeb" asp-action="Index">
-                <i class="fe fe-upload fe-16"></i>
-                <span class="ml-3 item-text">İhale Dosya Yükle</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" asp-area="" asp-controller="FileBrowser" asp-action="Index">
-                <i class="fe fe-folder fe-16"></i>
-                <span class="ml-3 item-text">İhale Dosyaları Listele</span>
-            </a>
-        </li> *@
         <li class="nav-item">
             <a class="nav-link" asp-area="Ihale" asp-controller="Ihale" asp-action="Index">
                 <i class="fe fe-clipboard fe-16"></i>
@@ -639,10 +632,31 @@
             <span class="group-icon">🚚</span>
             <span>Lojistik</span>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Lojistik" asp-controller="Dashboard" asp-action="Index">
+                <i class="fe fe-grid fe-16"></i>
+                <span class="ml-3 item-text">Dashboard</span>
+            </a>
+        </li>
+        @* ★ YENİ: Sipariş Doğrulama (ana ekran) *@
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Lojistik" asp-controller="Dogrulama" asp-action="Index">
+                <i class="fe fe-shield fe-16"></i>
+                <span class="ml-3 item-text">Sipariş Doğrulama</span>
+            </a>
+        </li>
+
+        @* ★ YENİ: Hastane Eşleştirme *@
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Lojistik" asp-controller="HospitalEslesmesi" asp-action="Index">
+                <i class="fe fe-link fe-16"></i>
+                <span class="ml-3 item-text">Hastane Eşleştirme</span>
+            </a>
+        </li>
 
         <li class="nav-item">
             <a class="nav-link" asp-area="Lojistik" asp-controller="StokOneri" asp-action="Index">
-                <i class="fe fe-send fe-16"></i>
+                <i class="fe fe-package fe-16"></i>
                 <span class="ml-3 item-text">Stok Öneri</span>
             </a>
         </li>

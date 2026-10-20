@@ -608,6 +608,45 @@ namespace CRMOzem.DataAccess.Migrations
                     b.ToTable("FileTransferQueues", "ozem");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.FizikiSayimHastaneEslesmesi", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("ApiHospitalName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("GuncellemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InternalHospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OlusturanKullanici")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Yoksay")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ApiHospitalName")
+                        .IsUnique();
+
+                    b.HasIndex("InternalHospitalID");
+
+                    b.ToTable("FizikiSayimHastaneEslesmesi", "ozem");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.FizikiSayimSnapshot", b =>
                 {
                     b.Property<int>("ID")
@@ -852,6 +891,53 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("HospitalID", "BirimId", "Aktif");
 
                     b.ToTable("HospitalBirimler", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalEslesmesi", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("ExternalKurumAdi")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ExternalMusteriKodu")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("GuncellemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InternalHospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Not")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("OlusturanKullanici")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Yoksay")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ExternalMusteriKodu")
+                        .IsUnique();
+
+                    b.HasIndex("InternalHospitalID");
+
+                    b.ToTable("HospitalEslesmesi", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>
@@ -1542,7 +1628,7 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("ExternalProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("HastaneTalepKutu")
+                    b.Property<int?>("HastaneTalepKutu")
                         .HasColumnType("int");
 
                     b.Property<int>("HastaneTalepTest")
@@ -2266,6 +2352,16 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRMOzem.Core.Models.FizikiSayimHastaneEslesmesi", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "InternalHospital")
+                        .WithMany()
+                        .HasForeignKey("InternalHospitalID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("InternalHospital");
+                });
+
             modelBuilder.Entity("CRMOzem.Core.Models.FizikiSayimSnapshot", b =>
                 {
                     b.HasOne("CRMOzem.Core.Models.Hospital", "Hospital")
@@ -2322,6 +2418,15 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Birim");
 
                     b.Navigation("Hospital");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.HospitalEslesmesi", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.Hospital", "InternalHospital")
+                        .WithMany()
+                        .HasForeignKey("InternalHospitalID");
+
+                    b.Navigation("InternalHospital");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.HospitalTestMonthlyVolume", b =>

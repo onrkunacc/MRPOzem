@@ -93,7 +93,7 @@ namespace CRMOzem.Core.Models
         public int HastaneTalepTest { get; set; }
 
         /// <summary>Hastanenin istediği miktar (kutu — gösterim için)</summary>
-        public int HastaneTalepKutu { get; set; }
+        public int? HastaneTalepKutu { get; set; }
 
         // ─── SİSTEM ÖNERİSİ ───
         /// <summary>Hesaplanan projeksiyon stoku (snapshot + gönderim - kullanım)</summary>

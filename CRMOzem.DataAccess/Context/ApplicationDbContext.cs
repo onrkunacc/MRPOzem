@@ -57,6 +57,8 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<FizikiSayimSnapshot> FizikiSayimSnapshotlari { get; set; } = null!;
         public DbSet<SiparisTalep> SiparisTalepler { get; set; } = null!;
         public DbSet<SiparisTalepKalem> SiparisTalepKalemleri { get; set; } = null!;
+        public DbSet<HospitalEslesmesi> HospitalEslesmeleri { get; set; } = null!;
+        public DbSet<FizikiSayimHastaneEslesmesi> FizikiSayimHastaneEslesmeleri { get; set; } = null!;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         
@@ -435,6 +437,20 @@ namespace CRMOzem.DataAccess.Context
                 .WithMany()
                 .HasForeignKey(x => x.HospitalID)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<HospitalEslesmesi>(e =>
+            {
+                e.HasIndex(x => x.ExternalMusteriKodu).IsUnique();
+            });
+
+            builder.Entity<FizikiSayimHastaneEslesmesi>(e =>
+            {
+                e.HasIndex(x => x.ApiHospitalName).IsUnique();
+                e.HasOne(x => x.InternalHospital)
+                 .WithMany()
+                 .HasForeignKey(x => x.InternalHospitalID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
 
         }
     }

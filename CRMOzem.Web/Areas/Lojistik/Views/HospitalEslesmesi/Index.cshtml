@@ -1,0 +1,337 @@
+﻿@{
+    ViewData["Title"] = "Hastane Eşleştirme";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var mevcut = ViewBag.MevcutEslesmeler as IEnumerable<CRMOzem.Core.Models.HospitalEslesmesi>;
+
+    // ★ Namespace-agnostic okuma — EslesmeyenMusteri hangi namespace'de olursa olsun çalışır
+    var eslesmeyenlerRaw = ViewBag.EslesmeyenMusteriler as System.Collections.IEnumerable;
+    var eslesmeyenler = eslesmeyenlerRaw?.Cast<dynamic>().ToList() ?? new List<dynamic>();
+
+    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic>;
+    var syncOzet = ViewBag.SyncSonucOzet as string;
+
+    // Debug — görünce bana sayıları söyle (sorun çözüldükten sonra silinecek)
+    var debugTip = ViewBag.EslesmeyenMusteriler?.GetType()?.FullName ?? "NULL";
+    var debugAdet = eslesmeyenler.Count;
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-link"></i></div>
+                <div>
+                    <h1>Hastane Eşleştirme</h1>
+                    <p>PHP sipariş sistemindeki kullanıcıları CRMOzem hastanelerine eşle</p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <button type="button" class="kt-btn kt-btn-primary" onclick="openAddHospitalModal(null)">
+                    <i class="fas fa-plus"></i> Yeni Hastane
+                </button>
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index", "StokOneri")">
+                    <i class="fas fa-arrow-left"></i> Stok Önerileri
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 20px;">
+            <i class="fas fa-check-circle" style="color:var(--kt-pos); margin-right:8px;"></i>@TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 20px;">
+            <i class="fas fa-exclamation-circle" style="color:var(--kt-neg); margin-right:8px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    <div class="kt-card" style="background:var(--kt-bg); border-style:dashed; padding:12px 18px;">
+        <div style="font-size:13px; color:var(--kt-ink-700);">
+            <i class="fas fa-circle-info" style="margin-right:6px; color:var(--kt-primary);"></i>
+            <strong>Son sync:</strong> @syncOzet
+        </div>
+        <div style="font-size:11px; color:#9333ea; margin-top:4px;">
+            <strong>DEBUG:</strong> ViewBag tipi = <code>@debugTip</code> · dynamic cast sonrası adet = <strong>@debugAdet</strong>
+        </div>
+    </div>
+
+    @* ═════════ EŞLEŞMEYEN MÜŞTERİLER ═════════ *@
+    @if (eslesmeyenler.Any())
+    {
+        <div class="kt-card kt-card-flush">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px;">
+                <div class="kt-section-icon" style="background:var(--kt-warn);"><i class="fas fa-triangle-exclamation"></i></div>
+                <div>
+                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Eşleşmeyen Müşteriler</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">@eslesmeyenler.Count müşteri eşleştirilmemiş · bu müşterilerden gelen siparişler sync'e dahil edilmiyor</div>
+                </div>
+            </div>
+
+            <div class="kt-table-wrap">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Müşteri Kodu</th>
+                            <th>Müşteri Adı</th>
+                            <th>PHP'deki Kurum</th>
+                            <th class="text-center">Sipariş #</th>
+                            <th>Eşleştir / Yoksay</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int rowIdx = 0;
+                        }
+                        @foreach (var m in eslesmeyenler)
+                        {
+                            var rid = $"row{rowIdx++}";
+                            string kurumAdi = (string)(m.KurumAdi ?? "");
+                            <tr>
+                                <td><span class="kt-code-badge">@m.MusteriKodu</span></td>
+                                <td>@m.MusteriAdi</td>
+                                <td class="kt-cell-primary">@m.KurumAdi</td>
+                                <td class="text-center">
+                                    <span class="kt-badge kt-badge-warning">@m.SiparisSayisi</span>
+                                </td>
+                                <td>
+                                    <form method="post" action="@Url.Action("Ekle")" style="display:flex; gap:6px; align-items:center;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="musteriKodu" value="@m.MusteriKodu" />
+                                        <input type="hidden" name="kurumAdi" value="@m.KurumAdi" />
+                                        <select name="hospitalId" class="kt-input hospital-select" id="@(rid)_select" style="width:260px;">
+                                            <option value="">-- hastane seç --</option>
+                                            @foreach (var h in hospitals!)
+                                            {
+                                                <option value="@h.HospitalID">@h.HospitalName</option>
+                                            }
+                                        </select>
+                                        <button type="button"
+                                                class="kt-btn kt-btn-sm kt-btn-ghost"
+                                                onclick="openAddHospitalModal('@(rid)_select', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(kurumAdi))')"
+                                                title="Yeni hastane ekle">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <label style="display:inline-flex; align-items:center; gap:4px; font-size:12.5px; color:var(--kt-ink-500); white-space:nowrap;">
+                                            <input type="checkbox" name="yoksay" value="true" /> Yoksay
+                                        </label>
+                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-primary">
+                                            <i class="fas fa-check"></i> Kaydet
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @* ═════════ MEVCUT EŞLEŞMELER ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px;">
+            <div class="kt-section-icon" style="background:var(--kt-pos);"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Mevcut Eşleşmeler</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">@mevcut?.Count() aktif eşleşme</div>
+            </div>
+        </div>
+
+        @if (mevcut != null && mevcut.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Müşteri Kodu</th>
+                            <th>PHP Kurum</th>
+                            <th>→ CRMOzem Hastane</th>
+                            <th class="text-center">Durum</th>
+                            <th>Not</th>
+                            <th class="text-center" style="width:1%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in mevcut)
+                        {
+                            <tr>
+                                <td><span class="kt-code-badge ghost">@e.ExternalMusteriKodu</span></td>
+                                <td style="font-size:12.5px;">@(e.ExternalKurumAdi ?? "—")</td>
+                                <td class="kt-cell-primary">
+                                    @if (e.Yoksay)
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                    else
+                                    {
+
+                                        @e.InternalHospital?.HospitalName
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (e.Yoksay)
+                                    {
+                                        <span class="kt-badge kt-badge-secondary"><i class="fas fa-ban"></i> Yoksayılıyor</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="kt-badge kt-badge-success"><i class="fas fa-link"></i> Aktif</span>
+                                    }
+                                </td>
+                                <td style="font-size:11.5px; color:var(--kt-ink-500);">@(e.Not ?? "")</td>
+                                <td class="text-center">
+                                    <form method="post" action="@Url.Action("Sil")" style="display:inline;"
+                                          onsubmit="return confirm('Bu eşleşmeyi silmek istiyor musun?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@e.ID" />
+                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost" style="color:var(--kt-neg);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-link-slash"></i>
+                <p>Henüz eşleşme yok</p>
+            </div>
+        }
+    </div>
+
+</div>
+
+@* ═════════ YENİ HASTANE MODALI ═════════ *@
+<div id="addHospitalBackdrop" class="kt-modal-backdrop">
+    <div class="kt-modal" style="width:min(500px, 95vw);" onclick="event.stopPropagation()">
+        <div class="kt-modal-head">
+            <h3 class="kt-modal-title">
+                <i class="fas fa-hospital" style="margin-right:8px; color:var(--kt-primary);"></i>
+                Yeni Hastane Ekle
+            </h3>
+            <button type="button" class="kt-modal-close" onclick="closeAddHospitalModal()">×</button>
+        </div>
+        <div class="kt-modal-body">
+            <div class="kt-form-group">
+                <label class="kt-label">Hastane Adı</label>
+                <input type="text" id="newHospitalName" class="kt-input"
+                       placeholder="örn. PAMUKKALE DEVLET HASTANESİ"
+                       autocomplete="off" />
+                <small style="color:var(--kt-ink-500); font-size:11.5px; margin-top:4px; display:block;">
+                    Aynı adda hastane varsa yenisi eklenmez, mevcut olan seçilir.
+                </small>
+            </div>
+            <div id="addHospitalError" style="display:none; margin-top:10px; padding:10px 14px; background:#fef2f2; color:#b91c1c; border-radius:6px; font-size:13px;"></div>
+        </div>
+        <div class="kt-modal-foot">
+            <button type="button" class="kt-btn kt-btn-secondary" onclick="closeAddHospitalModal()">İptal</button>
+            <button type="button" class="kt-btn kt-btn-primary" id="btnSaveNewHospital" onclick="saveNewHospital()">
+                <i class="fas fa-save"></i> Kaydet
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var targetSelectId = null;  // hangi dropdown'a ekleniyor
+
+        window.openAddHospitalModal = function (selectId, defaultName) {
+            targetSelectId = selectId;
+            document.getElementById('newHospitalName').value = defaultName || '';
+            document.getElementById('addHospitalError').style.display = 'none';
+            document.getElementById('addHospitalBackdrop').classList.add('open');
+            setTimeout(function () { document.getElementById('newHospitalName').focus(); }, 100);
+        };
+
+        window.closeAddHospitalModal = function () {
+            document.getElementById('addHospitalBackdrop').classList.remove('open');
+            targetSelectId = null;
+        };
+
+        document.getElementById('addHospitalBackdrop').addEventListener('click', closeAddHospitalModal);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeAddHospitalModal();
+        });
+
+        document.getElementById('newHospitalName').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); saveNewHospital(); }
+        });
+
+        window.saveNewHospital = async function () {
+            var name = document.getElementById('newHospitalName').value.trim();
+            var errBox = document.getElementById('addHospitalError');
+            errBox.style.display = 'none';
+
+            if (!name) {
+                errBox.textContent = 'Hastane adı boş olamaz.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            var btn = document.getElementById('btnSaveNewHospital');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
+
+            try {
+                var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                var formData = new FormData();
+                formData.append('hospitalName', name);
+                formData.append('__RequestVerificationToken', token);
+
+                var res = await fetch('@Url.Action("AddHospitalAjax")', {
+                    method: 'POST',
+                    body: formData
+                });
+                var data = await res.json();
+
+                if (!data.success) {
+                    errBox.textContent = data.message || 'Bir hata oluştu.';
+                    errBox.style.display = 'block';
+                    return;
+                }
+
+                var allSelects = document.querySelectorAll('.hospital-select');
+                allSelects.forEach(function (sel) {
+                    var exists = Array.from(sel.options).some(function (o) { return o.value == data.hospitalId; });
+                    if (!exists) {
+                        var opt = document.createElement('option');
+                        opt.value = data.hospitalId;
+                        opt.textContent = data.hospitalName;
+                        sel.appendChild(opt);
+                    }
+                });
+
+                if (targetSelectId) {
+                    var sel = document.getElementById(targetSelectId);
+                    if (sel) sel.value = data.hospitalId;
+                }
+
+                closeAddHospitalModal();
+
+                if (data.alreadyExists) {
+                    alert(data.message);
+                }
+            } catch (ex) {
+                errBox.textContent = 'Sunucu hatası: ' + ex.message;
+                errBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
+            }
+        };
+    })();
+</script>

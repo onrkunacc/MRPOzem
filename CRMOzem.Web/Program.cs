@@ -42,20 +42,54 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
 
+// ⚠️ KİMLİK DOĞRULAMA / COOKIE AYARLARI
+// ÖNEMLİ: ConfigureApplicationCookie SADECE BİR KEZ çağrılmalı!
+// Daha önce iki ayrı yerde çağrılıyordu, ikinci çağrı birincinin ayarlarını eziyordu
+// (SameSite, SlidingExpiration, ExpireTimeSpan vb.).
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "CRMOzem.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+    // PWA (standalone) için Lax, Chrome'un first-party çerez davranışıyla uyumlu
     options.Cookie.SameSite = SameSiteMode.Lax;
 
+    // Cookie süresi: 8 saat kullanım boyunca kayan + mutlak expiry
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
 
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
+
+    // AJAX istekleri için 302 yerine 401/403 döndür (PWA fetch çağrılarında önemli)
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        if (IsAjax(ctx.Request))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        if (IsAjax(ctx.Request))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
 });
+
+static bool IsAjax(HttpRequest req) =>
+    req.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+    (req.Headers["Accept"].ToString()?.Contains("application/json") ?? false);
+
 
 //  Servisler
 builder.Services.AddScoped<IUserService, UserService>();
@@ -93,14 +127,14 @@ builder.Services.AddHttpClient<ISiparisApiClient, SiparisApiClient>();
 builder.Services.AddScoped<ISiparisSyncService, SiparisSyncService>();
 builder.Services.AddHttpClient<IFizikiSayimApiClient, FizikiSayimApiClient>();
 builder.Services.AddScoped<IFizikiSayimSyncService, FizikiSayimSyncService>();
+builder.Services.AddScoped<IDogrulamaService, DogrulamaService>();
+builder.Services.AddScoped<ILojistikDashboardService, LojistikDashboardService>();
+builder.Services.AddScoped<ISaglikRaporuService, SaglikRaporuService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
-// Kimlik doğrulama ayarları
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.LoginPath = "/Account/Login"; 
-    options.AccessDeniedPath = "/Account/AccessDenied"; 
-});
+
+// ⚠️ DUPLICATE ConfigureApplicationCookie SİLİNDİ (eski line 102-106)
+// Önceden ikinci bir çağrı birinci çağrının ayarlarını eziyordu.
 
 // Şifre Gereksinimleri (IdentityOptions)
 builder.Services.Configure<IdentityOptions>(options =>
@@ -114,17 +148,17 @@ builder.Services.Configure<IdentityOptions>(options =>
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
-    options.ValueCountLimit = 10000;          // Default: 1024 — form değer sayısı
-    options.KeyLengthLimit = 4096;            // Default: 2048 — anahtar uzunluğu
-    options.ValueLengthLimit = int.MaxValue;  // Default: 4194304 (4MB)
+    options.ValueCountLimit = 10000;
+    options.KeyLengthLimit = 4096;
+    options.ValueLengthLimit = int.MaxValue;
     options.MultipartBodyLengthLimit = long.MaxValue;
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
-// MVC model binding koleksiyon limiti (Default: 1024)
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
 {
     options.MaxModelBindingCollectionSize = 10000;
 });
+
 //  MVC ve Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
@@ -145,7 +179,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     await RoleSeeder.SeedRoleAsync(services);
     await UserSeeder.SeedUsersAsync(services);
-    await TedarikciSeeder.SeedAsync(services);   
+    await TedarikciSeeder.SeedAsync(services);
 }
 
 //  Hata Yönetimi
@@ -176,14 +210,16 @@ app.Use(async (context, next) =>
     if (path.StartsWith("/account") || path.StartsWith("/identity")
         || path.StartsWith("/css") || path.StartsWith("/js")
         || path.StartsWith("/lib") || path.StartsWith("/favicon")
-        || path.StartsWith("/tinydash-master"))
+        || path.StartsWith("/tinydash-master")
+        || path.StartsWith("/icons") || path.StartsWith("/screenshots")
+        || path.EndsWith("/service-worker.js") || path.EndsWith("/app.webmanifest")
+        || path.EndsWith("/manifest.json"))
     {
         await next();
         return;
     }
 
     // Sadece kök veya Home/Index'te rol bazlı varsayılan yönlendirme yap.
-    // Diğer tüm yollarda kullanıcı serbest gezsin — yetki kontrolü [Authorize]'a bırakılır.
     bool isLandingPath = path == "/" || path == "/home" || path == "/home/index";
 
     if (!isLandingPath)
@@ -206,45 +242,39 @@ app.Use(async (context, next) =>
 
         var roles = await userManager.GetRolesAsync(user);
 
+        // Rol bazlı landing — AccountController.Login POST ile UYUMLU TUTULDU
         if (roles.Contains("Yönetici"))
-        {
-            context.Response.Redirect("/Admin/Admin/Index");
-            return;
-        }
+        { context.Response.Redirect("/Admin/Admin/Index"); return; }
         if (roles.Contains("Muhasebe"))
-        {
-            context.Response.Redirect("/Muhasebe/Cari/Index");
-            return;
-        }
+        { context.Response.Redirect("/Muhasebe/Cari/Index"); return; }
         if (roles.Contains("IT"))
-        {
-            context.Response.Redirect("/IT/Inventory/Index");
-            return;
-        }
+        { context.Response.Redirect("/IT/Inventory/Index"); return; }
+        if (roles.Contains("Lojistik"))
+        { context.Response.Redirect("/Lojistik/Dashboard/Index"); return; }
+        if (roles.Contains("KotaTakip"))
+        { context.Response.Redirect("/Finans/Kota/Index"); return; }
         if (roles.Contains("İstatistik") || roles.Contains("İstatistikYonetici")
             || roles.Contains("İstatistikGiris") || roles.Contains("DepoGiris")
             || roles.Contains("IstatistikRapor") || roles.Contains("IstatistikGoruntule"))
-        {
-            context.Response.Redirect("/Istatistik/Dashboard/Index");
-            return;
-        }
+        { context.Response.Redirect("/Istatistik/Dashboard/Index"); return; }
         if (roles.Contains("İhale") || roles.Contains("IhaleYonetici")
             || roles.Contains("IhaleGiris") || roles.Contains("IhaleGoruntule"))
-        {
-            context.Response.Redirect("/Ihale/Ihale/Index");
-            return;
-        }
+        { context.Response.Redirect("/Ihale/Ihale/Index"); return; }
         if (roles.Contains("Evrak"))
-        {
-            context.Response.Redirect("/Evrak/Document/Index");
-            return;
-        }
+        { context.Response.Redirect("/Evrak/Document/Index"); return; }
         if (roles.Contains("İnsan Kaynakları"))
+        { context.Response.Redirect("/InsanKaynaklari/Leave/Index"); return; }
+        if (roles.Contains("Aplikasyon"))
+        { context.Response.Redirect("/Istatistik/Report/Index"); return; }
+
+        if (roles.Count == 0)
         {
-            context.Response.Redirect("/InsanKaynaklari/Leave/Index");
+            await context.SignOutAsync();
+            context.Response.Redirect("/Account/Login?reason=norole");
             return;
         }
-        // Kullanıcı/Finans vb. → Home/Index'te kalsın (varsayılan)
+
+        // Diğer rol kombinasyonları → Home/Index'te kalsın (varsayılan)
     }
 
     await next();

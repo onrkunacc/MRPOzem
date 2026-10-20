@@ -1,0 +1,343 @@
+﻿@* ═══════════════════════════════════════════════════════════════════════
+   CRMOzem.Web/Areas/Lojistik/Views/Dashboard/SayimEslesme.cshtml
+   v2 — Eşleşmeyen hastaneler için modal: dropdown ile bağla veya yeni ekle
+   ═══════════════════════════════════════════════════════════════════════ *@
+@{
+    ViewData["Title"] = "Sayım Eşleşme Raporu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    dynamic m = Model;
+    var apiHastaneler = m.ApidenGelenHastaneler as System.Collections.IEnumerable;
+    var crmHastaneler = m.CRMOzemdekiHastaneler as System.Collections.IEnumerable;
+    int eslesen = m.EslesenSayisi;
+    int eslesmeyen = m.EslesemeyenSayisi;
+    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic>;
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    .se-row {
+        display: grid;
+        grid-template-columns: 50px 1fr 1fr 80px 240px;
+        gap: 10px; padding: 10px 14px;
+        border-bottom: 1px solid var(--kt-border);
+        align-items: center; font-size: 12.5px;
+    }
+    .se-row.header {
+        background: var(--kt-bg); font-weight: 700; font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.03em; color: var(--kt-ink-500);
+    }
+    .se-row:hover:not(.header) { background: #f8fafc; }
+    .se-row.eslesti { border-left: 3px solid #16a34a; }
+    .se-row.manuel { border-left: 3px solid #4338ca; background: #eef2ff; }
+    .se-row.yoksay { border-left: 3px solid #94a3b8; background: #f8fafc; opacity: 0.7; }
+    .se-row.eslesemedi { border-left: 3px solid #dc2626; background: #fef2f2; }
+    .se-row-actions { display: flex; gap: 4px; align-items: center; }
+    .se-row-actions .kt-input { font-size: 11.5px; }
+</style>
+
+<div class="kt-page">
+
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-link"></i></div>
+                <div>
+                    <h1>Sayım Eşleşme Raporu</h1>
+                    <p>API'den gelen hastane adları ↔ CRMOzem Hospital tablosu · manuel eşleştirme desteği</p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <button type="button" class="kt-btn kt-btn-primary" onclick="openHastaneModal(null, '')">
+                    <i class="fas fa-plus"></i> Yeni Hastane
+                </button>
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index")">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ ÖZET ═════════ *@
+    <div style="display:flex; gap:12px;">
+        <div class="kt-card" style="flex:1; padding:16px; text-align:center; border-left:4px solid #16a34a;">
+            <div style="font-size:32px; font-weight:800; color:#16a34a;">@eslesen</div>
+            <div style="font-size:11px; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.03em;">Eşleşen</div>
+        </div>
+        <div class="kt-card" style="flex:1; padding:16px; text-align:center; border-left:4px solid #dc2626;">
+            <div style="font-size:32px; font-weight:800; color:#dc2626;">@eslesmeyen</div>
+            <div style="font-size:11px; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.03em;">Eşleşmeyen</div>
+        </div>
+    </div>
+
+    @if (eslesmeyen > 0)
+    {
+        <div class="kt-card" style="background:#fffbeb; border-left:4px solid #f59e0b; padding:14px 20px;">
+            <div style="font-weight:700; color:#92400e; margin-bottom:4px;">
+                <i class="fas fa-triangle-exclamation"></i> @eslesmeyen hastane eşleşmedi
+            </div>
+            <div style="font-size:12px; color:var(--kt-ink-700);">
+                Her satırın sağındaki dropdown'dan CRMOzem hastanesi seç veya "+" ile yeni hastane ekle.
+                Yoksay'laman gereken (örn. test hastaneleri) için "Yoksay" seçeneğini kullan.
+                Kaydettikten sonra Dashboard'dan "Sayımları Yenile"ye bas.
+            </div>
+        </div>
+    }
+
+    @* ═════════ API HASTANELER ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--kt-border);">
+            <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">
+                API'den Gelen Hastaneler (@(eslesen + eslesmeyen) toplam)
+            </div>
+            <div style="font-size:11.5px; color:var(--kt-ink-500); margin-top:2px;">
+                🟢 otomatik eşleşti · 🟣 manuel bağlandı · ⚪ yoksay · 🔴 eşleşmedi
+            </div>
+        </div>
+
+        <div class="se-row header">
+            <div>Durum</div>
+            <div>API Adı</div>
+            <div>→ CRMOzem</div>
+            <div class="text-end">Satır</div>
+            <div class="text-center">Eşleştir / Yoksay</div>
+        </div>
+
+        @if (apiHastaneler != null)
+        {
+            int rowIdx = 0;
+            foreach (dynamic h in apiHastaneler)
+            {
+                var rid = $"row{rowIdx++}";
+                bool esl = (bool)h.Eslesti;
+                bool manuel = (bool)h.ManuelEslestirildi;
+                bool yoksay = (bool)h.ManuelYoksay;
+                string apiAd = (string)h.ApiHospitalName;
+                int? curHospitalId = h.InternalHospitalId;
+
+                string rowClass = yoksay ? "yoksay"
+                                : manuel ? "manuel"
+                                : esl ? "eslesti"
+                                : "eslesemedi";
+
+                <div class="se-row @rowClass">
+                    <div>
+                        @if (yoksay)
+                        {
+                            <i class="fas fa-ban" style="color:#94a3b8; font-size:16px;" title="Yoksayıldı"></i>
+                        }
+                        else if (manuel)
+                        {
+                            <i class="fas fa-link" style="color:#4338ca; font-size:16px;" title="Manuel bağlandı"></i>
+                        }
+                        else if (esl)
+                        {
+                            <i class="fas fa-check-circle" style="color:#16a34a; font-size:16px;" title="Otomatik eşleşti"></i>
+                        }
+                        else
+                        {
+                            <i class="fas fa-times-circle" style="color:#dc2626; font-size:16px;" title="Eşleşmedi"></i>
+                        }
+                    </div>
+                    <div style="font-weight:600;">
+                        @apiAd
+                        <div style="font-size:10.5px; color:var(--kt-ink-400);">API ID: @h.ApiHospitalId</div>
+                    </div>
+                    <div>
+                        @if (yoksay)
+                        {
+                            <span style="color:var(--kt-ink-500); font-style:italic;">yoksayıldı</span>
+                        }
+                        else if (esl)
+                        {
+                            <span style="color:var(--kt-ink-900); font-weight:600;">@h.InternalHospitalName</span>
+                            <div style="font-size:10.5px; color:var(--kt-ink-400);">CRMOzem ID: @h.InternalHospitalId</div>
+                        }
+                        else
+                        {
+                            <span style="color:#dc2626; font-style:italic;">—</span>
+                        }
+                    </div>
+                    <div class="text-end" style="font-variant-numeric: tabular-nums;">
+                        <strong>@h.SatirSayisi</strong>
+                    </div>
+                    <div class="se-row-actions">
+                        <form class="eslesme-form" data-api="@apiAd">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="apiHospitalName" value="@apiAd" />
+                            <select name="internalHospitalId" class="kt-input hospital-select" id="@(rid)_select" style="width:150px;">
+                                <option value="">— seç —</option>
+                                @foreach (var hh in hospitals!)
+                                {
+                                    <option value="@hh.HospitalID" selected="@(curHospitalId == hh.HospitalID)">@hh.HospitalName</option>
+                                }
+                            </select>
+                            <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost"
+                                    onclick="openHastaneModal('@(rid)_select', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(apiAd))')"
+                                    title="Yeni hastane oluştur">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <label style="display:inline-flex; align-items:center; gap:3px; font-size:11px;">
+                                <input type="checkbox" name="yoksay" value="true" @(yoksay ? "checked" : "") /> Y
+                            </label>
+                            <button type="button" class="kt-btn kt-btn-sm kt-btn-primary"
+                                    onclick="kaydetEslesme(this.closest('form'))">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ═════════ CRM HASTANELER (REFERANS) ═════════ *@
+    <details class="kt-card" style="padding:14px 20px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--kt-ink-900);">
+            <i class="fas fa-list"></i> CRMOzem Hospital Tablosu (referans)
+        </summary>
+        <div style="margin-top:12px; max-height:400px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:6px; font-family:ui-monospace,Menlo,monospace; font-size:11.5px; line-height:1.6;">
+            @if (crmHastaneler != null)
+            {
+                foreach (var h in crmHastaneler)
+                {
+                    <div>@h</div>
+                }
+            }
+        </div>
+    </details>
+
+</div>
+
+@* ═════════ YENİ HASTANE MODAL ═════════ *@
+<div id="hastaneBackdrop" class="kt-modal-backdrop">
+    <div class="kt-modal" style="width:min(480px,95vw);" onclick="event.stopPropagation()">
+        <div class="kt-modal-head">
+            <h3 class="kt-modal-title">
+                <i class="fas fa-hospital" style="margin-right:8px; color:var(--kt-primary);"></i>
+                Yeni Hastane Ekle
+            </h3>
+            <button type="button" class="kt-modal-close" onclick="closeHastaneModal()">×</button>
+        </div>
+        <div class="kt-modal-body">
+            <div class="kt-form-group">
+                <label class="kt-label">Hastane Adı</label>
+                <input type="text" id="newHospitalName" class="kt-input"
+                       placeholder="örn. PAMUKKALE DEVLET HASTANESİ" autocomplete="off" />
+                <small style="color:var(--kt-ink-500); font-size:11px; margin-top:4px; display:block;">
+                    Varsa mevcut hastane seçilir, yoksa yeni eklenir ve otomatik dropdown'a eklenir.
+                </small>
+            </div>
+            <div id="hastaneError" style="display:none; margin-top:10px; padding:10px 14px; background:#fef2f2; color:#b91c1c; border-radius:6px; font-size:12px;"></div>
+        </div>
+        <div class="kt-modal-foot">
+            <button type="button" class="kt-btn kt-btn-secondary" onclick="closeHastaneModal()">İptal</button>
+            <button type="button" class="kt-btn kt-btn-primary" id="btnSaveHastane" onclick="saveHastane()">
+                <i class="fas fa-save"></i> Kaydet
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var targetSelectId = null;
+
+    window.openHastaneModal = function (selectId, defaultName) {
+        targetSelectId = selectId;
+        document.getElementById('newHospitalName').value = defaultName || '';
+        document.getElementById('hastaneError').style.display = 'none';
+        document.getElementById('hastaneBackdrop').classList.add('open');
+        setTimeout(() => document.getElementById('newHospitalName').focus(), 100);
+    };
+    window.closeHastaneModal = function () {
+        document.getElementById('hastaneBackdrop').classList.remove('open');
+        targetSelectId = null;
+    };
+    document.getElementById('hastaneBackdrop').addEventListener('click', closeHastaneModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHastaneModal(); });
+
+    document.getElementById('newHospitalName').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); saveHastane(); }
+    });
+
+    window.saveHastane = async function () {
+        var name = document.getElementById('newHospitalName').value.trim();
+        var err = document.getElementById('hastaneError');
+        err.style.display = 'none';
+        if (!name) { err.textContent = 'Hastane adı boş olamaz.'; err.style.display = 'block'; return; }
+
+        var btn = document.getElementById('btnSaveHastane');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
+
+        try {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var fd = new FormData();
+            fd.append('hospitalName', name);
+            fd.append('__RequestVerificationToken', token);
+
+            var res = await fetch('@Url.Action("HastaneHizliEkle")', { method: 'POST', body: fd });
+            var data = await res.json();
+
+            if (!data.success) {
+                err.textContent = data.message || 'Hata';
+                err.style.display = 'block';
+                return;
+            }
+
+            // Tüm select'lere yeni option ekle
+            document.querySelectorAll('.hospital-select').forEach(sel => {
+                var exists = Array.from(sel.options).some(o => o.value == data.hospitalId);
+                if (!exists) {
+                    var opt = document.createElement('option');
+                    opt.value = data.hospitalId;
+                    opt.textContent = data.hospitalName;
+                    sel.appendChild(opt);
+                }
+            });
+
+            // Çağıran satırda seç
+            if (targetSelectId) {
+                var sel = document.getElementById(targetSelectId);
+                if (sel) sel.value = data.hospitalId;
+            }
+
+            closeHastaneModal();
+            if (data.alreadyExists) alert(data.message);
+        } catch (ex) {
+            err.textContent = 'Sunucu hatası: ' + ex.message;
+            err.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
+        }
+    };
+
+    // Eşleştirme kaydet
+    window.kaydetEslesme = async function (form) {
+        var fd = new FormData(form);
+        // yoksay checkbox'ı check değilse FormData'ya "false" olarak koy
+        if (!form.querySelector('input[name="yoksay"]').checked) fd.set('yoksay', 'false');
+
+        try {
+            var res = await fetch('@Url.Action("SayimEslesmeKaydet")', { method: 'POST', body: fd });
+            var data = await res.json();
+            if (data.success) {
+                // Satırı yeşile/mora çevir
+                var row = form.closest('.se-row');
+                row.className = 'se-row ' + (form.querySelector('input[name="yoksay"]').checked ? 'yoksay' : 'manuel');
+                // Küçük geçici başarı bildirimi
+                var btn = form.querySelector('button[type="button"]:last-of-type');
+                var orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check" style="color:#16a34a;"></i>';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            } else {
+                alert(data.message || 'Kayıt başarısız');
+            }
+        } catch (ex) {
+            alert('Hata: ' + ex.message);
+        }
+    };
+})();
+</script>

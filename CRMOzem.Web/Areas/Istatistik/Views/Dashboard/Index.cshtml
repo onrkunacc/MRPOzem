@@ -114,85 +114,474 @@
             color: #fff;
         }
 
-    .dsh-kpi-row {
+    /* ============== SPLIT LAYOUT (charts sol, panel sağ) ============== */
+    .dsh-split {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin-bottom: 1.25rem;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 1.25rem;
+        align-items: start;
     }
 
-    @@media (max-width: 992px) {
-        .dsh-kpi-row {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    @@media (max-width: 576px) {
-        .dsh-kpi-row {
+    @@media (max-width: 1199px) {
+        .dsh-split {
             grid-template-columns: 1fr;
         }
     }
 
-    .dsh-kpi {
-        background: rgba(255,255,255,.85);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,.6);
-        border-radius: 14px;
-        padding: 1.1rem;
-        display: flex;
-        align-items: center;
-        gap: .85rem;
-        transition: transform .2s, box-shadow .2s;
+    .dsh-split-aside {
+        position: sticky;
+        top: 1rem;
+        align-self: start;
     }
 
-        .dsh-kpi:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    @@media (max-width: 1199px) {
+        .dsh-split-aside {
+            position: static;
         }
+    }
 
-    .dsh-kpi-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+    /* ============== KOMPAKT VERİ GİRİŞİ PANELİ (SAĞDA BAR) ============== */
+    .mdp-panel {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.04);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 2rem);
+    }
+
+    @@media (max-width: 1199px) {
+        .mdp-panel {
+            max-height: none;
+        }
+    }
+
+    .mdp-head {
+        padding: .75rem .9rem;
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: #fff;
         display: flex;
         align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        color: #fff;
+        justify-content: space-between;
+        gap: .5rem;
         flex-shrink: 0;
     }
 
-    .dsh-kpi-1 .dsh-kpi-icon {
-        background: linear-gradient(135deg,#10b981,#059669);
+    .mdp-head-title {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        min-width: 0;
     }
 
-    .dsh-kpi-2 .dsh-kpi-icon {
-        background: linear-gradient(135deg,#6366f1,#4f46e5);
+    .mdp-head-icon {
+        font-size: 1rem;
+        flex-shrink: 0;
     }
 
-    .dsh-kpi-3 .dsh-kpi-icon {
-        background: linear-gradient(135deg,#f59e0b,#d97706);
+    .mdp-head-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.15;
     }
 
-    .dsh-kpi-4 .dsh-kpi-icon {
-        background: linear-gradient(135deg,#ef4444,#dc2626);
-    }
+        .mdp-head-text h3 {
+            margin: 0;
+            font-size: .82rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .01em;
+        }
 
-    .dsh-kpi-label {
-        color: #64748b;
+        .mdp-head-text p {
+            margin: 0;
+            font-size: .68rem;
+            opacity: .85;
+        }
+
+    .mdp-head-select {
+        background: rgba(255,255,255,.2);
+        border: 1px solid rgba(255,255,255,.35);
+        color: #fff;
         font-size: .72rem;
+        font-weight: 600;
+        padding: .25rem .4rem;
+        border-radius: 6px;
+        cursor: pointer;
+        min-width: 110px;
+        max-width: 130px;
+    }
+
+        .mdp-head-select option {
+            color: #0f172a;
+            background: #fff;
+        }
+
+    .mdp-progress-row {
+        padding: .55rem .9rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: #f8fafc;
+        flex-shrink: 0;
+    }
+
+    .mdp-progress-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: .3rem;
+    }
+
+    .mdp-progress-label {
+        font-size: .62rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .mdp-progress-stat {
+        font-size: .78rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+        .mdp-progress-stat .pct {
+            color: #0284c7;
+            font-size: .72rem;
+            margin-left: .2rem;
+        }
+
+    .mdp-progress-bar {
+        height: 6px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .mdp-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        border-radius: 999px;
+        transition: width .5s ease;
+        width: 0%;
+    }
+
+    .mdp-stat-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0;
+        border-bottom: 1px solid #f1f5f9;
+        flex-shrink: 0;
+    }
+
+    .mdp-stat {
+        padding: .5rem .4rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .1rem;
+        border-right: 1px solid #f1f5f9;
+    }
+
+        .mdp-stat:last-child {
+            border-right: 0;
+        }
+
+    .mdp-stat-icon {
+        font-size: .9rem;
+        line-height: 1;
+    }
+
+    .mdp-stat-label {
+        font-size: .6rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .04em;
-        font-weight: 600;
+        color: #64748b;
     }
 
-    .dsh-kpi-value {
-        font-size: 1.55rem;
-        font-weight: 700;
-        color: #1e293b;
+    .mdp-stat-value {
+        font-size: 1rem;
+        font-weight: 800;
         line-height: 1.1;
     }
 
+    .mdp-stat-complete .mdp-stat-value {
+        color: #047857;
+    }
+
+    .mdp-stat-partial .mdp-stat-value {
+        color: #b45309;
+    }
+
+    .mdp-stat-empty .mdp-stat-value {
+        color: #b91c1c;
+    }
+
+    .mdp-filterbar {
+        padding: .5rem .55rem;
+        display: flex;
+        gap: .25rem;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fafbfc;
+        flex-shrink: 0;
+    }
+
+    .mdp-chip {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #475569;
+        padding: .2rem .55rem;
+        border-radius: 999px;
+        font-size: .68rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        line-height: 1.2;
+    }
+
+        .mdp-chip:hover {
+            background: #f1f5f9;
+        }
+
+        .mdp-chip.active {
+            background: #0ea5e9;
+            color: #fff;
+            border-color: #0ea5e9;
+        }
+
+            .mdp-chip.active.chip-partial {
+                background: #d97706;
+                border-color: #d97706;
+            }
+
+            .mdp-chip.active.chip-empty {
+                background: #dc2626;
+                border-color: #dc2626;
+            }
+
+            .mdp-chip.active.chip-complete {
+                background: #059669;
+                border-color: #059669;
+            }
+
+    .mdp-chip-count {
+        background: rgba(0,0,0,.08);
+        padding: 0 .3rem;
+        border-radius: 999px;
+        font-size: .62rem;
+        font-weight: 700;
+        min-width: 16px;
+        text-align: center;
+    }
+
+    .mdp-chip.active .mdp-chip-count {
+        background: rgba(255,255,255,.25);
+        color: #fff;
+    }
+
+    /* --- Liste (scroll edilebilir, tek kolon) --- */
+    .mdp-list {
+        padding: .4rem .5rem;
+        overflow-y: auto;
+        flex: 1 1 auto;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: .35rem;
+    }
+
+        .mdp-list.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mdp-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .mdp-list::-webkit-scrollbar-track {
+            background: #f8fafc;
+        }
+
+        .mdp-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+            .mdp-list::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+
+    .mdp-item {
+        border: 1px solid #e2e8f0;
+        border-left: 3px solid #94a3b8;
+        border-radius: 7px;
+        padding: .4rem .55rem;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        transition: box-shadow .15s;
+    }
+
+        .mdp-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+
+        .mdp-item.status-complete {
+            border-left-color: #10b981;
+        }
+
+        .mdp-item.status-partial {
+            border-left-color: #f59e0b;
+            background: #fffdf5;
+        }
+
+        .mdp-item.status-empty {
+            border-left-color: #ef4444;
+            background: #fef7f7;
+        }
+
+    .mdp-item-info {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: .1rem;
+    }
+
+    .mdp-item-name {
+        font-size: .78rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mdp-item-marks {
+        display: flex;
+        gap: .35rem;
+        align-items: center;
+    }
+
+    .mdp-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: .15rem;
+        font-size: .62rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+        .mdp-mark .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: .62rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+        }
+
+            .mdp-mark .dot.yes {
+                background: #10b981;
+            }
+
+            .mdp-mark .dot.no {
+                background: #ef4444;
+            }
+
+    .mdp-item-acts {
+        display: flex;
+        gap: .25rem;
+        flex-shrink: 0;
+    }
+
+    .mdp-icon-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .68rem;
+        font-weight: 800;
+        background: #0ea5e9;
+        color: #fff;
+        text-decoration: none;
+        border: none;
+        transition: all .15s;
+        cursor: pointer;
+    }
+
+        .mdp-icon-btn:hover {
+            background: #0284c7;
+            color: #fff;
+            text-decoration: none;
+            transform: scale(1.08);
+        }
+
+        .mdp-icon-btn.ghost {
+            background: #f1f5f9;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+    .mdp-empty-state {
+        text-align: center;
+        padding: 1.5rem .5rem;
+        color: #64748b;
+    }
+
+        .mdp-empty-state .emoji {
+            font-size: 2rem;
+            margin-bottom: .3rem;
+        }
+
+        .mdp-empty-state h4 {
+            font-size: .85rem;
+            margin: 0 0 .2rem;
+            color: #0f172a;
+        }
+
+        .mdp-empty-state p {
+            font-size: .72rem;
+            margin: 0;
+        }
+
+    .mdp-spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #0ea5e9;
+        border-radius: 50%;
+        animation: mdpSpin .8s linear infinite;
+    }
+
+    @@keyframes mdpSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* ============== CHART AREA ============== */
     .dsh-chart-card {
         background: rgba(255,255,255,.85);
         backdrop-filter: blur(8px);
@@ -221,24 +610,7 @@
     }
 
     canvas {
-        max-height: 320px;
-    }
-
-    .skeleton {
-        background: linear-gradient(90deg,#f0f0f0 25%,#e6e6e6 37%,#f0f0f0 63%);
-        background-size: 400% 100%;
-        animation: shimmer 1.2s infinite;
-        border-radius: 4px;
-    }
-
-    @@keyframes shimmer {
-        0% {
-            background-position: 100% 0
-        }
-
-        100% {
-            background-position: -100% 0
-        }
+        max-height: 300px;
     }
 </style>
 
@@ -247,7 +619,7 @@
     <div class="dsh-header">
         <div>
             <h1>📈 İstatistik Özet</h1>
-            <p>Gönderim, tüketim ve genel performans göstergeleri</p>
+            <p>Gönderim, tüketim ve veri girişi durumu</p>
         </div>
         <div class="dsh-toolbar-actions">
             <button id="btnRefresh" class="dsh-btn-action"><i class="fa fa-rotate"></i> Yenile</button>
@@ -286,74 +658,121 @@
         </div>
     </div>
 
-    <div class="dsh-kpi-row">
-        <div class="dsh-kpi dsh-kpi-1">
-            <div class="dsh-kpi-icon">🚚</div>
-            <div>
-                <div class="dsh-kpi-label">Toplam Gönderim</div>
-                <div id="kpiShipment" class="dsh-kpi-value skeleton">—</div>
-            </div>
-        </div>
-        <div class="dsh-kpi dsh-kpi-2">
-            <div class="dsh-kpi-icon">🧪</div>
-            <div>
-                <div class="dsh-kpi-label">Toplam Kullanım</div>
-                <div id="kpiUsage" class="dsh-kpi-value skeleton">—</div>
-            </div>
-        </div>
-        <div class="dsh-kpi dsh-kpi-3">
-            <div class="dsh-kpi-icon">🔬</div>
-            <div>
-                <div class="dsh-kpi-label">Benzersiz Test</div>
-                <div id="kpiTests" class="dsh-kpi-value skeleton">—</div>
-            </div>
-        </div>
-        <div class="dsh-kpi dsh-kpi-4">
-            <div class="dsh-kpi-icon">🏥</div>
-            <div>
-                <div class="dsh-kpi-label">Aktif Hastane</div>
-                <div id="kpiHospitals" class="dsh-kpi-value skeleton">—</div>
-            </div>
-        </div>
-    </div>
-
     <div id="dashAlert" class="alert alert-danger d-none" role="alert"></div>
 
-    <div class="row g-3">
-        <div class="col-12 col-xl-6">
-            <div class="dsh-chart-card">
-                <div class="dsh-chart-header">
-                    <span class="dsh-chart-title">📊 Aylık Trend — Gönderim & Kullanım</span>
+    @* ============== SPLIT: SOL CHARTS - SAĞ VERİ GİRİŞİ PANELİ ============== *@
+    <div class="dsh-split">
+
+        @* Sol: Chart alanı *@
+        <div class="dsh-split-main">
+            <div class="row g-3">
+                <div class="col-12 col-xl-6">
+                    <div class="dsh-chart-card">
+                        <div class="dsh-chart-header">
+                            <span class="dsh-chart-title">📊 Aylık Trend</span>
+                            <small class="text-muted">Gönderim & Kullanım</small>
+                        </div>
+                        <div class="dsh-chart-body"><canvas id="trendChart"></canvas></div>
+                    </div>
                 </div>
-                <div class="dsh-chart-body"><canvas id="trendChart"></canvas></div>
+                <div class="col-12 col-xl-6">
+                    <div class="dsh-chart-card">
+                        <div class="dsh-chart-header">
+                            <span class="dsh-chart-title">🏥 Hastaneye Göre</span>
+                            <small class="text-muted">Toplamlar</small>
+                        </div>
+                        <div class="dsh-chart-body"><canvas id="hospitalChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <div class="dsh-chart-card">
+                        <div class="dsh-chart-header">
+                            <span class="dsh-chart-title">📦 En Çok Gönderilen</span>
+                            <small class="text-muted">Top 10</small>
+                        </div>
+                        <div class="dsh-chart-body"><canvas id="topShipChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <div class="dsh-chart-card">
+                        <div class="dsh-chart-header">
+                            <span class="dsh-chart-title">🧪 En Çok Kullanılan</span>
+                            <small class="text-muted">Top 10</small>
+                        </div>
+                        <div class="dsh-chart-body"><canvas id="topUseChart"></canvas></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-12 col-xl-6">
-            <div class="dsh-chart-card">
-                <div class="dsh-chart-header">
-                    <span class="dsh-chart-title">🏥 Hastaneye Göre Toplamlar</span>
+
+        @* Sağ: Veri Girişi Durumu Paneli (sticky bar) *@
+        <aside class="dsh-split-aside">
+            <div class="mdp-panel" id="mdpPanel">
+                <div class="mdp-head">
+                    <div class="mdp-head-title">
+                        <span class="mdp-head-icon">📋</span>
+                        <div class="mdp-head-text">
+                            <h3 id="mdpMonthLabel">Veri Girişi</h3>
+                            <p>Seçilen ayın girişleri</p>
+                        </div>
+                    </div>
+                    <select id="mdpMonthSelect" class="mdp-head-select" aria-label="Ay seç"></select>
                 </div>
-                <div class="dsh-chart-body"><canvas id="hospitalChart"></canvas></div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-6">
-            <div class="dsh-chart-card">
-                <div class="dsh-chart-header">
-                    <span class="dsh-chart-title">📦 En Çok Gönderilen Testler</span>
-                    <small class="text-muted">Top 10</small>
+
+                <div class="mdp-progress-row">
+                    <div class="mdp-progress-top">
+                        <span class="mdp-progress-label">Tamamlanma</span>
+                        <span class="mdp-progress-stat">
+                            <span id="mdpProgressNums">—</span>
+                            <span class="pct" id="mdpProgressPct"></span>
+                        </span>
+                    </div>
+                    <div class="mdp-progress-bar">
+                        <div class="mdp-progress-fill" id="mdpProgressFill"></div>
+                    </div>
                 </div>
-                <div class="dsh-chart-body"><canvas id="topShipChart"></canvas></div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-6">
-            <div class="dsh-chart-card">
-                <div class="dsh-chart-header">
-                    <span class="dsh-chart-title">🧪 En Çok Kullanılan Testler</span>
-                    <small class="text-muted">Top 10</small>
+
+                <div class="mdp-stat-strip">
+                    <div class="mdp-stat mdp-stat-complete">
+                        <span class="mdp-stat-icon">✅</span>
+                        <span class="mdp-stat-value" id="mdpCompleteCount">—</span>
+                        <span class="mdp-stat-label">Tam</span>
+                    </div>
+                    <div class="mdp-stat mdp-stat-partial">
+                        <span class="mdp-stat-icon">⚠️</span>
+                        <span class="mdp-stat-value" id="mdpPartialCount">—</span>
+                        <span class="mdp-stat-label">Yarı</span>
+                    </div>
+                    <div class="mdp-stat mdp-stat-empty">
+                        <span class="mdp-stat-icon">❌</span>
+                        <span class="mdp-stat-value" id="mdpEmptyCount">—</span>
+                        <span class="mdp-stat-label">Boş</span>
+                    </div>
                 </div>
-                <div class="dsh-chart-body"><canvas id="topUseChart"></canvas></div>
+
+                <div class="mdp-filterbar" id="mdpFilterBar">
+                    <button type="button" class="mdp-chip active" data-filter="missing">
+                        Eksik <span class="mdp-chip-count" id="mdpFCountMissing">0</span>
+                    </button>
+                    <button type="button" class="mdp-chip chip-empty" data-filter="empty">
+                        Boş <span class="mdp-chip-count" id="mdpFCountEmpty">0</span>
+                    </button>
+                    <button type="button" class="mdp-chip chip-partial" data-filter="partial">
+                        Yarı <span class="mdp-chip-count" id="mdpFCountPartial">0</span>
+                    </button>
+                    <button type="button" class="mdp-chip chip-complete" data-filter="complete">
+                        Tam <span class="mdp-chip-count" id="mdpFCountComplete">0</span>
+                    </button>
+                    <button type="button" class="mdp-chip" data-filter="all">
+                        Tümü <span class="mdp-chip-count" id="mdpFCountAll">0</span>
+                    </button>
+                </div>
+
+                <div class="mdp-list loading" id="mdpList">
+                    <div class="mdp-spinner" aria-label="Yükleniyor"></div>
+                </div>
             </div>
-        </div>
+        </aside>
     </div>
 </div>
 
@@ -361,167 +780,324 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script>
         (function () {
-        function fatal(msg) {
-        console.error(msg);
-        const a = document.getElementById('dashAlert');
-        if (a) { a.textContent = msg; a.classList.remove('d-none'); }
-        }
-        function ensureDom() {
-        const ids = ['hospitalId', 'startDate', 'endDate', 'btnApply', 'btnRefresh',
-        'kpiShipment', 'kpiUsage', 'kpiTests', 'kpiHospitals',
-        'trendChart', 'hospitalChart', 'topShipChart', 'topUseChart'];
-        for (const id of ids) { if (!document.getElementById(id)) return false; }
-        return true;
-        }
+            const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+                               'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+            const TR_MONTHS_SHORT = ['Oca','Şub','Mar','Nis','May','Haz',
+                                     'Tem','Ağu','Eyl','Eki','Kas','Ara'];
 
-        document.addEventListener('DOMContentLoaded', init, { once: true });
+            function fatal(msg) {
+                console.error(msg);
+                const a = document.getElementById('dashAlert');
+                if (a) { a.textContent = msg; a.classList.remove('d-none'); }
+            }
 
-        async function init() {
-        try {
-        if (!ensureDom()) return fatal('Dashboard DOM yüklenemedi.');
-        if (!window.Chart) return fatal('Chart.js yüklenemedi.');
+            function ensureDom() {
+                const ids = ['hospitalId','startDate','endDate','btnApply','btnRefresh',
+                             'trendChart','hospitalChart','topShipChart','topUseChart',
+                             'mdpPanel','mdpMonthSelect','mdpList'];
+                for (const id of ids) { if (!document.getElementById(id)) return false; }
+                return true;
+            }
 
-        const els = {
-        hospitalId: document.getElementById('hospitalId'),
-        startDate: document.getElementById('startDate'),
-        endDate: document.getElementById('endDate'),
-        btnApply: document.getElementById('btnApply'),
-        btnRefresh: document.getElementById('btnRefresh'),
-        kpiShipment: document.getElementById('kpiShipment'),
-        kpiUsage: document.getElementById('kpiUsage'),
-        kpiTests: document.getElementById('kpiTests'),
-        kpiHospitals: document.getElementById('kpiHospitals')
-        };
+            document.addEventListener('DOMContentLoaded', init, { once: true });
 
-        const state = { hospitalId: '', startDate: '', endDate: '' };
-        const charts = { trend: null, hospital: null, topShip: null, topUse: null };
-        const colors = {
-        green: 'rgba(16,185,129,.7)',
-        greenBorder: '#059669',
-        purple: 'rgba(99,102,241,.7)',
-        purpleBorder: '#4f46e5',
-        blue: 'rgba(14,165,233,.7)',
-        blueBorder: '#0284c7',
-        orange: 'rgba(245,158,11,.7)',
-        orangeBorder: '#d97706'
-        };
+            async function init() {
+                try {
+                    if (!ensureDom()) return fatal('Dashboard DOM yüklenemedi.');
+                    if (!window.Chart) return fatal('Chart.js yüklenemedi.');
 
-        function params() {
-        const p = new URLSearchParams();
-        if (state.hospitalId) p.append('hospitalId', state.hospitalId);
-        if (state.startDate) p.append('startDate', state.startDate);
-        if (state.endDate) p.append('endDate', state.endDate);
-        return p.toString();
-        }
+                    const els = {
+                        hospitalId: document.getElementById('hospitalId'),
+                        startDate: document.getElementById('startDate'),
+                        endDate: document.getElementById('endDate'),
+                        btnApply: document.getElementById('btnApply'),
+                        btnRefresh: document.getElementById('btnRefresh'),
+                        mdpMonthSelect: document.getElementById('mdpMonthSelect'),
+                        mdpMonthLabel: document.getElementById('mdpMonthLabel'),
+                        mdpList: document.getElementById('mdpList'),
+                        mdpCompleteCount: document.getElementById('mdpCompleteCount'),
+                        mdpPartialCount: document.getElementById('mdpPartialCount'),
+                        mdpEmptyCount: document.getElementById('mdpEmptyCount'),
+                        mdpProgressNums: document.getElementById('mdpProgressNums'),
+                        mdpProgressPct: document.getElementById('mdpProgressPct'),
+                        mdpProgressFill: document.getElementById('mdpProgressFill'),
+                        mdpFilterBar: document.getElementById('mdpFilterBar'),
+                        mdpFCountMissing:  document.getElementById('mdpFCountMissing'),
+                        mdpFCountEmpty:    document.getElementById('mdpFCountEmpty'),
+                        mdpFCountPartial:  document.getElementById('mdpFCountPartial'),
+                        mdpFCountComplete: document.getElementById('mdpFCountComplete'),
+                        mdpFCountAll:      document.getElementById('mdpFCountAll')
+                    };
 
-        function setKpiLoading(on) {
-        [els.kpiShipment, els.kpiUsage, els.kpiTests, els.kpiHospitals].forEach(el => {
-        if (on) { el.classList.add('skeleton'); el.textContent = '—'; }
-        else { el.classList.remove('skeleton'); }
-        });
-        }
+                    const state = { hospitalId: '', startDate: '', endDate: '' };
+                    const mdpState = { filter: 'missing', lastData: null };
+                    const charts = { trend: null, hospital: null, topShip: null, topUse: null };
+                    const colors = {
+                        green: 'rgba(16,185,129,.7)', greenBorder: '#059669',
+                        purple: 'rgba(99,102,241,.7)', purpleBorder: '#4f46e5',
+                        blue: 'rgba(14,165,233,.7)', blueBorder: '#0284c7',
+                        orange: 'rgba(245,158,11,.7)', orangeBorder: '#d97706'
+                    };
 
-        async function safeJson(url) {
-        try {
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-        return await res.json();
-        } catch (e) { console.error('İstek hatası:', url, e); return null; }
-        }
-        const guard = a => Array.isArray(a) ? a : [];
+                    // -------- Ay seçici (son 12 ay, kısa format) --------
+                    (function populateMonths() {
+                        const now = new Date();
+                        const defaultY = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+                        const defaultM = now.getMonth() === 0 ? 12 : now.getMonth();
+                        for (let i = 0; i < 12; i++) {
+                            const d = new Date(now.getFullYear(), now.getMonth() - 1 - i, 1);
+                            const y = d.getFullYear(), m = d.getMonth() + 1;
+                            const opt = document.createElement('option');
+                            opt.value = `${y}-${String(m).padStart(2,'0')}`;
+                            opt.textContent = `${TR_MONTHS_SHORT[m-1]} ${y}`;
+                            if (y === defaultY && m === defaultM) opt.selected = true;
+                            els.mdpMonthSelect.appendChild(opt);
+                        }
+                    })();
 
-        async function loadKpis() {
-        setKpiLoading(true);
-        const data = await safeJson(`@Url.Action("GetKpis", "Dashboard", new { area = "Istatistik" })?${params()}`);
-        els.kpiShipment.textContent = ((data?.totalShipment) || 0).toLocaleString('tr-TR');
-        els.kpiUsage.textContent = ((data?.totalUsage) || 0).toLocaleString('tr-TR');
-        els.kpiTests.textContent = ((data?.uniqueTests) || 0).toLocaleString('tr-TR');
-        els.kpiHospitals.textContent = ((data?.activeHospitals) || 0).toLocaleString('tr-TR');
-        setKpiLoading(false);
-        }
-        async function loadTrends() {
-        const data = guard(await safeJson(`@Url.Action("GetTrends", "Dashboard", new { area = "Istatistik" })?${params()}`));
-        chartTrend(data.map(x => x.month), data.map(x => x.shipment), data.map(x => x.usage));
-        }
-        async function loadTop() {
-        const data = await safeJson(`@Url.Action("GetTopTests", "Dashboard", new { area = "Istatistik" })?${params()}`);
-        const ship = guard(data?.shipments), use = guard(data?.usage);
-        chartTopShip(ship.map(x => x.name), ship.map(x => x.value));
-        chartTopUse(use.map(x => x.name), use.map(x => x.value));
-        }
-        async function loadByHospital() {
-        const rows = guard(await safeJson(`@Url.Action("GetByHospital", "Dashboard", new { area = "Istatistik" })?${params()}`));
-        chartHospital(rows.map(x => x.hospital), rows.map(x => x.shipment), rows.map(x => x.usage));
-        }
+                    function params() {
+                        const p = new URLSearchParams();
+                        if (state.hospitalId) p.append('hospitalId', state.hospitalId);
+                        if (state.startDate) p.append('startDate', state.startDate);
+                        if (state.endDate) p.append('endDate', state.endDate);
+                        return p.toString();
+                    }
 
-        function destroy(c) { if (c) c.destroy(); }
+                    async function safeJson(url) {
+                        try {
+                            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                            if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+                            return await res.json();
+                        } catch (e) { console.error('İstek hatası:', url, e); return null; }
+                    }
+                    const guard = a => Array.isArray(a) ? a : [];
 
-        function chartTrend(labels, ship, use) {
-        destroy(charts.trend);
-        charts.trend = new Chart(document.getElementById('trendChart'), {
-        type: 'line',
-        data: {
-        labels, datasets: [
-        { label: 'Gönderim', data: ship, tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.greenBorder, backgroundColor: colors.green, fill: false },
-        { label: 'Kullanım', data: use, tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.purpleBorder, backgroundColor: colors.purple, fill: false }
-        ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
-        });
-        }
+                    // ========================================================
+                    //        VERİ GİRİŞİ DURUMU PANELİ
+                    // ========================================================
+                    async function loadMissingData() {
+                        const [y, m] = els.mdpMonthSelect.value.split('-');
+                        els.mdpList.innerHTML = '<div class="mdp-spinner" aria-label="Yükleniyor"></div>';
+                        els.mdpList.classList.add('loading');
 
-        function chartHospital(labels, ship, use) {
-        destroy(charts.hospital);
-        charts.hospital = new Chart(document.getElementById('hospitalChart'), {
-        type: 'bar',
-        data: {
-        labels, datasets: [
-        { label: 'Gönderim', data: ship, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 },
-        { label: 'Kullanım', data: use, backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }
-        ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
-        });
-        }
+                        const data = await safeJson(
+                            `@Url.Action("GetMissingData", "Dashboard", new { area = "Istatistik" })?year=${y}&month=${m}`);
 
-        function chartTopShip(labels, values) {
-        destroy(charts.topShip);
-        charts.topShip = new Chart(document.getElementById('topShipChart'), {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Gönderim', data: values, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-        });
-        }
+                        if (!data) {
+                            els.mdpList.classList.remove('loading');
+                            els.mdpList.innerHTML = `
+                                <div class="mdp-empty-state">
+                                    <div class="emoji">⚠️</div>
+                                    <h4>Yüklenemedi</h4>
+                                    <p>Sayfayı yenileyin.</p>
+                                </div>`;
+                            return;
+                        }
 
-        function chartTopUse(labels, values) {
-        destroy(charts.topUse);
-        charts.topUse = new Chart(document.getElementById('topUseChart'), {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Kullanım', data: values, backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-        });
-        }
+                        mdpState.lastData = data;
 
-        async function refreshAll() {
-        state.hospitalId = (els.hospitalId.value || '').trim();
-        state.startDate = (els.startDate.value || '').trim();
-        state.endDate = (els.endDate.value || '').trim();
-        await Promise.all([loadKpis(), loadTrends(), loadTop(), loadByHospital()]);
-        }
+                        // Panel başlığı: "Eylül 2026"
+                        els.mdpMonthLabel.textContent = data.monthLabel || 'Veri Girişi';
 
-        els.btnApply.addEventListener('click', refreshAll);
-        els.btnRefresh.addEventListener('click', refreshAll);
+                        // Özet
+                        els.mdpCompleteCount.textContent = data.completeCount || 0;
+                        els.mdpPartialCount.textContent  = data.partialCount  || 0;
+                        els.mdpEmptyCount.textContent    = data.emptyCount    || 0;
 
-        const today = new Date(), yyyy = today.getFullYear();
-        els.startDate.value = `${yyyy}-01-01`;
-        els.endDate.value = today.toISOString().slice(0, 10);
+                        const total = data.totalHospitals || 0;
+                        const complete = data.completeCount || 0;
+                        const pct = total ? Math.round(100 * complete / total) : 0;
+                        els.mdpProgressNums.textContent = `${complete} / ${total}`;
+                        els.mdpProgressPct.textContent = `(%${pct})`;
+                        els.mdpProgressFill.style.width = pct + '%';
 
-        refreshAll();
+                        // Chip sayıları
+                        const missingCount = (data.partialCount || 0) + (data.emptyCount || 0);
+                        els.mdpFCountMissing.textContent  = missingCount;
+                        els.mdpFCountEmpty.textContent    = data.emptyCount    || 0;
+                        els.mdpFCountPartial.textContent  = data.partialCount  || 0;
+                        els.mdpFCountComplete.textContent = data.completeCount || 0;
+                        els.mdpFCountAll.textContent      = total;
 
-        } catch (err) {
-        fatal('Dashboard başlatılamadı: ' + (err?.message || err));
-        }
-        }
+                        renderMissingList();
+                    }
+
+                    function renderMissingList() {
+                        if (!mdpState.lastData) return;
+                        const items = mdpState.lastData.hospitals || [];
+                        const f = mdpState.filter;
+
+                        let filtered;
+                        if (f === 'all')          filtered = items;
+                        else if (f === 'missing') filtered = items.filter(x => x.status !== 'complete');
+                        else                      filtered = items.filter(x => x.status === f);
+
+                        els.mdpList.classList.remove('loading');
+
+                        if (!filtered.length) {
+                            const total = mdpState.lastData.totalHospitals || 0;
+                            if (f === 'missing' && total > 0) {
+                                els.mdpList.innerHTML = `
+                                    <div class="mdp-empty-state">
+                                        <div class="emoji">🎉</div>
+                                        <h4>Harika!</h4>
+                                        <p>${mdpState.lastData.monthLabel} için eksik yok.</p>
+                                    </div>`;
+                            } else {
+                                els.mdpList.innerHTML = `
+                                    <div class="mdp-empty-state">
+                                        <div class="emoji">📭</div>
+                                        <h4>Kayıt yok</h4>
+                                        <p>Farklı filtre deneyin.</p>
+                                    </div>`;
+                            }
+                            return;
+                        }
+
+                        els.mdpList.innerHTML = filtered.map(buildCard).join('');
+                    }
+
+                    function buildCard(h) {
+                        const shipDot = h.hasShipment
+                            ? '<span class="dot yes">✓</span>'
+                            : '<span class="dot no">✕</span>';
+                        const useDot = h.hasUsage
+                            ? '<span class="dot yes">✓</span>'
+                            : '<span class="dot no">✕</span>';
+
+                        // Veri Gir butonları (eksik olanlar için)
+                        const shipBtn = h.hasShipment
+                            ? '<span class="mdp-icon-btn ghost" title="Gönderim girilmiş">G</span>'
+                            : `<a class="mdp-icon-btn" title="Gönderim ekle" ` +
+                              `href="@Url.Action("Create", "Shipment", new { area = "Istatistik" })?hospitalId=${h.hospitalId}">+G</a>`;
+
+                        const useBtn = h.hasUsage
+                            ? '<span class="mdp-icon-btn ghost" title="Kullanım girilmiş">K</span>'
+                            : `<a class="mdp-icon-btn" title="Kullanım ekle" ` +
+                              `href="@Url.Action("Create", "Usage", new { area = "Istatistik" })?hospitalId=${h.hospitalId}">+K</a>`;
+
+                        const safeName = (h.hospitalName || '').replace(/[&<>"]/g, c => ({
+                            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'
+                        }[c]));
+
+                        return `
+                            <div class="mdp-item status-${h.status}" title="${safeName}">
+                                <div class="mdp-item-info">
+                                    <div class="mdp-item-name">${safeName}</div>
+                                    <div class="mdp-item-marks">
+                                        <span class="mdp-mark">G ${shipDot}</span>
+                                        <span class="mdp-mark">K ${useDot}</span>
+                                    </div>
+                                </div>
+                                <div class="mdp-item-acts">
+                                    ${shipBtn}
+                                    ${useBtn}
+                                </div>
+                            </div>`;
+                    }
+
+                    els.mdpFilterBar.addEventListener('click', e => {
+                        const chip = e.target.closest('.mdp-chip');
+                        if (!chip) return;
+                        els.mdpFilterBar.querySelectorAll('.mdp-chip').forEach(c => c.classList.remove('active'));
+                        chip.classList.add('active');
+                        mdpState.filter = chip.dataset.filter;
+                        renderMissingList();
+                    });
+
+                    els.mdpMonthSelect.addEventListener('change', loadMissingData);
+
+                    // ========================================================
+                    //        CHARTS
+                    // ========================================================
+                    async function loadTrends() {
+                        const data = guard(await safeJson(`@Url.Action("GetTrends", "Dashboard", new { area = "Istatistik" })?${params()}`));
+                        chartTrend(data.map(x => x.month), data.map(x => x.shipment), data.map(x => x.usage));
+                    }
+                    async function loadTop() {
+                        const data = await safeJson(`@Url.Action("GetTopTests", "Dashboard", new { area = "Istatistik" })?${params()}`);
+                        const ship = guard(data?.shipments), use = guard(data?.usage);
+                        chartTopShip(ship.map(x => x.name), ship.map(x => x.value));
+                        chartTopUse(use.map(x => x.name), use.map(x => x.value));
+                    }
+                    async function loadByHospital() {
+                        const rows = guard(await safeJson(`@Url.Action("GetByHospital", "Dashboard", new { area = "Istatistik" })?${params()}`));
+                        chartHospital(rows.map(x => x.hospital), rows.map(x => x.shipment), rows.map(x => x.usage));
+                    }
+
+                    function destroy(c) { if (c) c.destroy(); }
+
+                    function chartTrend(labels, ship, use) {
+                        destroy(charts.trend);
+                        charts.trend = new Chart(document.getElementById('trendChart'), {
+                            type: 'line',
+                            data: {
+                                labels, datasets: [
+                                    { label: 'Gönderim', data: ship, tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.greenBorder, backgroundColor: colors.green, fill: false },
+                                    { label: 'Kullanım', data: use,  tension: .3, borderWidth: 2.5, pointRadius: 3, borderColor: colors.purpleBorder, backgroundColor: colors.purple, fill: false }
+                                ]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+                        });
+                    }
+
+                    function chartHospital(labels, ship, use) {
+                        destroy(charts.hospital);
+                        charts.hospital = new Chart(document.getElementById('hospitalChart'), {
+                            type: 'bar',
+                            data: {
+                                labels, datasets: [
+                                    { label: 'Gönderim', data: ship, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 },
+                                    { label: 'Kullanım', data: use,  backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }
+                                ]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+                        });
+                    }
+
+                    function chartTopShip(labels, values) {
+                        destroy(charts.topShip);
+                        charts.topShip = new Chart(document.getElementById('topShipChart'), {
+                            type: 'bar',
+                            data: { labels, datasets: [{ label: 'Gönderim', data: values, backgroundColor: colors.green, borderColor: colors.greenBorder, borderWidth: 1, borderRadius: 4 }] },
+                            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                        });
+                    }
+
+                    function chartTopUse(labels, values) {
+                        destroy(charts.topUse);
+                        charts.topUse = new Chart(document.getElementById('topUseChart'), {
+                            type: 'bar',
+                            data: { labels, datasets: [{ label: 'Kullanım', data: values, backgroundColor: colors.purple, borderColor: colors.purpleBorder, borderWidth: 1, borderRadius: 4 }] },
+                            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                        });
+                    }
+
+                    async function refreshAll() {
+                        state.hospitalId = (els.hospitalId.value || '').trim();
+                        state.startDate = (els.startDate.value || '').trim();
+                        state.endDate = (els.endDate.value || '').trim();
+                        await Promise.all([
+                            loadMissingData(),
+                            loadTrends(),
+                            loadTop(),
+                            loadByHospital()
+                        ]);
+                    }
+
+                    els.btnApply.addEventListener('click', refreshAll);
+                    els.btnRefresh.addEventListener('click', refreshAll);
+
+                    const today = new Date(), yyyy = today.getFullYear();
+                    els.startDate.value = `${yyyy}-01-01`;
+                    els.endDate.value = today.toISOString().slice(0, 10);
+
+                    refreshAll();
+
+                } catch (err) {
+                    fatal('Dashboard başlatılamadı: ' + (err?.message || err));
+                }
+            }
         })();
     </script>
 }

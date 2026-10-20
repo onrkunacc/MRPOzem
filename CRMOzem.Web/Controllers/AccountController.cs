@@ -14,6 +14,7 @@ namespace CRMOzem.Web.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly Business.Interfaces.IEmailSender _emailSender;
+
         public AccountController(
             IUserService userService,
             SignInManager<ApplicationUser> signInManager,
@@ -26,12 +27,34 @@ namespace CRMOzem.Web.Controllers
             _emailSender = emailSender;
         }
 
-        public IActionResult Login()
+        // ⚠️ GEÇMİŞ: Login GET her durumda View dönüyordu.
+        // Artık authenticated kullanıcı Login'e düşerse → anasayfaya yönlendir.
+        // Bu PWA'da en kritik düzeltmelerden biri: AccessDenied → "Giriş sayfası" dead-end'ini kırar.
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Login(string? reason = null)
         {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                // Zaten giriş yapmış ve "Login" tuşuna bastıysa → anasayfaya götür
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (reason == "norole")
+            {
+                TempData["Message"] = "Hesabınıza henüz rol atanmamış. Lütfen yöneticinizle görüşün.";
+            }
+            else if (reason == "logout")
+            {
+                TempData["Message"] = "Oturumunuz kapatıldı.";
+            }
+
             return View();
         }
 
         [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid)
@@ -53,13 +76,21 @@ namespace CRMOzem.Web.Controllers
             var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
             if (!result.Succeeded)
             {
-                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifre" +
-                    "e.");
+                ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifre.");
                 return View(model);
             }
 
             var roles = await _userManager.GetRolesAsync(user);
 
+            // ⚠️ Rol atanmamış kullanıcı → login yapma, SignOut ve mesaj göster
+            if (roles.Count == 0)
+            {
+                await _signInManager.SignOutAsync();
+                TempData["Message"] = "Hesabınıza henüz rol atanmamış. Lütfen yöneticinizle görüşün.";
+                return RedirectToAction("Login");
+            }
+
+            // Rol bazlı landing — Program.cs middleware ile UYUMLU TUTULDU
             if (roles.Contains("Yönetici"))
                 return Redirect("/Admin/Admin/Index");
             if (roles.Contains("Muhasebe"))
@@ -79,23 +110,19 @@ namespace CRMOzem.Web.Controllers
                 return Redirect("/Evrak/Document/Index");
             if (roles.Contains("IT"))
                 return Redirect("/IT/Inventory/Index");
-            if (await _userManager.IsInRoleAsync(user, "Aplikasyon"))
+            if (roles.Contains("Aplikasyon"))
                 return Redirect("/Istatistik/Report/Index");
-
-            if (await _userManager.IsInRoleAsync(user, "Lojistik"))
-                return Redirect("/Lojistik/StokOneri/Index");
-
-            if (await _userManager.IsInRoleAsync(user, "İstatistikGiris"))
-                return Redirect("/Istatistik/Usage/Create");
+            if (roles.Contains("Lojistik"))
+                return Redirect("/Lojistik/Dashboard/Index");
 
             return RedirectToAction("Index", "Home");
-
         }
 
         public IActionResult Register()
         {
             return View();
         }
+
         [HttpPost]
         [AllowAnonymous]
         public async Task<IActionResult> Register(RegisterViewModel model)
@@ -103,7 +130,6 @@ namespace CRMOzem.Web.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            //Aynı mailde kullanıcı var mı ? 
             var existingEmail = await _userManager.FindByEmailAsync(model.Email);
             if (existingEmail != null)
             {
@@ -111,7 +137,6 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
 
-            //Aynı kullanıcı adını kullanan kullanıcı var mı ? 
             var existingUserName = await _userManager.FindByNameAsync(model.UserName);
             if (existingUserName != null)
             {
@@ -126,18 +151,14 @@ namespace CRMOzem.Web.Controllers
                 Email = model.Email,
                 UserName = model.UserName,
                 PhoneNumber = model.PhoneNumber,
-                IsApproved = false 
+                IsApproved = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
             {
-               
                 await _userManager.AddToRoleAsync(user, "Kullanıcı");
-
-                
                 TempData["Message"] = "Kaydınız alınmıştır. Yönetici onayladıktan sonra giriş yapabilirsiniz.";
-
                 return RedirectToAction("Login", "Account");
             }
 
@@ -149,18 +170,49 @@ namespace CRMOzem.Web.Controllers
             return View(model);
         }
 
-
-
+        // ⚠️ LOGOUT — hem GET hem POST kabul eder (PWA'daki AccessDenied linki için GET şart)
+        // Önceden sadece GET + yanlış cookie adı siliniyordu (.AspNetCore.Identity.Application
+        // ama gerçek adı CRMOzem.Auth). Artık TÜM auth cookie'leri siliniyor.
         [Authorize]
+        [AcceptVerbs("GET", "POST")]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> Logout()
         {
-            await _signInManager.SignOutAsync();  
-            HttpContext.Response.Cookies.Delete(".AspNetCore.Identity.Application"); 
-            return RedirectToAction("Login", "Account");
+            await _signInManager.SignOutAsync();
+
+            // Tüm auth-ilgili cookie'leri temizle (PWA'da takılı kalma problemine karşı)
+            foreach (var cookieName in Request.Cookies.Keys.ToList())
+            {
+                if (cookieName.StartsWith("CRMOzem.", StringComparison.OrdinalIgnoreCase) ||
+                    cookieName.StartsWith(".AspNetCore.", StringComparison.OrdinalIgnoreCase) ||
+                    cookieName.StartsWith("Identity.", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Cookies.Delete(cookieName);
+                    Response.Cookies.Delete(cookieName, new CookieOptions { Path = "/" });
+                }
+            }
+
+            // Cache'i de temizlemek için anti-cache header'ları
+            Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            return RedirectToAction("Login", "Account", new { reason = "logout" });
         }
 
+        // ⚠️ AccessDenied — AllowAnonymous eklendi
+        // Önceden [Authorize] filtresi hiç yoktu ama middleware'in bazı durumlarda cookie
+        // geçersizse buraya tekrar düşmesine karşı garantili erişim için eklendi.
+        [AllowAnonymous]
         public IActionResult AccessDenied()
         {
+            // Login + AccessDenied sayfaları ASLA cache'lenmesin (PWA stale state'e karşı)
+            Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            ViewBag.IsAuthenticated = User?.Identity?.IsAuthenticated == true;
+            ViewBag.UserName = User?.Identity?.Name;
             return View();
         }
 
@@ -216,11 +268,11 @@ namespace CRMOzem.Web.Controllers
             }
             catch (Exception ex)
             {
-
                 TempData["Error"] = "İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.";
                 return View(model);
             }
         }
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult ResetPassword(string token, string email)
@@ -290,7 +342,6 @@ namespace CRMOzem.Web.Controllers
             }
         }
 
-        // 📌 Kullanıcı Bilgilerini Güncelle
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Profile(ProfileViewModel model)
@@ -310,13 +361,11 @@ namespace CRMOzem.Web.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
-                // 📌 Mevcut Kullanıcı Bilgilerini Güncelle
                 user.FullName = model.FullName;
                 user.UserName = model.UserName;
                 user.PhoneNumber = model.PhoneNumber;
                 user.Title = model.Title;
                 user.CardNumber = model.CardNumber;
-
 
                 var result = await _userManager.UpdateAsync(user);
                 if (result.Succeeded)
@@ -325,7 +374,6 @@ namespace CRMOzem.Web.Controllers
                     return RedirectToAction(nameof(Profile));
                 }
 
-                // 📌 Hataları Ekrana Bas
                 foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError("", error.Description);
@@ -339,8 +387,5 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
         }
-
-    
-
     }
 }

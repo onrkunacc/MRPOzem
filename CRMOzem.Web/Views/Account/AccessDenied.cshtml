@@ -1,42 +1,263 @@
 ﻿@{
     Layout = null;
     ViewData["Title"] = "Erişim Engellendi";
+    var isAuthenticated = ViewBag.IsAuthenticated as bool? ?? false;
+    var userName = ViewBag.UserName as string;
 }
 
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Erişim Engellendi - Özem CRM</title>
-
-    <!-- Template CSS -->
-    <link rel="stylesheet" href="~/tinydash-master/light/css/simplebar.css">
-    <link rel="stylesheet" href="~/tinydash-master/light/css/feather.css">
-    <link rel="stylesheet" href="~/tinydash-master/light/css/app-light.css" id="lightTheme">
-    <link rel="stylesheet" href="~/tinydash-master/dark/css/app-dark.css" id="darkTheme" disabled>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Özem MRP erişim yetkisi bilgilendirmesi." />
+    <meta name="theme-color" content="#102f3d" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Erişim Engellendi - Özem MRP</title>
     <link rel="shortcut icon" href="~/favicon/ozemLogo.ico" />
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #152c3b;
+            --muted: #637786;
+            --accent: #087e83;
+            --accent-dark: #05666b;
+            --line: #e3eaf0;
+            --danger: #b53142;
+            --warn: #c17a30;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; min-width: 320px; min-height: 100vh; min-height: 100svh; background: #f2f5f7; color: var(--ink); font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+        button, input { font: inherit; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; text-underline-offset: 4px; }
+        button { cursor: pointer; }
+        button:disabled { cursor: wait; opacity: .7; }
+        a:focus-visible, button:focus-visible { outline: 3px solid #0b878c; outline-offset: 4px; }
+        .icon { display: inline-block; flex-shrink: 0; vertical-align: middle; }
+        .page-frame { max-width: 1280px; padding: 0 40px; margin: 0 auto; }
+        .site-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 104px; }
+        .brand { display: flex; align-items: center; gap: 18px; color: var(--ink); }
+        .brand:hover { text-decoration: none; }
+        .brand-logo { display: block; width: 112px; height: 48px; object-fit: cover; mix-blend-mode: multiply; }
+        .brand-name { padding-left: 18px; border-left: 1px solid #ccd7df; display: flex; flex-direction: column; gap: 3px; }
+        .brand-name strong { font-size: 15px; letter-spacing: .09em; font-weight: 700; }
+        .brand-name span { font-size: 11px; color: var(--muted); letter-spacing: .03em; }
+        .header-link { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+        .header-link .icon { width: 16px; height: 16px; }
+        .auth-shell { display: grid; grid-template-columns: .94fr 1.06fr; background: #fff; border: 1px solid #e1e8ed; border-radius: 26px; overflow: hidden; box-shadow: 0 24px 70px -42px #17394a55; min-height: 656px; }
+        .brand-panel { background: #102f3d; color: #fff; padding: 46px 42px 34px; position: relative; display: flex; flex-direction: column; overflow: hidden; isolation: isolate; }
+        .brand-panel::before { content: ""; position: absolute; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(circle, #138b8850, transparent 70%); left: -180px; bottom: -150px; z-index: -1; }
+        .brand-panel::after { content: ""; position: absolute; width: 370px; height: 370px; border: 1px solid #ffffff0d; border-radius: 50%; top: -220px; right: -130px; box-shadow: 0 0 0 46px #ffffff03, 0 0 0 92px #ffffff02; z-index: -1; }
+        .eyebrow { display: flex; align-items: center; gap: 9px; color: #a5d4d4; font-size: 10px; letter-spacing: .18em; font-weight: 700; text-transform: uppercase; margin: 0 0 26px; }
+        .eyebrow-mark { width: 7px; height: 7px; background: #74d5c9; border-radius: 2px; transform: rotate(45deg); }
+        .brand-heading { font-size: clamp(34px, 3.5vw, 45px); line-height: 1.16; font-weight: 600; letter-spacing: -.045em; margin: 0 0 20px; }
+        .brand-heading em { font-style: normal; color: #8bddcf; }
+        .brand-description { margin: 0; max-width: 345px; font-size: 14px; line-height: 1.75; color: #bdcfd7; }
+        .form-panel { padding: 50px 55px 38px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .form-tag { font-size: 10px; font-weight: 700; letter-spacing: .16em; color: var(--accent); margin: 0 0 12px; text-transform: uppercase; }
+        .form-title { font-size: 31px; letter-spacing: -.04em; line-height: 1.2; margin: 0 0 12px; font-weight: 650; }
+        .form-description { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0 0 29px; }
+        .primary-button { min-height: 51px; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 650; display: inline-flex; justify-content: center; align-items: center; gap: 12px; padding: 13px 20px; text-decoration: none; transition: background .18s, box-shadow .18s; width: 100%; }
+        .primary-button:hover { color: #fff; background: var(--accent-dark); border-color: var(--accent-dark); box-shadow: 0 5px 15px #087e831b; text-decoration: none; }
+        .primary-button .icon { width: 18px; height: 18px; }
+        .danger-button { min-height: 51px; border: 1px solid var(--danger); border-radius: 10px; background: #fff; color: var(--danger); font-size: 13px; font-weight: 650; display: inline-flex; justify-content: center; align-items: center; gap: 12px; padding: 13px 20px; text-decoration: none; transition: background .18s, color .18s, box-shadow .18s; width: 100%; cursor: pointer; }
+        .danger-button:hover { background: var(--danger); color: #fff; box-shadow: 0 5px 15px #b531421b; text-decoration: none; }
+        .danger-button .icon { width: 18px; height: 18px; }
+        .text-button { border: 0; background: transparent; padding: 6px 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 600; }
+        .text-button:hover { text-decoration: underline; text-underline-offset: 4px; color: var(--accent); }
+        .text-button .icon { width: 15px; height: 15px; }
+        .site-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 24px 1px 28px; color: #73848f; font-size: 11px; line-height: 1.6; }
+        .footer-note { display: inline-flex; align-items: center; gap: 7px; }
+        .footer-note::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #70a69f; }
+        .denied-shell { min-height: 620px; grid-template-columns: .92fr 1.08fr; }
+        .denied-panel { text-align: center; align-items: center; padding: 56px 45px; }
+        .denied-icon { width: 72px; height: 72px; border: 1px solid #edd8cb; background: #fff7f0; color: #b27648; border-radius: 21px; display: grid; place-items: center; margin-bottom: 25px; }
+        .denied-icon .icon { width: 32px; height: 32px; }
+        .status-badge { display: inline-flex; border: 1px solid #e0e7ed; border-radius: 6px; padding: 5px 9px; color: #738693; font-size: 10px; letter-spacing: .08em; margin-bottom: 13px; font-weight: 600; }
+        .denied-panel .form-title { font-size: 32px; }
+        .denied-panel .form-description { max-width: 340px; margin-bottom: 22px; }
+        .denied-note { max-width: 340px; background: #f6f8fa; border: 1px solid #e6ecf0; border-radius: 11px; padding: 15px 18px; font-size: 12px; line-height: 1.75; color: #617987; margin: 0 0 25px; }
+        .user-chip { max-width: 340px; display: inline-flex; align-items: center; gap: 10px; background: #eef7f7; border: 1px solid #c9e4e4; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #0f5a5e; margin: 0 0 18px; }
+        .user-chip strong { font-weight: 700; }
+        .denied-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-bottom: 18px; }
+        .inline-form { width: 100%; margin: 0; padding: 0; }
+        .access-art { min-height: 245px; margin: auto 0 30px; padding-top: 30px; position: relative; display: grid; place-items: center; }
+        .access-ring { width: 175px; height: 175px; display: grid; place-items: center; position: relative; border: 1px solid #91d6d73b; border-radius: 50%; box-shadow: 0 0 0 24px #91d6d708, 0 0 0 49px #91d6d704; }
+        .access-ring .icon { width: 74px; height: 74px; color: #a4e3d5; stroke-width: 1; }
+        .access-tag { position: absolute; right: -35px; bottom: 5px; border-radius: 10px; border: 1px solid #ffffff26; background: #244854; padding: 12px 16px; font-size: 10px; letter-spacing: .09em; color: #c2e5e2; box-shadow: 0 10px 20px #061b282b; }
+        .brand-bottom { display: flex; align-items: center; gap: 9px; font-size: 11px; color: #a8c3cb; margin-top: auto; }
+        .brand-bottom .icon { color: #8bddcf; width: 16px; height: 16px; }
+        @@media (max-width: 1100px) {
+            .page-frame { padding: 0 28px; }
+            .brand-panel { padding: 38px 30px 30px; }
+            .form-panel { padding: 42px 36px 34px; }
+            .brand-heading { font-size: 37px; }
+            .denied-panel { padding: 40px 28px; }
+        }
+        @@media (max-width: 850px) {
+            .page-frame { max-width: 650px; }
+            .site-header { min-height: 88px; }
+            .auth-shell { grid-template-columns: 1fr; min-height: auto; border-radius: 20px; }
+            .brand-panel { padding: 30px 34px; }
+            .eyebrow { margin-bottom: 15px; font-size: 9px; }
+            .brand-heading { font-size: 31px; margin-bottom: 13px; max-width: 450px; }
+            .brand-heading br { display: none; }
+            .brand-description { font-size: 12px; max-width: 460px; }
+            .access-art, .brand-bottom { display: none; }
+            .form-panel { padding: 34px; }
+            .form-title { font-size: 29px; }
+            .denied-shell .brand-panel { display: none; }
+            .denied-panel { min-height: 540px; padding: 40px 34px; }
+            .denied-panel .form-title { font-size: 29px; }
+        }
+        @@media (max-width: 520px) {
+            .page-frame { padding: 0 16px; }
+            .site-header { min-height: 80px; gap: 10px; }
+            .brand { gap: 10px; }
+            .brand-logo { width: 83px; height: 36px; }
+            .brand-name { padding-left: 10px; }
+            .brand-name strong { font-size: 12px; }
+            .brand-name span { font-size: 9px; }
+            .header-link { font-size: 11px; gap: 5px; }
+            .header-link .icon { width: 14px; }
+            .brand-panel { padding: 25px 23px; }
+            .brand-heading { font-size: 28px; }
+            .brand-description { font-size: 12px; line-height: 1.7; }
+            .form-panel { padding: 29px 23px 26px; }
+            .form-title { font-size: 27px; }
+            .form-description { font-size: 12px; margin-bottom: 24px; }
+            .site-footer { font-size: 10px; align-items: flex-start; padding: 19px 1px 24px; }
+            .footer-note { max-width: 140px; text-align: right; justify-content: flex-end; }
+            .footer-note::before { display: none; }
+            .denied-panel { min-height: 540px; }
+            .denied-panel .form-title { font-size: 26px; }
+        }
+        @@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+    </style>
 </head>
-<body class="light">
-    <div class="wrapper vh-100 d-flex align-items-center justify-content-center">
-        <div class="text-center">
-            <img src="~/tinydash-master/light/assets/images/logo.jpeg" width="180" alt="Özem Logo" class="mb-4">
-            <h1 class="display-4 text-danger">403</h1>
-            <h3 class="mb-3">Erişim Engellendi</h3>
-            <p class="text-muted">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-            
-            <a asp-controller="Home" asp-action="Index" class="btn btn-primary mt-3">
-                <i class="fe fe-arrow-left mr-2"></i> Ana Sayfaya Dön
+<body>
+    <div class="page-frame">
+        <header class="site-header">
+            <a class="brand" asp-controller="Account" asp-action="Login" aria-label="Özem MRP giriş sayfası">
+                <img class="brand-logo" src="~/tinydash-master/light/assets/images/logo.jpeg" width="112" height="48" alt="Özem" />
+                <span class="brand-name"><strong>MRP</strong><span>Kurumsal çalışma alanı</span></span>
             </a>
-        </div>
+            @if (isAuthenticated)
+            {
+                <form method="post" asp-controller="Account" asp-action="Logout" class="inline-form" style="width:auto">
+                    <button type="submit" class="header-link" style="border:0;background:transparent;color:var(--danger);cursor:pointer">
+                        Çıkış yap
+                        <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </button>
+                </form>
+            }
+            else
+            {
+                <a class="header-link" asp-controller="Account" asp-action="Login">Giriş sayfası
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </a>
+            }
+        </header>
+
+        <main class="auth-shell denied-shell" aria-labelledby="pageTitle">
+            <aside class="brand-panel" aria-label="Özem MRP">
+                <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span> ÖZEM MRP</p>
+                <h2 class="brand-heading">Doğru bilgi.<br /> Doğru kişi.<br /> <em>Kontrollü erişim.</em></h2>
+                <p class="brand-description">Çalışma alanınızdaki erişimler, görev ve yetkilere göre düzenlenir.</p>
+                <div class="access-art" aria-hidden="true">
+                    <div class="access-ring">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>
+                        <span class="access-tag">YETKİLENDİRİLMİŞ ERİŞİM</span>
+                    </div>
+                </div>
+                <div class="brand-bottom">
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>
+                    Özem kurumsal çalışma alanı
+                </div>
+            </aside>
+            <section class="form-panel denied-panel">
+                <div class="denied-icon">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                </div>
+                <span class="status-badge">403 / ERİŞİM YETKİSİ</span>
+                <h1 class="form-title" id="pageTitle">Bu sayfaya erişiminiz yok.</h1>
+                <p class="form-description">Bu alanı görüntülemek için hesabınızda gerekli yetki bulunmuyor.</p>
+
+                @if (isAuthenticated && !string.IsNullOrEmpty(userName))
+                {
+                    <div class="user-chip">
+                        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg>
+                        Oturum: <strong>@userName</strong>
+                    </div>
+                }
+
+                <p class="denied-note">
+                    Erişiminiz olması gerektiğini düşünüyorsanız sistem yöneticinizle iletişime geçin.
+                    Farklı bir hesapla giriş yapmak için <strong>Çıkış yap</strong>'a basın.
+                </p>
+
+                <div class="denied-actions">
+                    @* ⚠️ DEAD END KIRICI 1: Çıkış yap butonu (en belirgin) *@
+                    @if (isAuthenticated)
+                    {
+                        <form method="post" asp-controller="Account" asp-action="Logout" class="inline-form">
+                            <button type="submit" class="danger-button">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                Çıkış yap ve yeniden giriş yap
+                            </button>
+                        </form>
+                    }
+
+                    @* ⚠️ DEAD END KIRICI 2: Ana sayfaya dön (ikincil) *@
+                    <a class="primary-button" asp-controller="Home" asp-action="Index">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z"/></svg>
+                        Ana sayfaya dön
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                    </a>
+
+                    @* ⚠️ DEAD END KIRICI 3: PWA cache temizleme (son çare) *@
+                    <button type="button" class="text-button" onclick="pwaRecover()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>
+                        Hâlâ takılıysanız: önbelleği temizleyip yeniden deneyin
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <span>&copy; @DateTime.Now.Year Özem MRP</span>
+            <span class="footer-note">Birlikte daha düzenli, daha verimli.</span>
+        </footer>
     </div>
 
-    <!-- Template JS -->
-    <script src="~/tinydash-master/light/js/jquery.min.js"></script>
-    <script src="~/tinydash-master/light/js/bootstrap.min.js"></script>
-    <script src="~/tinydash-master/light/js/simplebar.min.js"></script>
-    <script src="~/tinydash-master/light/js/tinycolor-min.js"></script>
-    <script src="~/tinydash-master/light/js/config.js"></script>
-    <script src="~/tinydash-master/light/js/apps.js"></script>
+    @* ⚠️ PWA RECOVERY — Service Worker ve tüm cache'leri silip Login'e götürür *@
+    <script>
+        async function pwaRecover() {
+            try {
+                // Service Worker'ları kaldır
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+                // Tüm cache'leri temizle
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                // Local/session storage
+                try { localStorage.clear(); } catch { }
+                try { sessionStorage.clear(); } catch { }
+            } catch (e) {
+                console.warn('PWA recovery error:', e);
+            } finally {
+                // Logout endpoint'ine git (cookie'leri de silecek)
+                window.location.replace('/Account/Logout');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -1,9 +1,10 @@
 ﻿using CRMOzem.Business.Interfaces;
 using CRMOzem.DataAccess.Context;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Hosting;
+using System.Globalization;
 using System.IO;
 
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
@@ -38,7 +39,90 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
             return View();
         }
 
-        
+        // ====================================================================
+        // VERİ GİRİŞİ DURUMU
+        // Seçilen ay için gönderim (MonthlyShipment) ve kullanım (MonthlyStatistics)
+        // kaydı girilmiş hastaneleri raporlar.
+        // ====================================================================
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> GetMissingData(int? year, int? month, CancellationToken ct = default)
+        {
+            // Varsayılan: içinde bulunduğumuz ayın ÖNCEKİ ayı
+            // (Örn: Ekim'deysek Eylül kontrol edilir)
+            var now = DateTime.Now;
+            var targetYear = year ?? now.AddMonths(-1).Year;
+            var targetMonth = month ?? now.AddMonths(-1).Month;
+
+            // Ay aralığı [monthStart, monthEnd) — SQL Server için index-friendly
+            // MonthlyShipment.Month ve MonthlyStatistics.Month DateTime olduğu için
+            // DATEPART yerine range query kullanmak hem index'i korur hem sadeleştirir.
+            var monthStart = new DateTime(targetYear, targetMonth, 1);
+            var monthEnd = monthStart.AddMonths(1);
+
+            // Tüm hastaneler (alfabetik)
+            var hospitals = await _context.Hospitals
+                .AsNoTracking()
+                .OrderBy(h => h.HospitalName)
+                .Select(h => new { h.HospitalID, h.HospitalName })
+                .ToListAsync(ct);
+
+            // O ay için gönderim kaydı girilmiş hastane ID'leri
+            var shipmentHospitalIds = await _context.MonthlyShipments
+                .AsNoTracking()
+                .Where(s => s.Month >= monthStart && s.Month < monthEnd)
+                .Select(s => s.HospitalID)
+                .Distinct()
+                .ToListAsync(ct);
+
+            // O ay için kullanım (MonthlyStatistics) kaydı girilmiş hastane ID'leri
+            var usageHospitalIds = await _context.MonthlyStatistics
+                .AsNoTracking()
+                .Where(u => u.Month >= monthStart && u.Month < monthEnd)
+                .Select(u => u.HospitalID)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var shipmentSet = shipmentHospitalIds.ToHashSet();
+            var usageSet = usageHospitalIds.ToHashSet();
+
+            var items = hospitals.Select(h =>
+            {
+                var hasShip = shipmentSet.Contains(h.HospitalID);
+                var hasUse = usageSet.Contains(h.HospitalID);
+                var status = (hasShip && hasUse) ? "complete"
+                           : (hasShip || hasUse) ? "partial"
+                           : "empty";
+                return new
+                {
+                    hospitalId = h.HospitalID,
+                    hospitalName = h.HospitalName,
+                    hasShipment = hasShip,
+                    hasUsage = hasUse,
+                    status
+                };
+            })
+            // Önce boş, sonra yarı, en sonra tam; her grup içinde alfabetik
+            .OrderBy(x => x.status == "empty" ? 0 : x.status == "partial" ? 1 : 2)
+            .ThenBy(x => x.hospitalName)
+            .ToList();
+
+            var trCulture = new CultureInfo("tr-TR");
+
+            return Json(new
+            {
+                year = targetYear,
+                month = targetMonth,
+                monthLabel = monthStart.ToString("MMMM yyyy", trCulture),
+                monthShortLabel = monthStart.ToString("MMM yyyy", trCulture),
+                totalHospitals = items.Count,
+                completeCount = items.Count(x => x.status == "complete"),
+                partialCount = items.Count(x => x.status == "partial"),
+                emptyCount = items.Count(x => x.status == "empty"),
+                hospitals = items
+            });
+        }
+
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -63,7 +147,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
         public async Task<IActionResult> GetByHospital(DateTime? startDate, DateTime? endDate, int take = 12, CancellationToken ct = default)
             => Json(await _service.GetByHospitalAsync(startDate, endDate, take, ct));
 
-        
+
 
 
         [HttpGet]
@@ -95,7 +179,7 @@ namespace CRMOzem.Web.Areas.Istatistik.Controllers
 
             if (hospital == null) return NotFound("Hastane bulunamadı.");
 
-          
+
             var activeTests = await _context.TestTemplates.AsNoTracking()
                 .Include(t => t.Test)
                 .Where(t => t.HospitalID == hospitalId && t.IsActive)

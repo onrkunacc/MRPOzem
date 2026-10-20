@@ -1,5 +1,6 @@
 ﻿using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Enums;
+using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using CRMOzem.DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +45,7 @@ namespace CRMOzem.Business.Services
                 HedefRunwayAy = hedefRunwayAy
             };
 
-            // 2) Bu hastanenin AKTİF sayımındaki REAKTİF snapshot'ları (MappedTestID dolu)
+            // 2) Reaktif snapshot'lar (MappedTestID dolu)
             var snapshots = await _db.FizikiSayimSnapshotlari
                 .AsNoTracking()
                 .Where(s => s.HospitalID == hospitalId
@@ -56,25 +57,31 @@ namespace CRMOzem.Business.Services
             if (snapshots.Count == 0)
             {
                 _log.LogWarning("Hastane {HospitalID} için reaktif snapshot bulunamadı.", hospitalId);
-                return panel; // boş panel
+                return panel;
             }
 
-            // Snapshot'tan sayım meta
             panel.SonSayimNo = snapshots.First().SayimNo;
             panel.SonSayimTarihi = snapshots.Max(s => s.SayimTarihi);
 
-            // 3) TestID listesi + ürün bilgisi
+            // 3) TestID + Tests tablosundan birim bilgisi
             var testIdler = snapshots.Select(s => s.MappedTestID!.Value).Distinct().ToList();
 
+            //  ★ CHANGED: GirisTipi + KutuBasinaAdet alanlarını da çek
             var testler = await _db.Tests
                 .AsNoTracking()
                 .Where(t => testIdler.Contains(t.TestID))
-                .Select(t => new { t.TestID, t.TestName, t.SutCode })
+                .Select(t => new
+                {
+                    t.TestID,
+                    t.TestName,
+                    t.SutCode,
+                    t.GirisTipi,
+                    t.KutuBasinaAdet
+                })
                 .ToListAsync(ct);
             var testById = testler.ToDictionary(t => t.TestID);
 
-            // 4) İlgili gönderim & kullanım datasını BİR DEFA çek
-            // Son 6 ay geriye kadar yükle (bugünkü hesap + 3 ay ort için yeterli)
+            // 4) Gönderim & kullanım dataları
             var tarihSinir = DateTime.Now.AddMonths(-6);
             var tarihSinirMonth = new DateTime(tarihSinir.Year, tarihSinir.Month, 1);
 
@@ -94,7 +101,6 @@ namespace CRMOzem.Business.Services
                 .Select(s => new { s.TestID, s.Month, s.TestCount })
                 .ToListAsync(ct);
 
-            // Dictionary'ye grupla — her TestID için performanslı erişim
             var gonderimByTest = gonderimler
                 .GroupBy(x => x.TestID)
                 .ToDictionary(g => g.Key, g => g.ToList());
@@ -102,26 +108,36 @@ namespace CRMOzem.Business.Services
                 .GroupBy(x => x.TestID)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // 5) Her snapshot için satır üret
-            foreach (var snap in snapshots.OrderBy(s => s.ProductName))
-            {
-                var testId = snap.MappedTestID!.Value;
-                var testInfo = testById.TryGetValue(testId, out var t) ? t : null;
-                var sayimAyIlk = new DateTime(snap.SayimTarihi.Year, snap.SayimTarihi.Month, 1);
-                var hareketBaslangic = sayimAyIlk.AddMonths(1);  // sayım ayından sonraki ay
+            // 5) ★ Snapshot'ları MappedTestID'ye göre GRUPLA — aynı ürünün farklı lot'ları
+            //    tek satırda birleşsin. TestCount lot'ların toplamı olur.
+            var urunGruplari = snapshots
+                .GroupBy(s => s.MappedTestID!.Value)
+                .ToList();
 
-                // Gönderim (sayım ayından sonra)
+            foreach (var grp in urunGruplari.OrderBy(g => g.First().ProductName))
+            {
+                var testId = grp.Key;
+                var testInfo = testById.TryGetValue(testId, out var t) ? t : null;
+                var snap = grp.First();  // meta bilgi (ReferenceNumber, Platform vb.) için
+
+                // ★ Lot'lar arası TOPLA
+                int toplamTestCount = grp.Sum(s => s.TestCount);
+                int toplamBoxCount = grp.Sum(s => s.BoxCount);
+                int toplamFlaconCount = grp.Sum(s => s.FlaconCount);
+                var enSonSayim = grp.Max(s => s.SayimTarihi);
+                int lotSayisi = grp.Count();
+
+                var sayimAyIlk = new DateTime(enSonSayim.Year, enSonSayim.Month, 1);
+                var hareketBaslangic = sayimAyIlk.AddMonths(1);
+
                 var gListesi = gonderimByTest.TryGetValue(testId, out var gl) ? gl : new();
                 int gonderim = gListesi.Where(x => x.Month >= hareketBaslangic).Sum(x => x.SentCount);
 
-                // Kullanım (sayım ayından sonra)
                 var kListesi = kullanimByTest.TryGetValue(testId, out var kl) ? kl : new();
                 int kullanim = kListesi.Where(x => x.Month >= hareketBaslangic).Sum(x => x.TestCount);
 
-                // Hesap stok
-                int hesapStok = snap.TestCount + gonderim - kullanim;
+                int hesapStok = toplamTestCount + gonderim - kullanim;
 
-                // Son 3 ay ortalama
                 var buAy = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
                 var son3AyIlk = buAy.AddMonths(-3);
                 var son3AyKullanim = kListesi
@@ -129,30 +145,59 @@ namespace CRMOzem.Business.Services
                     .Sum(x => x.TestCount);
                 decimal ortalamaAylik = son3AyKullanim / 3m;
 
-                // Runway
                 int runwayGun = ortalamaAylik > 0
                     ? (int)(hesapStok / (ortalamaAylik / 30m))
                     : (hesapStok > 0 ? 9999 : 0);
 
-                // Hedef + öneri
                 int hedefStok = (int)Math.Round(ortalamaAylik * hedefRunwayAy);
                 int onerilenTest = Math.Max(0, hedefStok - hesapStok);
-                int boxText = snap.BoxTextCount > 0 ? snap.BoxTextCount : 1;
-                int onerilenKutu = onerilenTest > 0
-                    ? (int)Math.Ceiling((double)onerilenTest / boxText)
-                    : 0;
 
-                // Durum
+                // ★ CHANGED: boxText — Tests.KutuBasinaAdet öncelikli
+                //    Snapshot.BoxTextCount sadece Tests boşsa fallback
+                int boxText;
+                bool kutuBirimli;
+                if (testInfo != null
+                    && testInfo.GirisTipi == TestGirisTipi.Kutu
+                    && testInfo.KutuBasinaAdet.HasValue
+                    && testInfo.KutuBasinaAdet.Value > 0)
+                {
+                    boxText = testInfo.KutuBasinaAdet.Value;
+                    kutuBirimli = true;
+                }
+                else if (testInfo != null && testInfo.GirisTipi == TestGirisTipi.Adet)
+                {
+                    boxText = 1;
+                    kutuBirimli = false;  // adet birimli — kutu kavramı yok
+                }
+                else if (snap.BoxTextCount > 0)
+                {
+                    boxText = snap.BoxTextCount;
+                    kutuBirimli = true;  // snapshot'tan geldiyse kutuluk varsayılıyor
+                }
+                else
+                {
+                    boxText = 1;
+                    kutuBirimli = false;
+                }
+
+                // Önerilen kutu — adet birimli testler için 0 (anlamsız)
+                int onerilenKutu = 0;
+                if (kutuBirimli && onerilenTest > 0 && boxText > 1)
+                {
+                    onerilenKutu = (int)Math.Ceiling((double)onerilenTest / boxText);
+                }
+
                 var durum = KararVer(hesapStok, ortalamaAylik, runwayGun);
 
-                // Uyarılar
                 var uyarilar = new List<string>();
                 if (hesapStok < 0)
                     uyarilar.Add($"Hesap stok negatif ({hesapStok}) — kullanım verisi veya sayım yanlış olabilir.");
                 if (ortalamaAylik == 0 && hesapStok > 0)
                     uyarilar.Add("Son 3 ayda hiç kullanım yok — ürün durgun olabilir.");
-                if ((DateTime.Now - snap.SayimTarihi).TotalDays > 120)
-                    uyarilar.Add($"Son sayım {(int)(DateTime.Now - snap.SayimTarihi).TotalDays} gün önce — yeni sayım gerekli olabilir.");
+                if ((DateTime.Now - enSonSayim).TotalDays > 120)
+                    uyarilar.Add($"Son sayım {(int)(DateTime.Now - enSonSayim).TotalDays} gün önce — yeni sayım gerekli olabilir.");
+                if (lotSayisi > 1)
+                    uyarilar.Add($"{lotSayisi} farklı lot var — toplam stok gösteriliyor.");
 
                 var satir = new StokHesapSatirVm
                 {
@@ -163,9 +208,9 @@ namespace CRMOzem.Business.Services
                     Platform = snap.Platform,
                     UrunTipi = snap.UrunTipi,
 
-                    SonSayimTarihi = snap.SayimTarihi,
+                    SonSayimTarihi = enSonSayim,
                     SonSayimNo = snap.SayimNo,
-                    SonSayimTestCount = snap.TestCount,
+                    SonSayimTestCount = toplamTestCount,
 
                     SayimdanSonraGonderim = gonderim,
                     SayimdanSonraKullanim = kullanim,
@@ -181,8 +226,9 @@ namespace CRMOzem.Business.Services
                     BoxTextCount = boxText,
 
                     Durum = durum,
-                    HesaplamaOzeti = $"{snap.TestCount} + {gonderim} − {kullanim} = {hesapStok} test · "
-                                   + $"3 ay ort {ortalamaAylik:N1}/ay · "
+                    HesaplamaOzeti = $"{toplamTestCount} + {gonderim} − {kullanim} = {hesapStok} test"
+                                   + (lotSayisi > 1 ? $" ({lotSayisi} lot)" : "")
+                                   + $" · 3 ay ort {ortalamaAylik:N1}/ay · "
                                    + (runwayGun >= 9999 ? "sınırsız" : $"~{runwayGun} gün yetecek"),
                     Uyarilar = uyarilar
                 };
@@ -190,7 +236,7 @@ namespace CRMOzem.Business.Services
                 panel.Satirlar.Add(satir);
             }
 
-            // 6) KPI sayaçları
+            // 6) KPI
             panel.ToplamUrun = panel.Satirlar.Count;
             panel.KritikSayisi = panel.Satirlar.Count(s => s.Durum == StokDurumu.Kritik);
             panel.DusukSayisi = panel.Satirlar.Count(s => s.Durum == StokDurumu.Dusuk);
@@ -198,9 +244,8 @@ namespace CRMOzem.Business.Services
             panel.SaglikliSayisi = panel.Satirlar.Count(s => s.Durum == StokDurumu.Saglikli);
             panel.VeriYokSayisi = panel.Satirlar.Count(s => s.Durum == StokDurumu.VeriYok || s.Durum == StokDurumu.Durgun);
 
-            // Önerilen miktara göre sırala (yüksek öncelik üstte)
             panel.Satirlar = panel.Satirlar
-                .OrderBy(s => (int)s.Durum)         // Kritik önce
+                .OrderBy(s => (int)s.Durum)
                 .ThenByDescending(s => s.OnerilenTest)
                 .ToList();
 
@@ -208,7 +253,7 @@ namespace CRMOzem.Business.Services
         }
 
         // ═══════════════════════════════════════════════════════════
-        //  TEK ÜRÜN HESAPLAMA (opsiyonel)
+        //  TEK ÜRÜN
         // ═══════════════════════════════════════════════════════════
         public async Task<StokHesapSatirVm?> HesaplaUrunAsync(
             int hospitalId,

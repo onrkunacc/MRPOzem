@@ -1,0 +1,360 @@
+﻿@using CRMOzem.Core.ViewModels
+@model SaglikRaporuVm
+@{
+    ViewData["Title"] = "Sistem Sağlık Raporu";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string DurumIcon(KontrolDurumu d) => d switch
+    {
+        KontrolDurumu.Gecti => "fa-check-circle",
+        KontrolDurumu.Dikkat => "fa-circle-exclamation",
+        KontrolDurumu.Hata => "fa-triangle-exclamation",
+        _ => "fa-circle-question"
+    };
+    string DurumColor(KontrolDurumu d) => d switch
+    {
+        KontrolDurumu.Gecti => "#16a34a",
+        KontrolDurumu.Dikkat => "#f59e0b",
+        KontrolDurumu.Hata => "#dc2626",
+        _ => "#94a3b8"
+    };
+    string DurumBg(KontrolDurumu d) => d switch
+    {
+        KontrolDurumu.Gecti => "#f0fdf4",
+        KontrolDurumu.Dikkat => "#fffbeb",
+        KontrolDurumu.Hata => "#fef2f2",
+        _ => "#f8fafc"
+    };
+    string DurumText(KontrolDurumu d) => d switch
+    {
+        KontrolDurumu.Gecti => "Geçti",
+        KontrolDurumu.Dikkat => "Dikkat",
+        KontrolDurumu.Hata => "Hata",
+        _ => "—"
+    };
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    .sr-kontrol {
+        background: #fff;
+        border: 1px solid var(--kt-border);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        overflow: hidden;
+    }
+
+    .sr-kontrol-head {
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        transition: background 0.1s;
+        border-left: 4px solid var(--durum-color, transparent);
+    }
+
+        .sr-kontrol-head:hover {
+            background: var(--kt-bg);
+        }
+
+    .sr-kontrol-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 16px;
+    }
+
+    .sr-kontrol-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sr-kontrol-baslik {
+        font-weight: 700;
+        color: var(--kt-ink-900);
+        font-size: 14px;
+    }
+
+    .sr-kontrol-aciklama {
+        font-size: 11.5px;
+        color: var(--kt-ink-500);
+        margin-top: 2px;
+    }
+
+    .sr-kontrol-sayac {
+        font-size: 22px;
+        font-weight: 800;
+        min-width: 48px;
+        text-align: center;
+    }
+
+    .sr-kontrol-kategori {
+        display: inline-block;
+        padding: 2px 8px;
+        background: var(--kt-bg);
+        color: var(--kt-ink-500);
+        font-size: 10.5px;
+        font-weight: 600;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .sr-kontrol-body {
+        padding: 16px 18px;
+        border-top: 1px solid var(--kt-border);
+        background: var(--body-bg, #fff);
+        display: none;
+    }
+
+    .sr-kontrol.acik .sr-kontrol-body {
+        display: block;
+    }
+
+    .sr-bulgu-list {
+        font-size: 12px;
+        max-height: 320px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid var(--kt-border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-family: ui-monospace, Menlo, monospace;
+    }
+
+        .sr-bulgu-list .item {
+            padding: 4px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+            .sr-bulgu-list .item:last-child {
+                border-bottom: 0;
+            }
+
+    .sr-aksiyon {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #eef2ff;
+        border-left: 3px solid #4338ca;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--kt-ink-700);
+    }
+
+    .sr-cozum {
+        margin-top: 8px;
+        padding: 10px 14px;
+        background: #fffbeb;
+        border-left: 3px solid #f59e0b;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--kt-ink-700);
+    }
+
+    .sr-ozet-kart {
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid;
+        min-width: 140px;
+    }
+
+    .sr-ozet-sayi {
+        font-size: 36px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .sr-ozet-label {
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+</style>
+
+<div class="kt-page">
+
+    @* ═════════ HEADER ═════════ *@
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-stethoscope"></i></div>
+                <div>
+                    <h1>Sistem Sağlık Raporu</h1>
+                    <p>
+                        Pilot öncesi tutarlılık kontrolleri · @Model.HesaplamaZamani.ToString("dd.MM.yyyy HH:mm")
+                    </p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index")">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+                <a class="kt-btn kt-btn-primary" href="@Url.Action("SaglikRaporu")">
+                    <i class="fas fa-rotate"></i> Yeniden Çalıştır
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════ ÖZET ═════════ *@
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div class="sr-ozet-kart" style="background: #f0fdf4; border-color: #16a34a; flex: 1;">
+            <div class="sr-ozet-sayi" style="color: #16a34a;">@Model.ToplamGecen</div>
+            <div class="sr-ozet-label" style="color: #16a34a;">✓ Geçti</div>
+        </div>
+        <div class="sr-ozet-kart" style="background: #fffbeb; border-color: #f59e0b; flex: 1;">
+            <div class="sr-ozet-sayi" style="color: #f59e0b;">@Model.ToplamDikkat</div>
+            <div class="sr-ozet-label" style="color: #f59e0b;">⚠ Dikkat</div>
+        </div>
+        <div class="sr-ozet-kart" style="background: #fef2f2; border-color: #dc2626; flex: 1;">
+            <div class="sr-ozet-sayi" style="color: #dc2626;">@Model.ToplamHata</div>
+            <div class="sr-ozet-label" style="color: #dc2626;">✗ Hata</div>
+        </div>
+        <div class="sr-ozet-kart" style="background: #f8fafc; border-color: var(--kt-border); flex: 1;">
+            <div class="sr-ozet-sayi" style="color: var(--kt-ink-900);">@Model.Kontroller.Count</div>
+            <div class="sr-ozet-label" style="color: var(--kt-ink-500);">Toplam Kontrol</div>
+        </div>
+    </div>
+
+    @* ═════════ PILOT DURUMU ═════════ *@
+    @if (Model.ToplamHata > 0)
+    {
+        <div class="kt-card" style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 14px 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-shield-exclamation" style="font-size: 24px; color: #dc2626;"></i>
+                <div>
+                    <div style="font-weight: 700; color: #991b1b; font-size: 14px;">
+                        PİLOT ÖNCESİ DÜZELTİLMELİ
+                    </div>
+                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
+                        @Model.ToplamHata adet HATA bulgusu var — bunlar sistemin güvenilirliğini etkiler.
+                        Çözüm sonrası raporu tekrar çalıştır.
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.ToplamDikkat > 0)
+    {
+        <div class="kt-card" style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-circle-exclamation" style="font-size: 24px; color: #f59e0b;"></i>
+                <div>
+                    <div style="font-weight: 700; color: #92400e; font-size: 14px;">
+                        PİLOTA UYGUN — Dikkat edilecek @Model.ToplamDikkat madde var
+                    </div>
+                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
+                        Kritik hata yok, pilote başlanabilir. Dikkat maddeleri izlenmeli ve zamanla düzeltilmeli.
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="kt-card" style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-shield-check" style="font-size: 24px; color: #16a34a;"></i>
+                <div>
+                    <div style="font-weight: 700; color: #15803d; font-size: 14px;">
+                        ✓ TÜM KONTROLLER GEÇTİ — Sistem pilote hazır
+                    </div>
+                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
+                        Veri tutarlı, hesaplamalar sağlıklı. Pilot başlatılabilir.
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ═════════ KONTROLLER ═════════ *@
+    <div>
+        @foreach (var k in Model.Kontroller.OrderByDescending(x => (int)x.Durum))
+        {
+            var color = DurumColor(k.Durum);
+            var bg = DurumBg(k.Durum);
+            <div class="sr-kontrol" id="ctrl-@k.Kod" style="--durum-color: @color; --body-bg: @bg;">
+                <div class="sr-kontrol-head" onclick="document.getElementById('ctrl-@k.Kod').classList.toggle('acik')">
+                    <div class="sr-kontrol-icon" style="background: @color;">
+                        <i class="fas @DurumIcon(k.Durum)"></i>
+                    </div>
+                    <div class="sr-kontrol-info">
+                        <div class="sr-kontrol-baslik">
+                            <span style="color: var(--kt-ink-400); font-weight: 400; margin-right: 4px;">@k.Kod</span>
+                            @k.Baslik
+                            <span class="sr-kontrol-kategori" style="margin-left: 6px;">@k.Kategori</span>
+                        </div>
+                        <div class="sr-kontrol-aciklama">@k.Aciklama</div>
+                    </div>
+                    <div class="sr-kontrol-sayac" style="color: @color;">
+                        @if (k.BulguAdeti == 0)
+                        {
+                            <i class="fas fa-check" style="font-size: 18px;"></i>
+                        }
+                        else
+                        {
+                            @k.BulguAdeti
+                        }
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--kt-ink-400); margin-left: 8px; min-width: 50px; text-align: right;">
+                        @k.SureMs ms
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: var(--kt-ink-400); transition: transform 0.2s;"></i>
+                </div>
+
+                @if (k.BulguAdeti > 0)
+                {
+                    <div class="sr-kontrol-body">
+                        @if (!string.IsNullOrWhiteSpace(k.CozumOnerisi))
+                        {
+                            <div class="sr-cozum">
+                                <strong><i class="fas fa-lightbulb"></i> Çözüm önerisi:</strong>
+                                @k.CozumOnerisi
+                            </div>
+                        }
+
+                        <div style="margin-top: 10px; font-size: 12px; color: var(--kt-ink-500); margin-bottom: 6px;">
+                            <strong>Bulgular</strong> (ilk @k.BulguDetaylar.Count göster, toplam @k.BulguAdeti)
+                        </div>
+                        <div class="sr-bulgu-list">
+                            @foreach (var b in k.BulguDetaylar)
+                            {
+                                <div class="item">@b</div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(k.AksiyonUrl))
+                        {
+                            <div class="sr-aksiyon">
+                                <a href="@k.AksiyonUrl" style="color: #4338ca; font-weight: 600; text-decoration: none;">
+                                    <i class="fas fa-arrow-right"></i> @(k.AksiyonText ?? "Devam")
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* ═════════ ALT NOT ═════════ *@
+    <div class="kt-card" style="padding: 12px 18px; background: var(--kt-bg); border-style: dashed;">
+        <div style="font-size: 11.5px; color: var(--kt-ink-500); line-height: 1.6;">
+            <strong style="color: var(--kt-ink-700);">Not:</strong>
+            Bu rapor pilot öncesi "sistem mantıklı sonuç üretiyor mu?" sorusunun cevabıdır.
+            <strong style="color: #dc2626;">HATA</strong> bulguları düzeltilmeden pilot başlatılması önerilmez.
+            <strong style="color: #f59e0b;">DİKKAT</strong> bulguları izlenmeli ama blocker değil.
+            Her kontrolün çözüm önerisi vardır — kart başlığına tıklayarak detayları aç.
+        </div>
+    </div>
+
+</div>

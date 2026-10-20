@@ -50,5 +50,7 @@ namespace CRMOzem.Business.Interfaces
         public bool Eslesti { get; set; }
         public int? InternalHospitalId { get; set; }
         public string? InternalHospitalName { get; set; }
+        public bool ManuelEslestirildi { get; set; }   // true = user manuel bağladı
+        public bool ManuelYoksay { get; set; }         // true = user "yoksay" dedi
     }
 }
