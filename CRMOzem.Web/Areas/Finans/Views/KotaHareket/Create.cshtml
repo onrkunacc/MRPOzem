@@ -4,326 +4,223 @@
     ViewData["Title"] = "Yeni Fatura";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var tedarikciler = ViewBag.Tedarikciler as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
-    var kotaAdi = ViewBag.KotaAdi as string ?? "";
-    var kotaKodu = ViewBag.KotaKodu as string ?? "";
-    var hospitals = ViewBag.Hospitals as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var kotaAdi      = ViewBag.KotaAdi as string ?? "";
+    var kotaKodu     = ViewBag.KotaKodu as string ?? "";
+    var hospitals    = ViewBag.Hospitals as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 
-@await Html.PartialAsync("_KotaDesignSystem")
-
-<style>
-    .tur-selector {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .75rem;
-    }
-
-    .tur-option {
-        cursor: pointer;
-        padding: 1.15rem;
-        border: 2px solid var(--kt-gray-200);
-        border-radius: 14px;
-        text-align: center;
-        transition: all .18s;
-        background: #fff;
-    }
-
-        .tur-option:hover {
-            border-color: #94a3b8;
-            transform: translateY(-2px);
-        }
-
-        .tur-option input {
-            display: none;
-        }
-
-        .tur-option.active-gider {
-            border-color: var(--kt-danger);
-            background: linear-gradient(135deg, #fef2f2, #ffffff);
-            box-shadow: 0 4px 16px rgba(239,68,68,.2);
-        }
-
-        .tur-option.active-gelir {
-            border-color: var(--kt-success);
-            background: linear-gradient(135deg, #ecfdf5, #ffffff);
-            box-shadow: 0 4px 16px rgba(16,185,129,.2);
-        }
-
-    .tur-icon {
-        font-size: 1.75rem;
-        margin-bottom: .3rem;
-    }
-
-    .tur-title {
-        font-weight: 700;
-        color: var(--kt-gray-900);
-        font-size: 1rem;
-    }
-
-    .tur-desc {
-        font-size: .75rem;
-        color: var(--kt-gray-600);
-        margin-top: .2rem;
-    }
-
-    .pb-selector {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: .5rem;
-    }
-
-    .pb-option {
-        cursor: pointer;
-        padding: .85rem;
-        border: 2px solid var(--kt-gray-200);
-        border-radius: 12px;
-        text-align: center;
-        transition: all .15s;
-        background: #fff;
-        font-weight: 700;
-        font-size: 1rem;
-    }
-
-        .pb-option input {
-            display: none;
-        }
-
-        .pb-option.active-usd {
-            border-color: #3b82f6;
-            background: linear-gradient(135deg,#dbeafe,#ffffff);
-            color: #1e40af;
-            box-shadow: 0 3px 12px rgba(59,130,246,.2);
-        }
-
-        .pb-option.active-try {
-            border-color: #ec4899;
-            background: linear-gradient(135deg,#fce7f3,#ffffff);
-            color: #9f1239;
-            box-shadow: 0 3px 12px rgba(236,72,153,.2);
-        }
-
-    .kur-box {
-        padding: 1rem;
-        border-radius: 12px;
-        margin-top: .5rem;
-        background: linear-gradient(135deg, #eff6ff, #dbeafe);
-        border: 1px solid #93c5fd;
-    }
-
-        .kur-box.loading {
-            background: var(--kt-gray-50);
-            border-color: #cbd5e1;
-        }
-
-        .kur-box.error {
-            background: #fef2f2;
-            border-color: #fca5a5;
-        }
-
-    .hesap-box {
-        padding: 1.15rem;
-        background: linear-gradient(135deg, #f0fdf4, #d1fae5);
-        border: 1px solid #6ee7b7;
-        border-radius: 12px;
-        margin-top: .5rem;
-    }
-
-    .hesap-row {
-        display: flex;
-        justify-content: space-between;
-        padding: .35rem 0;
-    }
-
-    .hesap-label {
-        color: #065f46;
-        font-size: .87rem;
-    }
-
-    .hesap-value {
-        font-weight: 700;
-        color: #065f46;
-        font-family: ui-monospace, monospace;
-        font-size: 1rem;
-    }
-</style>
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
 
 <div class="kt-page">
 
+    @* ═══ HEADER ═══ *@
     <div class="kt-header theme-success">
-        <div class="kt-header-content">
-            <div class="kt-header-icon">➕</div>
-            <div style="flex: 1;">
-                <h1>Yeni Fatura</h1>
-                <p style="opacity:.92;font-size:.87rem;">
-                    <i class="fe fe-target"></i> <strong>@kotaAdi</strong>
-                    @if (!string.IsNullOrWhiteSpace(kotaKodu))
-                    {
-                        <span> • @kotaKodu</span>
-                    }
-                </p>
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-plus"></i></div>
+                <div>
+                    <h1>Yeni Fatura</h1>
+                    <p>
+                        <strong class="text-strong">@kotaAdi</strong>
+                        @if (!string.IsNullOrWhiteSpace(kotaKodu))
+                        {
+                            <span class="kt-code-badge ghost" style="margin-left:6px;">@kotaKodu</span>
+                        }
+                    </p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a asp-action="Detay" asp-route-id="@Model.KotaID" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> Hareketler
+                </a>
             </div>
         </div>
     </div>
 
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger" style="border-radius:12px;"><i class="fe fe-alert-circle me-1"></i> @TempData["Error"]</div>
+        <div class="kt-card" style="padding:12px 16px; border-color:#fecaca; background:var(--kt-neg-50); color:var(--kt-neg-700); font-size:13px;">
+            <i class="fas fa-circle-exclamation"></i> @TempData["Error"]
+        </div>
     }
 
+    @* ═══ FORM ═══ *@
     <div class="kt-card">
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="KotaID" />
 
-            <div class="kt-section section-hospital">
-                <div class="kt-section-icon">🔀</div>
+            @* ─── HAREKET TÜRÜ ─── *@
+            <div class="kt-section section-primary">
+                <div class="kt-section-icon"><i class="fas fa-right-left"></i></div>
                 <div>
-                    <h5 class="kt-section-title">Hareket Türü</h5>
-                    <small class="kt-section-desc">Bir gider mi giriyorsunuz yoksa gelir mi?</small>
+                    <span class="kt-section-title">Hareket Türü</span>
+                    <span class="kt-section-desc">Bir gider mi giriyorsunuz yoksa gelir mi?</span>
                 </div>
             </div>
 
             <div class="row g-3 mb-4">
                 <div class="col-12 col-md-6">
-                    <label class="kt-label">Tür <span class="req">*</span></label>
-                    <div class="tur-selector">
-                        <label class="tur-option" id="turGider">
-                            <input type="radio" asp-for="HareketTuru" value="Gider" />
-                            <div class="tur-icon">📉</div>
-                            <div class="tur-title">Gider</div>
-                            <div class="tur-desc">Abbott / 3rd Party fatura</div>
-                        </label>
-                        <label class="tur-option" id="turGelir">
-                            <input type="radio" asp-for="HareketTuru" value="Gelir" />
-                            <div class="tur-icon">📈</div>
-                            <div class="tur-title">Gelir</div>
-                            <div class="tur-desc">Bizim kestiğimiz fatura</div>
-                        </label>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Tür <span class="req">*</span></label>
+                        <div class="tur-selector">
+                            <label class="tur-option" id="turGider">
+                                <input type="radio" asp-for="HareketTuru" value="Gider" />
+                                <div class="tur-icon"><i class="fas fa-arrow-trend-down"></i></div>
+                                <div class="tur-title">Gider</div>
+                                <div class="tur-desc">Abbott / 3rd Party fatura</div>
+                            </label>
+                            <label class="tur-option" id="turGelir">
+                                <input type="radio" asp-for="HareketTuru" value="Gelir" />
+                                <div class="tur-icon"><i class="fas fa-arrow-trend-up"></i></div>
+                                <div class="tur-title">Gelir</div>
+                                <div class="tur-desc">Bizim kestiğimiz fatura</div>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div class="col-12 col-md-6">
-                    <label class="kt-label">Tedarikçi <span class="req">*</span></label>
-                    <select asp-for="TedarikciID" class="kt-select" required>
-                        <option value="">— Tedarikçi seçiniz —</option>
-                        @foreach (var t in tedarikciler)
-                        {
-                            <option value="@t.TedarikciID">@t.Ad — (@t.Grup)</option>
-                        }
-                    </select>
-                    <small class="text-muted">
-                        <a asp-controller="Tedarikci" asp-action="Create" target="_blank" style="color:var(--kt-success);">
-                            <i class="fe fe-plus"></i> Yeni tedarikçi ekle
-                        </a>
-                    </small>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Tedarikçi <span class="req">*</span></label>
+                        <select asp-for="TedarikciID" class="kt-select" required>
+                            <option value="">— Tedarikçi seçiniz —</option>
+                            @foreach (var t in tedarikciler)
+                            {
+                                <option value="@t.TedarikciID">@t.Ad — (@t.Grup)</option>
+                            }
+                        </select>
+                        <div class="kt-hint">
+                            <i class="fas fa-plus"></i>
+                            <a asp-controller="Tedarikci" asp-action="Create" target="_blank"
+                               style="color:var(--kt-primary); text-decoration:none;">Yeni tedarikçi ekle</a>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="col-12">
-                    <label class="kt-label">Hastane <span style="font-weight:400;color:var(--kt-gray-400);">(Opsiyonel)</span></label>
-                    <select asp-for="HospitalID" class="kt-select">
-                        <option value="">— Genel (hastaneye özel değil) —</option>
-                        @foreach (var h in hospitals)
-                        {
-                            <option value="@h.HospitalID">🏥 @h.HospitalName</option>
-                        }
-                    </select>
-                    <div class="kt-hint">
-                        @if (!hospitals.Any())
-                        {
-                            <span>⚠️ Bu kotaya henüz hastane atanmamış. Kotayı düzenleyerek hastane ekleyebilirsiniz.</span>
-                        }
-                        else
-                        {
-                            <span>Belirli bir hastane için fatura ise seçin, tüm kota için ise boş bırakın.</span>
-                        }
+                    <div class="kt-form-group">
+                        <label class="kt-label">Hastane <span style="text-transform:none; font-weight:400; color:var(--kt-ink-400);">(opsiyonel)</span></label>
+                        <select asp-for="HospitalID" class="kt-select">
+                            <option value="">— Genel (hastaneye özel değil) —</option>
+                            @foreach (var h in hospitals)
+                            {
+                                <option value="@h.HospitalID">@h.HospitalName</option>
+                            }
+                        </select>
+                        <div class="kt-hint">
+                            @if (!hospitals.Any())
+                            {
+                                <i class="fas fa-triangle-exclamation" style="color:var(--kt-warn);"></i>
+                                <span>Bu kotaya henüz hastane atanmamış. Kotayı düzenleyerek hastane ekleyebilirsiniz.</span>
+                            }
+                            else
+                            {
+                                <i class="fas fa-circle-info"></i>
+                                <span>Belirli bir hastane için fatura ise seçin, tüm kota için ise boş bırakın.</span>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="kt-section">
-                <div class="kt-section-icon">📄</div>
+            @* ─── FATURA BİLGİLERİ ─── *@
+            <div class="kt-section section-money">
+                <div class="kt-section-icon"><i class="fas fa-file-invoice"></i></div>
                 <div>
-                    <h5 class="kt-section-title">Fatura Bilgileri</h5>
-                    <small class="kt-section-desc">Tarih, tutar ve para birimi</small>
+                    <span class="kt-section-title">Fatura Bilgileri</span>
+                    <span class="kt-section-desc">Tarih, tutar ve para birimi</span>
                 </div>
             </div>
 
-            <div class="row g-3 mb-3">
+            <div class="row g-3">
                 <div class="col-12 col-md-4">
-                    <label class="kt-label">Fatura Tarihi <span class="req">*</span></label>
-                    <input asp-for="FaturaTarihi" type="date" class="kt-input" id="faturaTarihi" required />
+                    <div class="kt-form-group">
+                        <label class="kt-label">Fatura Tarihi <span class="req">*</span></label>
+                        <input asp-for="FaturaTarihi" type="date" class="kt-input" id="faturaTarihi" required />
+                    </div>
                 </div>
 
                 <div class="col-12 col-md-4">
-                    <label class="kt-label">Fatura No</label>
-                    <input asp-for="FaturaNo" class="kt-input" placeholder="Opsiyonel" />
+                    <div class="kt-form-group">
+                        <label class="kt-label">Fatura No</label>
+                        <input asp-for="FaturaNo" class="kt-input" placeholder="Opsiyonel" />
+                    </div>
                 </div>
 
                 <div class="col-12 col-md-4">
-                    <label class="kt-label">Para Birimi <span class="req">*</span></label>
-                    <div class="pb-selector">
-                        <label class="pb-option" id="pbUsd">
-                            <input type="radio" asp-for="ParaBirimi" value="USD" />
-                            💵 USD
-                        </label>
-                        <label class="pb-option" id="pbTry">
-                            <input type="radio" asp-for="ParaBirimi" value="TRY" />
-                            ₺ TRY
-                        </label>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Para Birimi <span class="req">*</span></label>
+                        <div class="pb-selector">
+                            <label class="pb-option" id="pbUsd">
+                                <input type="radio" asp-for="ParaBirimi" value="USD" /> USD
+                            </label>
+                            <label class="pb-option" id="pbTry">
+                                <input type="radio" asp-for="ParaBirimi" value="TRY" /> TRY
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div class="col-12">
-                    <label class="kt-label">Açıklama</label>
-                    <input asp-for="Aciklama" class="kt-input" placeholder="Reaktif, Kalibratör, Kontrol, Sarf, Servis, Kira vb." />
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="kt-label">Tutar <span class="req">*</span></label>
-                    <div class="kt-input-group">
-                        <div class="kt-input-group-prefix" id="tutarSimge">$</div>
-                        <input asp-for="Tutar" type="number" step="0.01" id="tutarInput" required />
+                    <div class="kt-form-group">
+                        <label class="kt-label">Açıklama</label>
+                        <input asp-for="Aciklama" class="kt-input"
+                               placeholder="Reaktif, Kalibratör, Kontrol, Sarf, Servis, Kira vb." />
                     </div>
                 </div>
 
                 <div class="col-12 col-md-6">
-                    <label class="kt-label">Kur (USD/TRY)</label>
-                    <div style="display:flex; gap:.5rem;">
-                        <input asp-for="Kur" type="number" step="0.0001" class="kt-input" id="kurInput" placeholder="Otomatik doldurulur" />
-                        <button type="button" class="kt-btn kt-btn-ghost" id="kurYenile" title="TCMB'den yeniden çek" style="padding:.7rem 1rem;">
-                            <i class="fa fa-sync"></i>
-                        </button>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Tutar <span class="req">*</span></label>
+                        <div class="kt-input-group">
+                            <div class="kt-input-group-prefix is-usd" id="tutarSimge">$</div>
+                            <input asp-for="Tutar" type="number" step="0.01" id="tutarInput" required />
+                        </div>
                     </div>
-                    <div class="kt-hint">TCMB'den fatura tarihine göre otomatik çekilir.</div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Kur (USD/TRY)</label>
+                        <div style="display:flex; gap:8px;">
+                            <input asp-for="Kur" type="number" step="0.0001" class="kt-input" id="kurInput"
+                                   placeholder="Otomatik doldurulur" />
+                            <button type="button" class="kt-btn kt-btn-secondary" id="kurYenile"
+                                    title="TCMB'den yeniden çek" style="flex-shrink:0;">
+                                <i class="fas fa-rotate"></i>
+                            </button>
+                        </div>
+                        <div class="kt-hint"><i class="fas fa-circle-info"></i> TCMB'den fatura tarihine göre otomatik çekilir.</div>
+                    </div>
                 </div>
 
                 <div class="col-12">
                     <div class="kur-box" id="kurBox" style="display:none;">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fe fe-info"></i>
-                            <span id="kurBoxText">Kur bilgisi yükleniyor...</span>
-                        </div>
+                        <i class="fas fa-circle-info"></i>
+                        <span id="kurBoxText">Kur bilgisi yükleniyor...</span>
                     </div>
 
                     <div class="hesap-box" id="hesapBox" style="display:none;">
                         <div class="hesap-row">
-                            <span class="hesap-label">TL Karşılığı:</span>
+                            <span class="hesap-label">TL Karşılığı</span>
                             <span class="hesap-value" id="tlKarsiligi">—</span>
                         </div>
                         <div class="hesap-row">
-                            <span class="hesap-label">USD Karşılığı:</span>
+                            <span class="hesap-label">USD Karşılığı</span>
                             <span class="hesap-value" id="usdKarsiligi">—</span>
                         </div>
                     </div>
                 </div>
             </div>
 
+            @* ─── ACTIONS ─── *@
             <div class="kt-actions">
                 <a asp-action="Detay" asp-route-id="@Model.KotaID" class="kt-btn kt-btn-ghost">
-                    <i class="fa fa-arrow-left"></i> Geri
+                    <i class="fas fa-arrow-left"></i> Geri
                 </a>
                 <button type="submit" class="kt-btn kt-btn-success">
-                    <i class="fa fa-save"></i> Faturayı Kaydet
+                    <i class="fas fa-floppy-disk"></i> Faturayı Kaydet
                 </button>
             </div>
         </form>
@@ -331,100 +228,114 @@
 </div>
 
 @section Scripts {
-    <script>
-        (function() {
-            const trTR = 'tr-TR';
-            const turGider = document.getElementById('turGider');
-            const turGelir = document.getElementById('turGelir');
-            const pbUsd = document.getElementById('pbUsd');
-            const pbTry = document.getElementById('pbTry');
-            const faturaTarihi = document.getElementById('faturaTarihi');
-            const tutarInput = document.getElementById('tutarInput');
-            const kurInput = document.getElementById('kurInput');
-            const kurYenile = document.getElementById('kurYenile');
-            const kurBox = document.getElementById('kurBox');
-            const kurBoxText = document.getElementById('kurBoxText');
-            const hesapBox = document.getElementById('hesapBox');
-            const tlKarsiligi = document.getElementById('tlKarsiligi');
-            const usdKarsiligi = document.getElementById('usdKarsiligi');
-            const tutarSimge = document.getElementById('tutarSimge');
+<script>
+(function () {
+    const trTR        = 'tr-TR';
+    const turGider    = document.getElementById('turGider');
+    const turGelir    = document.getElementById('turGelir');
+    const pbUsd       = document.getElementById('pbUsd');
+    const pbTry       = document.getElementById('pbTry');
+    const faturaTarihi= document.getElementById('faturaTarihi');
+    const tutarInput  = document.getElementById('tutarInput');
+    const kurInput    = document.getElementById('kurInput');
+    const kurYenile   = document.getElementById('kurYenile');
+    const kurBox      = document.getElementById('kurBox');
+    const kurBoxText  = document.getElementById('kurBoxText');
+    const hesapBox    = document.getElementById('hesapBox');
+    const tlKarsiligi = document.getElementById('tlKarsiligi');
+    const usdKarsiligi= document.getElementById('usdKarsiligi');
+    const tutarSimge  = document.getElementById('tutarSimge');
 
-            function updateTurUI() {
-                const isGider = document.querySelector('input[name="HareketTuru"]:checked')?.value === 'Gider';
-                turGider.classList.toggle('active-gider', isGider);
-                turGelir.classList.toggle('active-gelir', !isGider);
-            }
-            document.querySelectorAll('input[name="HareketTuru"]').forEach(r => r.addEventListener('change', updateTurUI));
+    const isUsd = () => document.querySelector('input[name="ParaBirimi"]:checked')?.value === 'USD';
 
-            function updatePbUI() {
-                const isUsd = document.querySelector('input[name="ParaBirimi"]:checked')?.value === 'USD';
-                pbUsd.classList.toggle('active-usd', isUsd);
-                pbTry.classList.toggle('active-try', !isUsd);
-                tutarSimge.textContent = isUsd ? '$' : '₺';
-                tutarSimge.style.background = isUsd
-                    ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
-                    : 'linear-gradient(135deg, #ec4899, #db2777)';
-                fetchKur();
-            }
-            document.querySelectorAll('input[name="ParaBirimi"]').forEach(r => r.addEventListener('change', updatePbUI));
+    function updateTurUI() {
+        const gider = document.querySelector('input[name="HareketTuru"]:checked')?.value === 'Gider';
+        turGider.classList.toggle('active-gider', gider);
+        turGelir.classList.toggle('active-gelir', !gider);
+    }
+    document.querySelectorAll('input[name="HareketTuru"]')
+            .forEach(r => r.addEventListener('change', updateTurUI));
 
-            let kurAbortController = null;
-            async function fetchKur() {
-                const tarih = faturaTarihi.value;
-                if (!tarih) return;
-                if (kurAbortController) kurAbortController.abort();
-                kurAbortController = new AbortController();
-                kurBox.style.display = '';
-                kurBox.classList.remove('error');
-                kurBox.classList.add('loading');
-                kurBoxText.innerHTML = '<i class="fa fa-spinner fa-spin"></i> TCMB\'den kur çekiliyor...';
-                try {
-                    const res = await fetch(`@Url.Action("GetKur", "KotaHareket", new { area = "Finans" })?tarih=${tarih}`, { signal: kurAbortController.signal });
-                    const data = await res.json();
-                    kurBox.classList.remove('loading');
-                    if (data.basarili && data.kur) {
-                        kurInput.value = parseFloat(data.kur).toFixed(4);
-                        const kurTarih = data.kurTarihi ? new Date(data.kurTarihi).toLocaleDateString('tr-TR') : tarih;
-                        kurBoxText.innerHTML = `<i class="fe fe-check-circle"></i> <strong>1 USD = ${parseFloat(data.kur).toFixed(4)} TL</strong> (${kurTarih} • ${data.mesaj || 'TCMB'})`;
-                        hesapla();
-                    } else {
-                        kurBox.classList.add('error');
-                        kurBoxText.innerHTML = `<i class="fe fe-alert-triangle"></i> ${data.mesaj || 'Kur alınamadı.'}`;
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') return;
-                    kurBox.classList.remove('loading');
-                    kurBox.classList.add('error');
-                    kurBoxText.innerHTML = '<i class="fe fe-alert-triangle"></i> Kur çekilemedi.';
-                }
-            }
+    function updatePbUI() {
+        const usd = isUsd();
+        pbUsd.classList.toggle('active-usd', usd);
+        pbTry.classList.toggle('active-try', !usd);
+        tutarSimge.textContent = usd ? '$' : '₺';
+        tutarSimge.classList.toggle('is-usd', usd);
+        tutarSimge.classList.toggle('is-try', !usd);
+        fetchKur();
+    }
+    document.querySelectorAll('input[name="ParaBirimi"]')
+            .forEach(r => r.addEventListener('change', updatePbUI));
 
-            function hesapla() {
-                const tutar = parseFloat(tutarInput.value) || 0;
-                const kur = parseFloat(kurInput.value) || 0;
-                const isUsd = document.querySelector('input[name="ParaBirimi"]:checked')?.value === 'USD';
-                if (tutar <= 0 || kur <= 0) { hesapBox.style.display = 'none'; return; }
-                let tl, usd;
-                if (isUsd) { usd = tutar; tl = tutar * kur; }
-                else { tl = tutar; usd = tutar / kur; }
-                tlKarsiligi.textContent = '₺' + tl.toLocaleString(trTR, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                usdKarsiligi.textContent = '$' + usd.toLocaleString(trTR, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                hesapBox.style.display = '';
-            }
+    let kurAbort = null;
+    async function fetchKur() {
+        const tarih = faturaTarihi.value;
+        if (!tarih) return;
+        if (kurAbort) kurAbort.abort();
+        kurAbort = new AbortController();
 
-            faturaTarihi.addEventListener('change', fetchKur);
-            kurYenile.addEventListener('click', fetchKur);
-            tutarInput.addEventListener('input', hesapla);
-            kurInput.addEventListener('input', hesapla);
+        kurBox.style.display = '';
+        kurBox.classList.remove('error');
+        kurBox.classList.add('loading');
+        kurBoxText.innerHTML = 'TCMB\'den kur çekiliyor...';
 
-            if (!document.querySelector('input[name="HareketTuru"]:checked')) {
-                document.querySelector('input[name="HareketTuru"][value="Gider"]').checked = true;
+        try {
+            const res = await fetch(
+                `@Url.Action("GetKur", "KotaHareket", new { area = "Finans" })?tarih=${tarih}`,
+                { signal: kurAbort.signal });
+            const data = await res.json();
+            kurBox.classList.remove('loading');
+
+            if (data.basarili && data.kur) {
+                kurInput.value = parseFloat(data.kur).toFixed(4);
+                const kurTarih = data.kurTarihi
+                    ? new Date(data.kurTarihi).toLocaleDateString('tr-TR')
+                    : tarih;
+                kurBoxText.innerHTML =
+                    `<strong>1 USD = ${parseFloat(data.kur).toFixed(4)} TL</strong> ` +
+                    `&middot; ${kurTarih} &middot; ${data.mesaj || 'TCMB'}`;
+                hesapla();
+            } else {
+                kurBox.classList.add('error');
+                kurBoxText.textContent = data.mesaj || 'Kur alınamadı.';
             }
-            if (!document.querySelector('input[name="ParaBirimi"]:checked')) {
-                document.querySelector('input[name="ParaBirimi"][value="USD"]').checked = true;
-            }
-            updateTurUI();
-            updatePbUI();
-        })();
-    </script>
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            kurBox.classList.remove('loading');
+            kurBox.classList.add('error');
+            kurBoxText.textContent = 'Kur çekilemedi.';
+        }
+    }
+
+    function hesapla() {
+        const tutar = parseFloat(tutarInput.value) || 0;
+        const kur   = parseFloat(kurInput.value) || 0;
+        if (tutar <= 0 || kur <= 0) { hesapBox.style.display = 'none'; return; }
+
+        let tl, usd;
+        if (isUsd()) { usd = tutar; tl = tutar * kur; }
+        else         { tl = tutar; usd = tutar / kur; }
+
+        const f = v => v.toLocaleString(trTR, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        tlKarsiligi.textContent  = '₺' + f(tl);
+        usdKarsiligi.textContent = '$' + f(usd);
+        hesapBox.style.display = '';
+    }
+
+    faturaTarihi.addEventListener('change', fetchKur);
+    kurYenile.addEventListener('click', fetchKur);
+    tutarInput.addEventListener('input', hesapla);
+    kurInput.addEventListener('input', hesapla);
+
+    if (!document.querySelector('input[name="HareketTuru"]:checked')) {
+        document.querySelector('input[name="HareketTuru"][value="Gider"]').checked = true;
+    }
+    if (!document.querySelector('input[name="ParaBirimi"]:checked')) {
+        document.querySelector('input[name="ParaBirimi"][value="USD"]').checked = true;
+    }
+    updateTurUI();
+    updatePbUI();
+})();
+</script>
 }

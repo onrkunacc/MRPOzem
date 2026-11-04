@@ -1,0 +1,237 @@
+﻿@model CRMOzem.Core.ViewModels.LeaveCalendarVm
+@{
+    ViewData["Title"] = "İzin Takvimi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var gunAdlari = new[] { "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz" };
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Takvim")
+
+<style>
+    .tk-grid { display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: start; }
+    @@media (max-width: 1200px) { .tk-grid { grid-template-columns: 1fr; } }
+
+    .tk-hafta-basliklari {
+        display: grid; grid-template-columns: repeat(7, 1fr);
+        border-bottom: 1px solid var(--kt-border); background: var(--kt-bg-soft);
+    }
+    .tk-hafta-basliklari > div {
+        padding: 10px 8px; text-align: center; font-size: 11px; font-weight: 700;
+        color: var(--kt-ink-500); text-transform: uppercase; letter-spacing: .05em;
+    }
+    .tk-hafta-basliklari > div:nth-child(6),
+    .tk-hafta-basliklari > div:nth-child(7) { color: var(--kt-ink-400); }
+
+    .tk-aylik { display: grid; grid-template-columns: repeat(7, 1fr); }
+
+    .tk-gun {
+        min-height: 104px; border-right: 1px solid var(--kt-border);
+        border-bottom: 1px solid var(--kt-border); padding: 6px 7px;
+        background: var(--kt-paper); position: relative; overflow: hidden;
+    }
+    .tk-gun:nth-child(7n) { border-right: none; }
+    .tk-gun.disari { background: #fcfcfd; }
+    .tk-gun.disari .tk-gun-no { color: var(--kt-ink-400); opacity: .6; }
+    .tk-gun.haftasonu { background: var(--kt-bg); }
+    .tk-gun.tatil { background: var(--kt-neg-50); }
+    .tk-gun.bugun { box-shadow: inset 0 0 0 2px var(--kt-primary); }
+
+    .tk-gun-no {
+        font-size: 12.5px; font-weight: 700; color: var(--kt-ink-900);
+        display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    }
+    .tk-gun.bugun .tk-gun-no {
+        color: var(--kt-primary);
+    }
+    .tk-tatil-ad {
+        font-size: 9.5px; color: var(--kt-neg-700); font-weight: 600;
+        line-height: 1.2; margin-top: 2px; overflow: hidden;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .tk-tatil-ad.yarim { color: var(--kt-warn); }
+
+    .tk-kisiler { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+    .tk-kisi {
+        display: flex; align-items: center; gap: 4px;
+        font-size: 10.5px; line-height: 1.25;
+        padding: 2px 5px; border-radius: 4px;
+        background: var(--kt-bg-soft); color: var(--kt-ink-700);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tk-kisi .nokta { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    .tk-renk-0 .nokta { background: #4f46e5; } .tk-renk-0 { background: #eef2ff; color: #3730a3; }
+    .tk-renk-1 .nokta { background: #059669; } .tk-renk-1 { background: #ecfdf5; color: #065f46; }
+    .tk-renk-2 .nokta { background: #d97706; } .tk-renk-2 { background: #fffbeb; color: #92400e; }
+    .tk-renk-3 .nokta { background: #0284c7; } .tk-renk-3 { background: #f0f9ff; color: #075985; }
+    .tk-renk-4 .nokta { background: #db2777; } .tk-renk-4 { background: #fdf2f8; color: #9d174d; }
+    .tk-renk-5 .nokta { background: #7c3aed; } .tk-renk-5 { background: #f5f3ff; color: #5b21b6; }
+    .tk-renk-6 .nokta { background: #0d9488; } .tk-renk-6 { background: #f0fdfa; color: #115e59; }
+    .tk-renk-7 .nokta { background: #ca8a04; } .tk-renk-7 { background: #fefce8; color: #854d0e; }
+
+    .tk-fazla { font-size: 10px; color: var(--kt-ink-400); padding-left: 5px; }
+
+    .tk-yan-satir {
+        display: flex; align-items: flex-start; gap: 9px;
+        padding: 10px 0; border-bottom: 1px solid var(--kt-border); font-size: 12.5px;
+    }
+    .tk-yan-satir:last-child { border-bottom: none; }
+    .tk-yan-rozet {
+        width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+        display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: #fff;
+    }
+    @@media (max-width: 700px) {
+        .tk-gun { min-height: 76px; padding: 4px; }
+        .tk-kisi { font-size: 9px; padding: 1px 3px; }
+    }
+</style>
+
+<div class="kt-page" style="padding-top:0;">
+
+    <div class="tk-grid">
+
+        @* ═══ TAKVİM ═══ *@
+        <div class="kt-card kt-card-flush">
+            <div style="padding:16px 20px; border-bottom:1px solid var(--kt-border);
+                        display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:17px; font-weight:700; color:var(--kt-ink-900); text-transform:capitalize;">
+                        @Model.AyAdi
+                    </div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">
+                        @Model.IzinliCalisanSayisi çalışan izinli · @Model.ToplamIzinGunu kişi-gün
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <a class="kt-btn kt-btn-ghost kt-btn-icon"
+                       asp-action="Takvim" asp-route-yil="@Model.OncekiAy.Year" asp-route-ay="@Model.OncekiAy.Month"
+                       title="Önceki ay"><i class="fas fa-chevron-left"></i></a>
+                    <a class="kt-btn kt-btn-secondary"
+                       asp-action="Takvim" asp-route-yil="@DateTime.Now.Year" asp-route-ay="@DateTime.Now.Month">
+                        Bugün
+                    </a>
+                    <a class="kt-btn kt-btn-ghost kt-btn-icon"
+                       asp-action="Takvim" asp-route-yil="@Model.SonrakiAy.Year" asp-route-ay="@Model.SonrakiAy.Month"
+                       title="Sonraki ay"><i class="fas fa-chevron-right"></i></a>
+                </div>
+            </div>
+
+            <div class="tk-hafta-basliklari">
+                @foreach (var g in gunAdlari)
+                {
+                    <div>@g</div>
+                }
+            </div>
+
+            <div class="tk-aylik">
+                @foreach (var gun in Model.Gunler)
+                {
+                    var cls = "tk-gun";
+                    if (!gun.AyinIcinde) cls += " disari";
+                    if (gun.HaftaSonu) cls += " haftasonu";
+                    if (gun.TatilAdi != null && gun.TatilTamGun) cls += " tatil";
+                    if (gun.Bugun) cls += " bugun";
+
+                    <div class="@cls">
+                        <div class="tk-gun-no">
+                            <span>@gun.Tarih.Day</span>
+                            @if (gun.Izinliler.Count > 0)
+                            {
+                                <span style="font-size:9.5px; font-weight:600; color:var(--kt-ink-400);">
+                                    @gun.Izinliler.Count
+                                </span>
+                            }
+                        </div>
+
+                        @if (gun.TatilAdi != null)
+                        {
+                            <div class="tk-tatil-ad @(gun.TatilTamGun ? "" : "yarim")" title="@gun.TatilAdi">
+                                @gun.TatilAdi
+                            </div>
+                        }
+
+                        @if (gun.Izinliler.Any())
+                        {
+                            <div class="tk-kisiler">
+                                @foreach (var k in gun.Izinliler.Take(3))
+                                {
+                                    <span class="tk-kisi tk-renk-@k.RenkIndeksi"
+                                          title="@k.FullName — @k.LeaveTypeName (@k.StartDate.ToString("dd.MM") – @k.EndDate.ToString("dd.MM"))">
+                                        <span class="nokta"></span>@k.FullName
+                                    </span>
+                                }
+                                @if (gun.Izinliler.Count > 3)
+                                {
+                                    <span class="tk-fazla">+@(gun.Izinliler.Count - 3) kişi daha</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ═══ YAN PANEL ═══ *@
+        <div>
+            <div class="kt-card">
+                <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500);
+                            text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                    Bu Ayki İzinler
+                </div>
+
+                @if (Model.AyinIzinleri.Any())
+                {
+                    @foreach (var k in Model.AyinIzinleri)
+                    {
+                        var renkler = new[] { "#4f46e5", "#059669", "#d97706", "#0284c7", "#db2777", "#7c3aed", "#0d9488", "#ca8a04" };
+                        <div class="tk-yan-satir">
+                            <div class="tk-yan-rozet" style="background:@renkler[k.RenkIndeksi];">@k.Initials</div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:600; color:var(--kt-ink-900); font-size:13px;">@k.FullName</div>
+                                <div style="font-size:11.5px; color:var(--kt-ink-500); margin-top:1px;">
+                                    @k.StartDate.ToString("dd.MM") – @k.EndDate.ToString("dd.MM") · @k.LeaveTypeName
+                                </div>
+                            </div>
+                            <a class="kt-btn kt-btn-sm kt-btn-ghost" asp-action="Detail" asp-route-id="@k.RequestId"
+                               title="Detay"><i class="fas fa-chevron-right"></i></a>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="padding:28px 10px; text-align:center; color:var(--kt-ink-400); font-size:13px;">
+                        <i class="fas fa-calendar-check" style="font-size:26px; opacity:.5; display:block; margin-bottom:8px;"></i>
+                        Bu ay onaylı izin yok
+                    </div>
+                }
+            </div>
+
+            <div class="kt-card">
+                <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500);
+                            text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                    Gösterim
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:12.5px; color:var(--kt-ink-700);">
+                    <div style="display:flex; align-items:center; gap:9px;">
+                        <span style="width:18px; height:18px; border-radius:4px; background:var(--kt-neg-50); border:1px solid #fecaca;"></span>
+                        Resmi tatil (tam gün)
+                    </div>
+                    <div style="display:flex; align-items:center; gap:9px;">
+                        <span style="width:18px; height:18px; border-radius:4px; background:var(--kt-bg); border:1px solid var(--kt-border);"></span>
+                        Hafta sonu
+                    </div>
+                    <div style="display:flex; align-items:center; gap:9px;">
+                        <span style="width:18px; height:18px; border-radius:4px; box-shadow:inset 0 0 0 2px var(--kt-primary);"></span>
+                        Bugün
+                    </div>
+                </div>
+                <div class="kt-hint" style="margin-top:12px;">
+                    <i class="fas fa-circle-info"></i>
+                    Takvimde yalnızca onaylanmış izinler görünür.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

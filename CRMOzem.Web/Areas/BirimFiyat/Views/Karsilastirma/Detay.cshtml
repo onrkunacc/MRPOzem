@@ -1,0 +1,938 @@
+﻿@using CRMOzem.Core.Enums
+@using CRMOzem.Web.Areas.BirimFiyat.Controllers
+@model CRMOzem.Web.Areas.BirimFiyat.Models.KarsilastirmaDetayVm
+@{
+    var k = Model.Karsilastirma;
+    ViewData["Title"] = k.Ad;
+
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    // Grafik ölçeği
+    var enBuyukFark = Model.DonemOzetleri.Count > 0
+        ? Model.DonemOzetleri.Max(d => Math.Abs(d.ToplamFarkTl))
+        : 0m;
+    if (enBuyukFark == 0m) enBuyukFark = 1m;
+
+    string Para(decimal? v, string birim = "₺")
+        => v.HasValue ? v.Value.ToString("N2", tr) + " " + birim : "—";
+
+    string Yuzde(decimal? v)
+        => v.HasValue ? (v.Value > 0 ? "+" : "") + v.Value.ToString("N2", tr) + "%" : "—";
+
+    string FarkSinif(decimal? v)
+        => !v.HasValue ? "bf-zero" : v.Value > 0 ? "bf-pos" : v.Value < 0 ? "bf-neg" : "bf-zero";
+}
+
+<link rel="stylesheet" href="~/css/birim-fiyat.css" asp-append-version="true" />
+
+<style>
+    /* ── Yükleme panelleri ──────────────────────────────────── */
+    .bf-yukleme-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .bf-yukleme {
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-r);
+        background: var(--bf-surface);
+        box-shadow: var(--bf-sh);
+        overflow: hidden;
+    }
+
+    .bf-yukleme-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--bf-border);
+        background: var(--bf-surface-alt);
+    }
+
+    .bf-yukleme-ad {
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .bf-yukleme-body {
+        padding: 14px;
+    }
+
+    .bf-yukleme.is-dolu .bf-yukleme-head {
+        background: var(--bf-success-sf);
+        border-bottom-color: #a7f3d0;
+    }
+
+    .bf-yukleme.is-bos .bf-yukleme-head {
+        background: var(--bf-warn-sf);
+        border-bottom-color: #fde68a;
+    }
+
+    .bf-dosya-bilgi {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--bf-surface-alt);
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-r-sm);
+        margin-bottom: 11px;
+    }
+
+    .bf-dosya-ikon {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        border-radius: 8px;
+        background: var(--bf-success-sf);
+        color: var(--bf-success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+    }
+
+    .bf-dosya-ad {
+        font-size: 12.5px;
+        font-weight: 600;
+        word-break: break-all;
+        line-height: 1.35;
+    }
+
+    .bf-dosya-not {
+        font-size: 11px;
+        color: var(--bf-muted);
+        margin-top: 2px;
+    }
+
+    .bf-sablon {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        margin-bottom: 11px;
+        border: 1px solid #c7d2fe;
+        background: var(--bf-primary-sf);
+        border-radius: var(--bf-r-sm);
+    }
+
+    .bf-sablon-ikon {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border-radius: 7px;
+        background: #fff;
+        border: 1px solid #c7d2fe;
+        color: var(--bf-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .bf-sablon-ad {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--bf-primary-dk);
+    }
+
+    .bf-sablon-not {
+        font-size: 10.5px;
+        color: var(--bf-muted);
+        margin-top: 2px;
+        line-height: 1.4;
+    }
+
+    .bf-dosya-sec {
+        display: block;
+        border: 1.5px dashed var(--bf-border-str);
+        border-radius: var(--bf-r-sm);
+        padding: 18px 14px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--bf-muted);
+        transition: border-color .15s, background .15s, color .15s;
+        margin-bottom: 10px;
+    }
+
+        .bf-dosya-sec:hover {
+            border-color: var(--bf-primary);
+            background: var(--bf-primary-sf);
+            color: var(--bf-primary-dk);
+        }
+
+        .bf-dosya-sec input {
+            display: none;
+        }
+
+        .bf-dosya-sec .ikon {
+            font-size: 21px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .bf-dosya-sec .ad {
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .bf-dosya-sec .not {
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+    /* ── Hesapla şeridi ─────────────────────────────────────── */
+    .bf-hesapla-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        border-radius: var(--bf-r);
+        background: var(--bf-navy);
+        color: #fff;
+        margin-bottom: 18px;
+    }
+
+        .bf-hesapla-bar h3 {
+            margin: 0 0 3px;
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+
+        .bf-hesapla-bar p {
+            margin: 0;
+            font-size: 11.5px;
+            color: #cbd5e1;
+        }
+
+        .bf-hesapla-bar .bf-btn {
+            background: #fff;
+            border-color: #fff;
+            color: var(--bf-navy);
+        }
+
+            .bf-hesapla-bar .bf-btn:hover {
+                background: #e2e8f0;
+                color: var(--bf-navy);
+            }
+
+    /* ── Kural rozetleri ────────────────────────────────────── */
+    .bf-kural-serit {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-bottom: 16px;
+    }
+
+    .bf-kural {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bf-surface);
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-r-sm);
+        padding: 6px 11px;
+        font-size: 11.5px;
+    }
+
+        .bf-kural .lbl {
+            color: var(--bf-faint);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 9.5px;
+            letter-spacing: .05em;
+        }
+
+        .bf-kural .val {
+            color: var(--bf-text-2);
+            font-weight: 600;
+        }
+
+    /* ── Dönem grafiği ──────────────────────────────────────── */
+    .bf-grafik {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .bf-grafik-satir {
+        display: grid;
+        grid-template-columns: 110px 1fr 130px;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .bf-grafik-ad {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--bf-text-2);
+        text-align: right;
+    }
+
+    .bf-grafik-ray {
+        position: relative;
+        height: 22px;
+        background: var(--bf-surface-alt);
+        border-radius: 5px;
+        overflow: hidden;
+        border: 1px solid var(--bf-border);
+    }
+
+    .bf-grafik-bar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        border-radius: 3px;
+        min-width: 2px;
+    }
+
+        .bf-grafik-bar.is-pos {
+            background: #fca5a5;
+            left: 50%;
+        }
+
+        .bf-grafik-bar.is-neg {
+            background: #6ee7b7;
+            right: 50%;
+        }
+
+    .bf-grafik-orta {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: var(--bf-border-str);
+    }
+
+    .bf-grafik-deger {
+        font-size: 11.5px;
+        font-family: var(--bf-mono);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    /* ── Sapma kartları ─────────────────────────────────────── */
+    .bf-sapma-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+    }
+
+    .bf-sapma {
+        border: 1px solid var(--bf-border);
+        border-left: 3px solid var(--bf-danger);
+        border-radius: var(--bf-r-sm);
+        padding: 10px 12px;
+        background: var(--bf-surface);
+    }
+
+    .bf-sapma-ad {
+        font-size: 11.5px;
+        font-weight: 700;
+        line-height: 1.35;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        min-height: 31px;
+    }
+
+    .bf-sapma-ref {
+        font-size: 10.5px;
+        color: var(--bf-faint);
+        font-family: var(--bf-mono);
+        margin-top: 3px;
+    }
+
+    .bf-sapma-deger {
+        font-size: 17px;
+        font-weight: 700;
+        margin-top: 6px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .bf-sapma-alt {
+        font-size: 10.5px;
+        color: var(--bf-muted);
+        margin-top: 2px;
+    }
+
+    /* ── Filtreler ──────────────────────────────────────────── */
+    .bf-filtre {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--bf-border);
+        background: var(--bf-surface-alt);
+    }
+
+    .bf-cip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--bf-border-str);
+        background: var(--bf-surface);
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--bf-text-2);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+        .bf-cip:hover {
+            border-color: var(--bf-primary);
+            color: var(--bf-primary-dk);
+            text-decoration: none;
+        }
+
+        .bf-cip.is-active {
+            background: var(--bf-navy);
+            border-color: var(--bf-navy);
+            color: #fff;
+        }
+
+        .bf-cip .sayi {
+            font-size: 10px;
+            font-weight: 700;
+            background: rgba(15,23,42,.08);
+            border-radius: 999px;
+            padding: 0 5px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bf-cip.is-active .sayi {
+            background: rgba(255,255,255,.2);
+        }
+
+    .bf-tablo-kaydir {
+        max-height: 640px;
+        overflow: auto;
+    }
+
+    @@media (max-width: 860px) {
+        .bf-yukleme-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .bf-grafik-satir {
+            grid-template-columns: 82px 1fr 100px;
+        }
+    }
+</style>
+
+<div class="bf-wrap">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bf-note bf-note-success"><i class="fe fe-check-circle"></i><div>@TempData["SuccessMessage"]</div></div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="bf-note bf-note-warn"><i class="fe fe-alert-triangle"></i><div>@TempData["Warning"]</div></div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="bf-note bf-note-danger"><i class="fe fe-x-circle"></i><div>@TempData["Error"]</div></div>
+    }
+
+    <!-- ══ Başlık ══ -->
+    <div class="bf-head">
+        <div class="bf-head-left">
+            <div class="bf-head-icon"><i class="fe fe-git-compare"></i></div>
+            <div style="min-width:0;">
+                <h1>@k.Ad</h1>
+                <div class="bf-head-sub">
+                    @k.TedarikciEtiket (@k.TedarikciParaBirimi)
+                    <i class="fe fe-arrow-right" style="font-size:10px;"></i>
+                    @k.BizEtiket (@k.BizParaBirimi)
+                    @if (!string.IsNullOrWhiteSpace(k.IhaleAdi))
+                    {
+                        <text> · İhale: @k.IhaleAdi</text>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(k.HastaneAdi))
+                    {
+                        <text> · @k.HastaneAdi</text>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="bf-head-actions">
+            <a asp-action="Index" asp-route-klasorId="@k.KlasorId" class="bf-btn">
+                <i class="fe fe-arrow-left"></i> Liste
+            </a>
+
+            @if (Model.SonucVarMi)
+            {
+                <a asp-action="SonucExcel" asp-route-id="@k.Id" class="bf-btn">
+                    <i class="fe fe-download"></i> Excel
+                </a>
+            }
+
+            <a asp-action="Duzenle" asp-route-id="@k.Id" class="bf-btn">
+                <i class="fe fe-settings"></i> Ayarlar
+            </a>
+
+            <form asp-action="Sil" method="post" style="display:inline;"
+                  onsubmit="return confirm('Bu karşılaştırma ve tüm yüklenmiş satırları silinecek. Emin misiniz?');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@k.Id" />
+                <button type="submit" class="bf-btn bf-btn-danger"><i class="fe fe-trash-2"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ══ Kural şeridi ══ -->
+    <div class="bf-kural-serit">
+        <div class="bf-kural">
+            <span class="lbl">Eşleştirme</span>
+            <span class="val">@KarsilastirmaController.KuralAdi(k.EslestirmeKurali)</span>
+        </div>
+        <div class="bf-kural">
+            <span class="lbl">Kur</span>
+            <span class="val">@KarsilastirmaController.KurKaynakAdi(k.KurKaynagi, k.SabitKur)</span>
+        </div>
+        <div class="bf-kural">
+            <span class="lbl">Tolerans</span>
+            <span class="val">@k.ToleransYuzde.ToString("N2", tr) %</span>
+        </div>
+        @if (k.SonHesaplamaTarihi.HasValue)
+        {
+            <div class="bf-kural">
+                <span class="lbl">Son hesaplama</span>
+                <span class="val">@k.SonHesaplamaTarihi.Value.ToString("dd.MM.yyyy HH:mm", tr)</span>
+            </div>
+        }
+    </div>
+
+    @foreach (var uyari in Model.Uyarilar)
+    {
+        <div class="bf-note bf-note-warn"><i class="fe fe-alert-triangle"></i><div>@uyari</div></div>
+    }
+
+    <!-- ══ Dosya yükleme ══ -->
+    <div class="bf-yukleme-grid">
+        @{
+            var taraflar = new[]
+            {
+                (Taraf: KarsilastirmaTarafi.Tedarikci, Ad: k.TedarikciEtiket, Birim: k.TedarikciParaBirimi,
+                 Dosya: k.TedarikciDosyaAdi, Tarih: k.TedarikciYuklemeTarihi, Adet: k.TedarikciSatirSayisi),
+                (Taraf: KarsilastirmaTarafi.Biz, Ad: k.BizEtiket, Birim: k.BizParaBirimi,
+                 Dosya: k.BizDosyaAdi, Tarih: k.BizYuklemeTarihi, Adet: k.BizSatirSayisi)
+            };
+        }
+
+        @foreach (var t in taraflar)
+        {
+            var dolu = t.Adet > 0;
+            <div class="bf-yukleme @(dolu ? "is-dolu" : "is-bos")">
+                <div class="bf-yukleme-head">
+                    <div class="bf-yukleme-ad">
+                        <i class="fe fe-@(dolu ? "check-circle" : "upload-cloud")"></i>
+                        @t.Ad
+                        <span class="bf-badge bf-badge-gray">@t.Birim</span>
+                    </div>
+                    @if (dolu)
+                    {
+                        <a asp-action="Satirlar" asp-route-id="@k.Id" asp-route-taraf="@t.Taraf"
+                           class="bf-btn bf-btn-sm">
+                            <i class="fe fe-list"></i> @t.Adet.ToString("N0", tr) satır
+                        </a>
+                    }
+                </div>
+
+                <div class="bf-yukleme-body">
+                    @if (dolu)
+                    {
+                        <div class="bf-dosya-bilgi">
+                            <div class="bf-dosya-ikon"><i class="fe fe-file-text"></i></div>
+                            <div style="min-width:0;">
+                                <div class="bf-dosya-ad">@t.Dosya</div>
+                                <div class="bf-dosya-not">
+                                    @t.Adet.ToString("N0", tr) satır ·
+                                    @(t.Tarih?.ToString("dd.MM.yyyy HH:mm", tr) ?? "—")
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="bf-sablon">
+                        <div class="bf-sablon-ikon"><i class="fe fe-download"></i></div>
+                        <div style="flex:1; min-width:0;">
+                            <div class="bf-sablon-ad">Hazır şablonu kullanın</div>
+                            <div class="bf-sablon-not">
+                                Kolonlar doğru adlandırılmış gelir, eşleştirme adımı kendiliğinden doğru olur.
+                            </div>
+                        </div>
+                        <a asp-action="SablonIndir" asp-route-id="@k.Id" asp-route-taraf="@t.Taraf"
+                           class="bf-btn bf-btn-sm bf-nowrap">
+                            <i class="fe fe-file-plus"></i> Şablon indir
+                        </a>
+                    </div>
+
+                    <form asp-action="DosyaYukle" method="post" enctype="multipart/form-data" id="bfForm_@((int)t.Taraf)">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@k.Id" />
+                        <input type="hidden" name="taraf" value="@((int)t.Taraf)" />
+
+                        <label class="bf-dosya-sec">
+                            <input type="file" name="dosya" accept=".xlsx,.xlsm"
+                                   onchange="bfDosyaSecildi(this, @((int)t.Taraf))" />
+                            <span class="ikon"><i class="fe fe-upload"></i></span>
+                            <span class="ad" id="bfDosyaAd_@((int)t.Taraf)">
+                                @(dolu ? "Dosyayı değiştir" : "Excel dosyası seç")
+                            </span>
+                            <span class="not">.xlsx · sürükleyip bırakmak yerine tıklayın</span>
+                        </label>
+
+                        <button type="submit" class="bf-btn bf-btn-primary" style="width:100%; justify-content:center;"
+                                id="bfYukleBtn_@((int)t.Taraf)" disabled>
+                            <i class="fe fe-arrow-right"></i> Yükle ve kolonları eşleştir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- ══ Hesapla ══ -->
+    @if (Model.HesaplanabilirMi)
+    {
+        <div class="bf-hesapla-bar">
+            <div>
+                <h3>
+                    @if (Model.SonucVarMi)
+                    {
+                        <text>Karşılaştırma hesaplandı</text>
+                    }
+                    else
+                    {
+                        <text>Her iki dosya da hazır</text>
+                    }
+                </h3>
+                <p>
+                    @k.TedarikciSatirSayisi.ToString("N0", tr) + @k.BizSatirSayisi.ToString("N0", tr) satır ·
+                    @KarsilastirmaController.KuralAdi(k.EslestirmeKurali)
+                    @if (k.KurKaynagi == KurKaynagi.TcmbFaturaTarihi)
+                    {
+                        <text> · TCMB kurları fatura tarihlerine göre çekilecek</text>
+                    }
+                </p>
+            </div>
+
+            <form asp-action="Hesapla" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@k.Id" />
+                <button type="submit" class="bf-btn">
+                    <i class="fe fe-zap"></i> @(Model.SonucVarMi ? "Yeniden hesapla" : "Karşılaştır")
+                </button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="bf-note bf-note-info">
+            <i class="fe fe-info"></i>
+            <div>
+                Karşılaştırma için her iki tarafın Excel dosyası da yüklenmeli.
+                @if (k.TedarikciSatirSayisi == 0)
+                {
+                    <text><strong>@k.TedarikciEtiket</strong> dosyası bekleniyor. </text>
+                }
+                @if (k.BizSatirSayisi == 0)
+                {
+                    <text><strong>@k.BizEtiket</strong> dosyası bekleniyor.</text>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.SonucVarMi)
+    {
+        <!-- ══ Sonuç özeti ══ -->
+        <div class="bf-stats">
+            <div class="bf-stat is-primary">
+                <div class="bf-stat-label">Eşleşen Ürün</div>
+                <div class="bf-stat-value">@k.ToplamEslesen.ToString("N0", tr)</div>
+                <div class="bf-stat-note">Eşleşme oranı %@k.EslesmeOrani.ToString("N1", tr)</div>
+            </div>
+
+            <div class="bf-stat is-danger">
+                <div class="bf-stat-label">Dikkat Gerektiren</div>
+                <div class="bf-stat-value">@k.FarkliUrunSayisi.ToString("N0", tr)</div>
+                <div class="bf-stat-note">Tolerans (%@k.ToleransYuzde.ToString("N2", tr)) dışı</div>
+            </div>
+
+            <div class="bf-stat @(k.ToplamFarkTl >= 0 ? "is-danger" : "is-success")">
+                <div class="bf-stat-label">Toplam Fark (TL)</div>
+                <div class="bf-stat-value">@k.ToplamFarkTl.ToString("N2", tr) ₺</div>
+                <div class="bf-stat-note">
+                    @(k.ToplamFarkTl >= 0 ? $"{k.BizEtiket} fiyatı yüksek" : $"{k.TedarikciEtiket} fiyatı yüksek")
+                </div>
+            </div>
+
+            <div class="bf-stat is-warn">
+                <div class="bf-stat-label">Ortalama Sapma</div>
+                <div class="bf-stat-value">%@k.OrtalamaSapmaYuzde.ToString("N2", tr)</div>
+                <div class="bf-stat-note">Eşleşen satırların mutlak ortalaması</div>
+            </div>
+
+            <div class="bf-stat is-info">
+                <div class="bf-stat-label">Sadece @k.TedarikciEtiket</div>
+                <div class="bf-stat-value">@k.ToplamSadeceTedarikci.ToString("N0", tr)</div>
+                <div class="bf-stat-note">Bizim dosyada karşılığı yok</div>
+            </div>
+
+            <div class="bf-stat is-info">
+                <div class="bf-stat-label">Sadece @k.BizEtiket</div>
+                <div class="bf-stat-value">@k.ToplamSadeceBiz.ToString("N0", tr)</div>
+                <div class="bf-stat-note">Tedarikçi dosyasında karşılığı yok</div>
+            </div>
+        </div>
+
+        <!-- ══ Dönem grafiği + en büyük sapmalar ══ -->
+        @if (Model.DonemOzetleri.Count > 0)
+        {
+            <div class="bf-card" style="margin-bottom:16px;">
+                <div class="bf-card-head">
+                    <h2 class="bf-card-title">Dönem Bazında Fark</h2>
+                    <span class="bf-faint" style="font-size:11px;">
+                        Sağa (kırmızı) = @k.BizEtiket yüksek · Sola (yeşil) = @k.TedarikciEtiket yüksek
+                    </span>
+                </div>
+                <div class="bf-card-body">
+                    <div class="bf-grafik">
+                        @foreach (var d in Model.DonemOzetleri)
+                        {
+                            var oran = Math.Abs(d.ToplamFarkTl) / enBuyukFark * 50m;
+                            var genislik = Math.Max(0.5m, Math.Min(50m, oran)).ToString("0.##", inv);
+                            <div class="bf-grafik-satir">
+                                <div class="bf-grafik-ad">@d.DonemAdi</div>
+                                <div class="bf-grafik-ray">
+                                    <div class="bf-grafik-orta"></div>
+                                    <div class="bf-grafik-bar @(d.ToplamFarkTl >= 0 ? "is-pos" : "is-neg")"
+                                         style="width:@(genislik)%;"
+                                         title="@d.Adet ürün · @d.DikkatAdedi dikkat · ort. sapma %@d.OrtalamaSapmaYuzde.ToString("N2", tr)"></div>
+                                </div>
+                                <div class="bf-grafik-deger @FarkSinif(d.ToplamFarkTl)">
+                                    @d.ToplamFarkTl.ToString("N0", tr) ₺
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.EnBuyukSapmalar.Count > 0)
+        {
+            <div class="bf-card" style="margin-bottom:16px;">
+                <div class="bf-card-head">
+                    <h2 class="bf-card-title">En Büyük Sapmalar</h2>
+                    <span class="bf-faint" style="font-size:11px;">Yüzde farkına göre ilk 5</span>
+                </div>
+                <div class="bf-card-body">
+                    <div class="bf-sapma-grid">
+                        @foreach (var s in Model.EnBuyukSapmalar)
+                        {
+                            <div class="bf-sapma">
+                                <div class="bf-sapma-ad" title="@s.UrunAdi">@(s.UrunAdi ?? "—")</div>
+                                <div class="bf-sapma-ref">@(s.ReferansNo ?? s.ReferansNormalize)</div>
+                                <div class="bf-sapma-deger @FarkSinif(s.FarkYuzde)">@Yuzde(s.FarkYuzde)</div>
+                                <div class="bf-sapma-alt">
+                                    @Para(s.TedarikciFiyatTl) → @Para(s.BizFiyatTl)
+                                    @if (s.Donem.HasValue)
+                                    {
+                                        <text> · @s.Donem.Value.ToString("MM.yyyy", tr)</text>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ══ Sonuç tablosu ══ -->
+        <div class="bf-card">
+            <div class="bf-card-head">
+                <h2 class="bf-card-title">Karşılaştırma Sonuçları</h2>
+                <span class="bf-faint" style="font-size:11px;">@Model.FiltreliToplam satır gösteriliyor</span>
+            </div>
+
+            <div class="bf-filtre">
+                <a asp-action="Detay" asp-route-id="@k.Id"
+                   class="bf-cip @(Model.Durum == null && !Model.SadeceDikkat ? "is-active" : "")">
+                    Tümü <span class="sayi">@(k.ToplamEslesen + k.ToplamSadeceTedarikci + k.ToplamSadeceBiz)</span>
+                </a>
+
+                <a asp-action="Detay" asp-route-id="@k.Id" asp-route-sadeceDikkat="true" asp-route-arama="@Model.Arama"
+                   class="bf-cip @(Model.SadeceDikkat && Model.Durum == null ? "is-active" : "")">
+                    <i class="fe fe-alert-triangle"></i> Dikkat <span class="sayi">@k.FarkliUrunSayisi</span>
+                </a>
+
+                <a asp-action="Detay" asp-route-id="@k.Id" asp-route-durum="@((int)SonucDurumu.Eslesti)" asp-route-arama="@Model.Arama"
+                   class="bf-cip @(Model.Durum == SonucDurumu.Eslesti ? "is-active" : "")">
+                    Eşleşen <span class="sayi">@k.ToplamEslesen</span>
+                </a>
+
+                <a asp-action="Detay" asp-route-id="@k.Id" asp-route-durum="@((int)SonucDurumu.SadeceTedarikci)" asp-route-arama="@Model.Arama"
+                   class="bf-cip @(Model.Durum == SonucDurumu.SadeceTedarikci ? "is-active" : "")">
+                    Sadece @k.TedarikciEtiket <span class="sayi">@k.ToplamSadeceTedarikci</span>
+                </a>
+
+                <a asp-action="Detay" asp-route-id="@k.Id" asp-route-durum="@((int)SonucDurumu.SadeceBiz)" asp-route-arama="@Model.Arama"
+                   class="bf-cip @(Model.Durum == SonucDurumu.SadeceBiz ? "is-active" : "")">
+                    Sadece @k.BizEtiket <span class="sayi">@k.ToplamSadeceBiz</span>
+                </a>
+
+                <form method="get" asp-action="Detay" style="margin-left:auto; display:flex; gap:6px;">
+                    <input type="hidden" name="id" value="@k.Id" />
+                    <input type="hidden" name="durum" value="@((int?)Model.Durum)" />
+                    <input type="hidden" name="sadeceDikkat" value="@Model.SadeceDikkat.ToString().ToLower()" />
+                    <input type="search" name="arama" class="bf-input" style="width:190px; padding:5px 10px; font-size:12px;"
+                           placeholder="Referans veya ürün ara…" value="@Model.Arama" />
+                    <button type="submit" class="bf-btn bf-btn-sm bf-btn-icon"><i class="fe fe-search"></i></button>
+                </form>
+            </div>
+
+            @if (Model.Sonuclar.Count == 0)
+            {
+                <div class="bf-empty">
+                    <div class="bf-empty-icon"><i class="fe fe-filter"></i></div>
+                    <h3>Bu filtreye uyan satır yok</h3>
+                    <p>Filtreyi değiştirin veya aramayı temizleyin.</p>
+                    <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn">Filtreyi temizle</a>
+                </div>
+            }
+            else
+            {
+                <div class="bf-tablo-kaydir">
+                    <table class="bf-table">
+                        <thead>
+                            <tr>
+                                <th>Referans</th>
+                                <th>Ürün</th>
+                                <th>Dönem</th>
+                                <th class="num">@k.TedarikciEtiket (USD)</th>
+                                <th class="num">@k.TedarikciEtiket (TL)</th>
+                                <th class="num">@k.BizEtiket (TL)</th>
+                                <th class="num">Kur</th>
+                                <th class="num">Fark (TL)</th>
+                                <th class="num">Fark (%)</th>
+                                <th class="num">Miktar</th>
+                                <th class="num">Tutar Etkisi</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Sonuclar)
+                            {
+                                <tr class="@(s.DikkatGerektiriyor && s.Durum == SonucDurumu.Eslesti ? "is-flag" : "")">
+                                    <td class="bf-mono bf-nowrap">@(s.ReferansNo ?? s.ReferansNormalize)</td>
+                                    <td style="max-width:260px;">
+                                        <div class="bf-truncate" title="@s.UrunAdi">@(s.UrunAdi ?? "—")</div>
+                                        @if (!string.IsNullOrWhiteSpace(s.Not))
+                                        {
+                                            <div style="font-size:10.5px; color:var(--bf-muted); margin-top:2px;">@s.Not</div>
+                                        }
+                                    </td>
+                                    <td class="bf-nowrap">@(s.Donem?.ToString("MM.yyyy", tr) ?? "—")</td>
+                                    <td class="num">@(s.TedarikciFiyatUsd?.ToString("N4", tr) ?? "—")</td>
+                                    <td class="num">@(s.TedarikciFiyatTl?.ToString("N2", tr) ?? "—")</td>
+                                    <td class="num">@(s.BizFiyatTl?.ToString("N2", tr) ?? "—")</td>
+                                    <td class="num bf-faint" title="@(s.KurTarihi?.ToString("dd.MM.yyyy", tr) ?? "")">
+                                        @(s.Kur?.ToString("N4", tr) ?? "—")
+                                    </td>
+                                    <td class="num @FarkSinif(s.FarkTl)">
+                                        @(s.FarkTl.HasValue ? (s.FarkTl.Value > 0 ? "+" : "") + s.FarkTl.Value.ToString("N2", tr) : "—")
+                                    </td>
+                                    <td class="num @FarkSinif(s.FarkYuzde)">@Yuzde(s.FarkYuzde)</td>
+                                    <td class="num">@(s.Miktar?.ToString("N0", tr) ?? "—")</td>
+                                    <td class="num @FarkSinif(s.TutarEtkisiTl)">
+                                        @(s.TutarEtkisiTl.HasValue ? s.TutarEtkisiTl.Value.ToString("N2", tr) : "—")
+                                    </td>
+                                    <td class="bf-nowrap">
+                                        @switch (s.Durum)
+                                        {
+                                            case SonucDurumu.Eslesti:
+                                                if (s.DikkatGerektiriyor)
+                                                {
+                                                    <span class="bf-badge bf-badge-danger"><i class="fe fe-alert-triangle"></i> Fark var</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="bf-badge bf-badge-success"><i class="fe fe-check"></i> Uyumlu</span>
+                                                }
+                                                break;
+                                            case SonucDurumu.SadeceTedarikci:
+                                                <span class="bf-badge bf-badge-warn">Sadece @k.TedarikciEtiket</span>
+                                                break;
+                                            case SonucDurumu.SadeceBiz:
+                                                <span class="bf-badge bf-badge-info">Sadece @k.BizEtiket</span>
+                                                break;
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+
+                        @{
+                            var eslesenler = Model.Sonuclar.Where(x => x.Durum == SonucDurumu.Eslesti).ToList();
+                        }
+                        @if (eslesenler.Count > 0)
+                        {
+                            <tfoot>
+                                <tr>
+                                    <td colspan="7">
+                                        TOPLAM · @eslesenler.Count eşleşen satır
+                                    </td>
+                                    <td class="num">
+                                        @eslesenler.Sum(x => x.FarkTl ?? 0m).ToString("N2", tr)
+                                    </td>
+                                    <td class="num">
+                                        %@(eslesenler.Count == 0 ? "0,00" : eslesenler.Average(x => x.MutlakFarkYuzde).ToString("N2", tr))
+                                    </td>
+                                    <td class="num">@eslesenler.Sum(x => x.Miktar ?? 0m).ToString("N0", tr)</td>
+                                    <td class="num">@eslesenler.Sum(x => x.TutarEtkisiTl ?? 0m).ToString("N2", tr)</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function bfDosyaSecildi(input, taraf) {
+            var ad = document.getElementById('bfDosyaAd_' + taraf);
+            var btn = document.getElementById('bfYukleBtn_' + taraf);
+
+            if (input.files && input.files.length > 0) {
+                ad.textContent = input.files[0].name;
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        }
+    </script>
+}

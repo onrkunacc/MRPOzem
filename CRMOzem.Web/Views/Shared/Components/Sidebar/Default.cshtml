@@ -40,6 +40,14 @@
 
             </ul>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="LeaveRequest" asp-action="MyLeaves">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">İzinlerim</span>
+            </a>
+        </li>
+
     }
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
@@ -720,5 +728,21 @@
                 <span class="ml-3 item-text">Raporlama</span>
             </a>
         </li>
+    }
+     @if (Model.Contains("Birim"))
+    {
+        <li class="sidebar-group-title">
+            <span class="group-icon">📊</span>
+            <span>Birim Fiyat Karşılaştırma</span>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" asp-area="BirimFiyat" asp-controller="Karsilastirma" asp-action="Index">
+                <i class="fe fe-home fe-16"></i>
+                <span class="ml-3 item-text">Ana Sayfa</span>
+            </a>
+        </li>
+
+       
     }
 </ul>

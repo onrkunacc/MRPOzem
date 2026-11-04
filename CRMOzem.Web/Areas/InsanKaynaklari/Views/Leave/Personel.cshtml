@@ -1,0 +1,150 @@
+﻿@model CRMOzem.Core.ViewModels.PersonelListVm
+@{
+    ViewData["Title"] = "Personel Özlük";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var sadeceAktif = ViewBag.SadeceAktif as bool? ?? false;
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Personel")
+
+<div class="kt-page" style="padding-top:0;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @if (Model.EksikBilgiSayisi > 0)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-warn); padding:13px 18px;">
+            <div style="font-weight:600; font-size:13.5px; color:var(--kt-ink-900);">
+                <i class="fas fa-triangle-exclamation" style="color:var(--kt-warn); margin-right:7px;"></i>
+                @Model.EksikBilgiSayisi çalışanın işe giriş tarihi girilmemiş
+            </div>
+            <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:3px;">
+                İşe giriş tarihi olmadan kıdeme göre otomatik izin hakedişi hesaplanamıyor.
+            </div>
+        </div>
+    }
+
+    <div class="kt-card" style="padding:12px 18px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <div class="kt-chip-row">
+            <a class="kt-chip @(sadeceAktif ? "" : "active")" asp-action="Personel" asp-route-sadeceAktif="false">
+                Tümü <strong style="margin-left:4px;">@Model.Personeller.Count</strong>
+            </a>
+            <a class="kt-chip @(sadeceAktif ? "active" : "")" asp-action="Personel" asp-route-sadeceAktif="true">
+                Aktif <strong style="margin-left:4px;">@Model.AktifSayisi</strong>
+            </a>
+        </div>
+        <input type="text" id="prAra" class="kt-input" placeholder="Çalışan ara..."
+               style="width:220px; margin-left:auto;" />
+    </div>
+
+    <div class="kt-card kt-card-flush">
+        <div class="kt-table-wrap">
+            <table class="kt-table" id="prTablo">
+                <thead>
+                    <tr>
+                        <th>Çalışan</th>
+                        <th>Departman</th>
+                        <th>İşe Giriş</th>
+                        <th class="text-center">Kıdem</th>
+                        <th>Doğum Tarihi</th>
+                        <th class="text-center">Yaş</th>
+                        <th class="text-center">@DateTime.Now.Year Hakediş</th>
+                        <th class="text-center" style="width:1%;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Personeller)
+                    {
+                        <tr data-ara="@($"{p.FullName} {p.UserName} {p.Title} {p.Departman}".ToLower())"
+                            style="@(p.Aktif ? "" : "opacity:.55;")">
+                            <td class="kt-cell-primary">
+                                @p.FullName
+                                <div style="font-size:11px; color:var(--kt-ink-400);">
+                                    @(p.Title ?? "—")
+                                    @if (!p.Aktif)
+                                    {
+                                        <span class="kt-badge kt-badge-secondary" style="margin-left:5px; font-size:9.5px;">ayrıldı</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(p.Departman) ? "—" : p.Departman)</td>
+                            <td style="white-space:nowrap;">
+                                @if (p.IseGirisTarihi.HasValue)
+                                {
+                                    <strong>@p.IseGirisTarihi.Value.ToString("dd.MM.yyyy")</strong>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--kt-warn); font-size:12px;">
+                                        <i class="fas fa-triangle-exclamation"></i> girilmedi
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (p.IseGirisTarihi.HasValue)
+                                {
+                                    <strong>@p.Kidem</strong><span style="color:var(--kt-ink-400);"> yıl</span>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td style="white-space:nowrap;">
+                                @(p.DogumTarihi?.ToString("dd.MM.yyyy") ?? "—")
+                            </td>
+                            <td class="text-center">
+                                @if (p.DogumTarihi.HasValue)
+                                {
+                                    <span>@p.Yas</span>
+                                    @if (p.Yas >= 50 || p.Yas <= 18)
+                                    {
+                                        <div style="font-size:10px; color:var(--kt-info);">min 20 gün</div>
+                                    }
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="text-center">
+                                @if (p.IseGirisTarihi.HasValue)
+                                {
+                                    <strong style="font-size:15px;">@p.BuYilHakedis</strong>
+                                    <div style="font-size:10px; color:var(--kt-ink-400);">gün</div>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="text-center">
+                                <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                   asp-action="PersonelDuzenle" asp-route-id="@p.UserId" title="Düzenle">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        const ara = document.getElementById('prAra');
+        ara.addEventListener('input', () => {
+            const q = ara.value.trim().toLowerCase();
+            document.querySelectorAll('#prTablo tbody tr').forEach(tr => {
+                tr.style.display = (!q || (tr.dataset.ara || '').includes(q)) ? '' : 'none';
+            });
+        });
+    })();
+</script>
+}

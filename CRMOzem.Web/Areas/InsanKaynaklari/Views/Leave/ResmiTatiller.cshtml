@@ -1,0 +1,226 @@
+﻿@model CRMOzem.Core.ViewModels.ResmiTatilListVm
+@{
+    ViewData["Title"] = "Resmi Tatiller";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "ResmiTatiller")
+
+<div class="kt-page" style="padding-top:0;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    <div class="kt-card" style="padding:12px 18px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <form method="get" style="display:inline;">
+            <select name="yil" class="kt-select" style="width:120px;" onchange="this.form.submit()">
+                @foreach (var y in Model.AvailableYears)
+                {
+                    <option value="@y" selected="@(y == Model.Yil)">@y</option>
+                }
+            </select>
+        </form>
+
+        <form asp-action="SabitTatilleriOlustur" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="yil" value="@Model.Yil" />
+            <button type="submit" class="kt-btn kt-btn-dark">
+                <i class="fas fa-flag"></i> Sabit Tatilleri Oluştur
+            </button>
+        </form>
+
+        <button type="button" class="kt-btn kt-btn-primary" onclick="tatilAc()">
+            <i class="fas fa-plus"></i> Tatil / Bayram Ekle
+        </button>
+
+        <div style="margin-left:auto; display:flex; gap:14px; font-size:12.5px; color:var(--kt-ink-500);">
+            <span><strong style="color:var(--kt-ink-900);">@Model.TamGunSayisi</strong> tam gün</span>
+            <span><strong style="color:var(--kt-ink-900);">@Model.YarimGunSayisi</strong> yarım gün</span>
+        </div>
+    </div>
+
+    @if (!Model.Tatiller.Any())
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-warn); padding:14px 18px;">
+            <div style="font-weight:600; font-size:13.5px; color:var(--kt-ink-900);">
+                <i class="fas fa-triangle-exclamation" style="color:var(--kt-warn); margin-right:7px;"></i>
+                @Model.Yil yılı için resmi tatil tanımlanmamış
+            </div>
+            <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:3px;">
+                Tatiller girilmeden izin gün hesabı yalnızca pazarları düşer.
+                <strong>Sabit Tatilleri Oluştur</strong> ile milli bayramları tek tıkla ekleyin,
+                dini bayramları <strong>Tatil / Bayram Ekle</strong> ile girin.
+            </div>
+        </div>
+    }
+
+    <div class="kt-card kt-card-flush">
+        @if (Model.Tatiller.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Gün</th>
+                            <th>Tatil Adı</th>
+                            <th class="text-center">Tür</th>
+                            <th>Açıklama</th>
+                            <th class="text-center" style="width:1%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model.Tatiller)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap;"><strong>@t.Tarih.ToString("dd.MM.yyyy")</strong></td>
+                                <td style="color:var(--kt-ink-500); font-size:12.5px;">
+                                    @t.Tarih.ToString("dddd", tr)
+                                </td>
+                                <td class="kt-cell-primary">@t.Ad</td>
+                                <td class="text-center">
+                                    @if (t.TamGun)
+                                    {
+                                        <span class="kt-badge kt-badge-danger">Tam gün</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="kt-badge kt-badge-warning">Yarım gün</span>
+                                    }
+                                </td>
+                                <td style="font-size:12.5px; color:var(--kt-ink-500); max-width:280px;">
+                                    @(string.IsNullOrWhiteSpace(t.Aciklama) ? "—" : t.Aciklama)
+                                </td>
+                                <td class="text-center">
+                                    <form asp-action="TatilSil" method="post" style="display:inline;"
+                                          onsubmit="return confirm('@t.Tarih.ToString("dd.MM.yyyy") — @t.Ad kaydı silinecek. Emin misiniz?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <input type="hidden" name="yil" value="@Model.Yil" />
+                                        <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost"
+                                                style="color:var(--kt-neg);" title="Sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-flag"></i>
+                <p>@Model.Yil yılı için kayıt yok</p>
+            </div>
+        }
+    </div>
+
+    <div class="kt-card" style="padding:14px 18px;">
+        <div style="font-size:12.5px; color:var(--kt-ink-500); line-height:1.6;">
+            <strong style="color:var(--kt-ink-900);">Tam gün</strong> işaretli tatiller izin gün hesabından düşülür.
+            <strong style="color:var(--kt-ink-900);">Yarım gün</strong> olanlar takvimde görünür ama izinden düşmez.
+            <br />
+            <strong style="color:var(--kt-ink-900);">Sabit Tatilleri Oluştur</strong> yalnızca tarihi değişmeyen
+            milli bayramları ekler. Ramazan ve Kurban Bayramı hicri takvime göre kaydığı ve resmi tatil süresi
+            Cumhurbaşkanı kararıyla uzatılabildiği için bunları her yıl elle girmeniz gerekir —
+            bayram aralığını bir kerede ekleyebilirsiniz.
+        </div>
+    </div>
+</div>
+
+@* ═══ TATİL EKLE MODAL ═══ *@
+<div class="kt-modal-backdrop" id="tatilModal">
+    <div class="kt-modal kt-modal-sm">
+        <div class="kt-modal-head">
+            <h5 class="kt-modal-title"><i class="fas fa-flag"></i> Tatil / Bayram Ekle</h5>
+            <button type="button" class="kt-modal-close" onclick="tatilKapat()">&times;</button>
+        </div>
+        <form asp-action="TatilEkle" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="yil" value="@Model.Yil" />
+            <div class="kt-modal-body">
+                <div class="kt-form-group" style="margin-bottom:14px;">
+                    <label class="kt-label">Tatil Adı <span class="req">*</span></label>
+                    <input type="text" name="ad" class="kt-input" required maxlength="200"
+                           placeholder="Örn: Kurban Bayramı" />
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Başlangıç <span class="req">*</span></label>
+                            <input type="date" name="baslangic" class="kt-input" required id="tBas"
+                                   value="@($"{Model.Yil}-01-01")" />
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Bitiş <span class="req">*</span></label>
+                            <input type="date" name="bitis" class="kt-input" required id="tBit"
+                                   value="@($"{Model.Yil}-01-01")" />
+                        </div>
+                    </div>
+                </div>
+
+                <label class="kt-chip" style="display:flex; gap:9px; width:100%; cursor:pointer; padding:11px 13px; margin-top:12px;">
+                    <input type="checkbox" name="tamGun" value="true" checked
+                           style="width:16px; height:16px; accent-color:var(--kt-primary);" />
+                    <span style="text-align:left;">
+                        Tam gün tatil
+                        <small style="display:block; font-size:11.5px; color:var(--kt-ink-400);">
+                            İşaretlenmezse yarım gün sayılır ve izinden düşmez
+                        </small>
+                    </span>
+                </label>
+
+                <div class="kt-form-group" style="margin-top:12px;">
+                    <label class="kt-label">Açıklama</label>
+                    <input type="text" name="aciklama" class="kt-input" maxlength="500" placeholder="Opsiyonel" />
+                </div>
+
+                <div class="kt-hint">
+                    <i class="fas fa-circle-info"></i>
+                    Birden çok gün seçerseniz her gün ayrı kaydedilir ve
+                    "Kurban Bayramı 1. Gün", "2. Gün" şeklinde adlandırılır.
+                </div>
+            </div>
+            <div class="kt-modal-foot">
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="tatilKapat()">Vazgeç</button>
+                <button type="submit" class="kt-btn kt-btn-primary"><i class="fas fa-plus"></i> Ekle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function tatilAc(){ document.getElementById('tatilModal').classList.add('open'); document.body.style.overflow='hidden'; }
+    function tatilKapat(){ document.getElementById('tatilModal').classList.remove('open'); document.body.style.overflow=''; }
+    document.getElementById('tatilModal').addEventListener('click', e => {
+        if (e.target.id === 'tatilModal') tatilKapat();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') tatilKapat(); });
+
+    // Başlangıç seçilince bitişi eşitle
+    document.getElementById('tBas').addEventListener('change', function () {
+        const bit = document.getElementById('tBit');
+        if (!bit.value || new Date(bit.value) < new Date(this.value)) bit.value = this.value;
+        bit.min = this.value;
+    });
+</script>
+}

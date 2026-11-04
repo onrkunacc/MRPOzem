@@ -3,11 +3,13 @@ using CRMOzem.Business.Interfaces;
 using CRMOzem.Core.Models;
 using CRMOzem.DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CRMOzem.Business.Services
@@ -17,6 +19,9 @@ namespace CRMOzem.Business.Services
         private readonly ApplicationDbContext _db;
         private readonly IFizikiSayimApiClient _api;
         private readonly ILogger<FizikiSayimSyncService> _log;
+
+
+        private static readonly DateTime SqlMinTarih = new DateTime(1753, 1, 1);
 
         public FizikiSayimSyncService(
             ApplicationDbContext db,
@@ -36,7 +41,7 @@ namespace CRMOzem.Business.Services
             {
                 _log.LogInformation("Fiziki sayım sync başlıyor. HospitalId={HospitalId}", hospitalId);
 
-                // 1) API'den çek
+              
                 var cevap = await _api.GetStocksAsync(hospitalId, null, ct);
                 if (cevap == null || !cevap.Success)
                 {
@@ -53,7 +58,7 @@ namespace CRMOzem.Business.Services
                     return sonuc;
                 }
 
-                // 2) Hospital Name → Internal ID lookup (NAME + NORMALIZE)
+                
                 var crmHospitals = await _db.Hospitals
                     .AsNoTracking()
                     .Select(h => new { h.HospitalID, h.HospitalName })
@@ -63,7 +68,6 @@ namespace CRMOzem.Business.Services
                     .GroupBy(h => NormalizeName(h.HospitalName), StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(g => g.Key, g => g.First().HospitalID, StringComparer.OrdinalIgnoreCase);
 
-                // 2b) ★ YENİ: Manuel hastane eşleştirme tablosu — otomatik name-match'i override eder
                 var manuelMappings = await _db.FizikiSayimHastaneEslesmeleri
                     .AsNoTracking()
                     .ToListAsync(ct);
@@ -77,7 +81,7 @@ namespace CRMOzem.Business.Services
                     if (m.Yoksay)
                         yoksayNames.Add(key);
                     else if (m.InternalHospitalID.HasValue)
-                        hospitalByName[key] = m.InternalHospitalID.Value;  // override
+                        hospitalByName[key] = m.InternalHospitalID.Value;  
                 }
 
                 _log.LogInformation("Manuel eşleştirme: {Toplam} kayıt ({Override} override, {Yoksay} yoksay)",
@@ -85,7 +89,7 @@ namespace CRMOzem.Business.Services
                     manuelMappings.Count(m => !m.Yoksay && m.InternalHospitalID.HasValue),
                     yoksayNames.Count);
 
-                // 3) Test eşleşmesi — leading zero normalize ile
+               
                 var testler = await _db.Tests
                     .AsNoTracking()
                     .Where(t => !string.IsNullOrEmpty(t.SutCode))
@@ -99,7 +103,7 @@ namespace CRMOzem.Business.Services
 
                 _log.LogInformation("Test lookup hazır: {Count} SutCode normalize edildi.", testBySutCode.Count);
 
-                // 4) Eşleşmeyen hastaneleri önceden tespit (yoksay hariç)
+               
                 var apiHospitalNames = cevap.Items.Select(i => i.HospitalName).Distinct().ToList();
                 foreach (var apiName in apiHospitalNames)
                 {
@@ -112,7 +116,7 @@ namespace CRMOzem.Business.Services
                     }
                 }
 
-                // 5) Mevcut snapshot'ları yükle — upsert için
+                
                 var internalHospIds = cevap.Items
                     .Select(i => hospitalByName.TryGetValue(NormalizeName(i.HospitalName), out var id) ? (int?)id : null)
                     .Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
@@ -121,13 +125,10 @@ namespace CRMOzem.Business.Services
                     .Where(s => internalHospIds.Contains(s.HospitalID))
                     .ToListAsync(ct);
 
-                // ★ Duplicate key'leri tolere et — DB'de aynı ürünün farklı lot/expiry
-                //   ile 2 snapshot'ı olabilir, aynı normalize key'e düşerler
                 var mevcutMap = mevcutlar
                     .GroupBy(s => BuildKey(s.HospitalID, s.ReferenceNumber, s.SayimNo, s.LotNumber))
                     .ToDictionary(g => g.Key, g => g.First());
 
-                // Duplicate uyarı log'u (artık lot dahil edildiği için nadiren tetiklenir)
                 var duplicateler = mevcutlar
                     .GroupBy(s => BuildKey(s.HospitalID, s.ReferenceNumber, s.SayimNo, s.LotNumber))
                     .Where(g => g.Count() > 1)
@@ -140,12 +141,14 @@ namespace CRMOzem.Business.Services
                         string.Join(", ", duplicateler.Select(g => $"{g.Key} ×{g.Count()}")));
                 }
 
-                // 6) Upsert loop
+     
+                var batchTekrari = 0;
+
+       
                 foreach (var item in cevap.Items)
                 {
                     var normalized = NormalizeName(item.HospitalName);
 
-                    // ★ YENİ: Yoksay işaretli hastaneyi atla
                     if (yoksayNames.Contains(normalized))
                     {
                         sonuc.AtlanilanHastaneSizKayit++;
@@ -160,7 +163,7 @@ namespace CRMOzem.Business.Services
 
                     var tipi = UrunTipiTespitHelper.Tespit(item.ProductName, item.ProductType);
 
-                    // ★ Reaktif ise Test eşleşmesi dene — NORMALIZE EDİLMİŞ referansla
+                    
                     int? mappedTestId = null;
                     if (tipi == CRMOzem.Core.Enums.UrunTipi.Reaktif
                         && !string.IsNullOrWhiteSpace(item.ReferenceNumber))
@@ -181,6 +184,12 @@ namespace CRMOzem.Business.Services
 
                     if (mevcutMap.TryGetValue(key, out var existing))
                     {
+                       
+                        if (_db.Entry(existing).State == EntityState.Added)
+                            batchTekrari++;
+                        else
+                            sonuc.Guncellenen++;
+
                         existing.ExternalProductId = item.ProductId;
                         existing.ProductName = item.ProductName;
                         existing.ProductType = item.ProductType;
@@ -198,12 +207,10 @@ namespace CRMOzem.Business.Services
                         existing.ExpiryDate = item.ExpiryDate;
                         existing.LastUpdatedExternal = item.LastUpdated;
                         existing.CekilmeTarihi = DateTime.Now;
-
-                        sonuc.Guncellenen++;
                     }
                     else
                     {
-                        _db.FizikiSayimSnapshotlari.Add(new FizikiSayimSnapshot
+                        var yeni = new FizikiSayimSnapshot
                         {
                             HospitalID = internalHospitalId,
                             ExternalProductId = item.ProductId,
@@ -225,10 +232,28 @@ namespace CRMOzem.Business.Services
                             ExpiryDate = item.ExpiryDate,
                             LastUpdatedExternal = item.LastUpdated,
                             CekilmeTarihi = DateTime.Now
-                        });
+                        };
+
+                        _db.FizikiSayimSnapshotlari.Add(yeni);
+
+                      
+                        mevcutMap[key] = yeni;
+
                         sonuc.YeniEklenen++;
                     }
                 }
+
+                if (batchTekrari > 0)
+                {
+                    _log.LogWarning(
+                        "API aynı batch içinde {N} tekrar eden satır döndü (aynı hastane+referans+sayımNo+lot). " +
+                        "Son gelen değer kullanıldı, duplicate INSERT engellendi.", batchTekrari);
+                }
+
+              
+                var duzeltilen = SnapshotlariTemizle();
+                if (duzeltilen > 0)
+                    _log.LogWarning("Kaydetmeden önce {N} alan otomatik düzeltildi (kırpma/tarih).", duzeltilen);
 
                 await _db.SaveChangesAsync(ct);
 
@@ -236,19 +261,31 @@ namespace CRMOzem.Business.Services
                 sonuc.BitisZamani = DateTime.Now;
                 _log.LogInformation("Fiziki sayım sync bitti. {Ozet}", sonuc.Ozet);
             }
+            catch (DbUpdateException ex)
+            {
+               
+                var zincir = HataZinciri(ex);
+                var kayitlar = SorunluKayitlar(ex);
+
+                _log.LogError(ex,
+                    "Fiziki sayım sync — VERİTABANI HATASI\nZincir: {Zincir}\nEtkilenen kayıtlar:\n{Kayitlar}",
+                    zincir, kayitlar);
+
+                sonuc.HataMesaji = EnIcMesaj(ex) + "  |  Detay için uygulama log'una bakın.";
+                sonuc.BitisZamani = DateTime.Now;
+            }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Fiziki sayım sync HATASI");
-                sonuc.HataMesaji = ex.Message;
+                _log.LogError(ex, "Fiziki sayım sync HATASI. Zincir: {Zincir}", HataZinciri(ex));
+
+                sonuc.HataMesaji = EnIcMesaj(ex);
                 sonuc.BitisZamani = DateTime.Now;
             }
 
             return sonuc;
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  TEŞHİS — mevcut manuel eşleşmeleri de dikkate alır
-        // ═══════════════════════════════════════════════════════════
+
         public async Task<EslesmeRaporuVm> TestEslesmeAsync(CancellationToken ct = default)
         {
             var rapor = new EslesmeRaporuVm();
@@ -264,15 +301,16 @@ namespace CRMOzem.Business.Services
                 .GroupBy(h => NormalizeName(h.HospitalName), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => new { g.First().HospitalID, g.First().HospitalName }, StringComparer.OrdinalIgnoreCase);
 
-            // Manuel eşleştirmeleri yükle
+          
             var manuelMappings = await _db.FizikiSayimHastaneEslesmeleri
                 .AsNoTracking()
                 .Include(e => e.InternalHospital)
                 .ToListAsync(ct);
-            var manuelByName = manuelMappings.ToDictionary(
-                m => NormalizeName(m.ApiHospitalName),
-                m => m,
-                StringComparer.OrdinalIgnoreCase);
+
+       
+            var manuelByName = manuelMappings
+                .GroupBy(m => NormalizeName(m.ApiHospitalName), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             var cevap = await _api.GetStocksAsync(null, null, ct);
             if (cevap == null) return rapor;
@@ -292,7 +330,6 @@ namespace CRMOzem.Business.Services
                     SatirSayisi = g.SatirSayisi
                 };
 
-                // Önce manuel eşleşme kontrolü
                 if (manuelByName.TryGetValue(normalized, out var manuel))
                 {
                     if (manuel.Yoksay)
@@ -309,7 +346,7 @@ namespace CRMOzem.Business.Services
                     }
                 }
 
-                // Manuel yoksa otomatik name-match
+
                 if (!detay.Eslesti && !detay.ManuelYoksay && hospitalByName.TryGetValue(normalized, out var crmHosp))
                 {
                     detay.Eslesti = true;
@@ -326,12 +363,111 @@ namespace CRMOzem.Business.Services
             return rapor;
         }
 
-        // ───────────────────────────────────────────────────────────
-        //  HELPERS
-        // ───────────────────────────────────────────────────────────
-        //  BuildKey artık LotNumber da içerir — aynı üründen farklı lot'lar
-        //  ayrı snapshot olarak tutulur (farklı expiry date vb.)
-        private static string BuildKey(int hospitalId, string referenceNumber, int sayimNo, string? lotNumber = null)
+     
+        private int SnapshotlariTemizle()
+        {
+            var entityType = _db.Model.FindEntityType(typeof(FizikiSayimSnapshot));
+            if (entityType == null) return 0;
+
+            var props = entityType.GetProperties()
+                .Where(p => !p.IsPrimaryKey())
+                .ToList();
+
+            var duzeltme = 0;
+
+            foreach (var entry in _db.ChangeTracker.Entries<FizikiSayimSnapshot>().ToList())
+            {
+                if (entry.State != EntityState.Added && entry.State != EntityState.Modified)
+                    continue;
+
+                foreach (var prop in props)
+                {
+                    var pe = entry.Property(prop.Name);
+                    var deger = pe.CurrentValue;
+                    if (deger == null) continue;
+
+                    if (deger is string metin)
+                    {
+                        var max = prop.GetMaxLength();
+                        if (max.HasValue && max.Value > 0 && metin.Length > max.Value)
+                        {
+                            pe.CurrentValue = metin.Substring(0, max.Value);
+                            duzeltme++;
+
+                            _log.LogWarning(
+                                "Kırpıldı · {Prop}: {Uzunluk} → {Max} karakter · HospitalID={Hid} Ref='{Ref}' · Değer: '{Deger}'",
+                                prop.Name, metin.Length, max.Value,
+                                entry.Entity.HospitalID, entry.Entity.ReferenceNumber,
+                                metin.Length > 80 ? metin.Substring(0, 80) + "…" : metin);
+                        }
+                    }
+          
+                    else if (deger is DateTime tarih && tarih < SqlMinTarih)
+                    {
+                        var nullableMi = Nullable.GetUnderlyingType(prop.ClrType) != null;
+                        pe.CurrentValue = nullableMi ? null : (object)SqlMinTarih;
+                        duzeltme++;
+
+                        _log.LogWarning(
+                            "Geçersiz tarih düzeltildi · {Prop} = {Deger:yyyy-MM-dd} · HospitalID={Hid} Ref='{Ref}'",
+                            prop.Name, tarih, entry.Entity.HospitalID, entry.Entity.ReferenceNumber);
+                    }
+                }
+            }
+
+            return duzeltme;
+        }
+
+  
+        private static string HataZinciri(Exception ex)
+        {
+            var sb = new StringBuilder();
+            for (Exception? e = ex; e != null; e = e.InnerException)
+            {
+                if (sb.Length > 0) sb.Append("  →  ");
+                sb.Append(e.GetType().Name).Append(": ").Append(e.Message);
+            }
+            return sb.ToString();
+        }
+
+        private static string EnIcMesaj(Exception ex)
+        {
+            var e = ex;
+            while (e.InnerException != null) e = e.InnerException;
+            return e.Message;
+        }
+
+        private static string SorunluKayitlar(DbUpdateException ex, int limit = 5)
+        {
+            if (ex.Entries == null || ex.Entries.Count == 0)
+                return "(EF hangi kaydın hata verdiğini bildirmedi)";
+
+            var sb = new StringBuilder();
+
+            foreach (var entry in ex.Entries.Take(limit))
+            {
+                sb.AppendLine($"- {entry.Entity.GetType().Name} [{entry.State}]");
+
+                if (entry.Entity is FizikiSayimSnapshot s)
+                {
+                    sb.AppendLine($"    HospitalID={s.HospitalID}  SayimNo={s.SayimNo}  Ref='{s.ReferenceNumber}'  Lot='{s.LotNumber}'");
+                    sb.AppendLine($"    ProductName  ({Uzunluk(s.ProductName)}) = '{s.ProductName}'");
+                    sb.AppendLine($"    ProductType  ({Uzunluk(s.ProductType)}) = '{s.ProductType}'");
+                    sb.AppendLine($"    Platform     ({Uzunluk(s.Platform)}) = '{s.Platform}'");
+                    sb.AppendLine($"    SayimTarihi={s.SayimTarihi:yyyy-MM-dd}  ExpiryDate={s.ExpiryDate:yyyy-MM-dd}  LastUpdatedExternal={s.LastUpdatedExternal:yyyy-MM-dd}");
+                }
+            }
+
+            if (ex.Entries.Count > limit)
+                sb.AppendLine($"  … +{ex.Entries.Count - limit} kayıt daha");
+
+            return sb.ToString().TrimEnd();
+        }
+
+        private static int Uzunluk(string? s) => s?.Length ?? 0;
+
+       
+        private static string BuildKey(int hospitalId, string? referenceNumber, int sayimNo, string? lotNumber = null)
             => $"{hospitalId}|{NormalizeRef(referenceNumber)}|{sayimNo}|{(lotNumber ?? "").Trim().ToUpperInvariant()}";
 
         private static string NormalizeName(string? name)

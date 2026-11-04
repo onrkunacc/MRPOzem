@@ -1,49 +1,308 @@
 ﻿@model CRMOzem.Core.ViewModels.CreateLeaveRequestViewModel
-
 @{
     ViewData["Title"] = "Yeni İzin Talebi";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var b = Model.Balance;
 }
 
-<div class="container mt-4">
-    <div class="card shadow-lg border-0">
-        <div class="card-body">
-            <h3 class="text-primary fw-bold mb-4"><i class="fa fa-calendar-plus"></i> Yeni İzin Talebi</h3>
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
 
-            <form asp-action="Create" method="post">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">İzin Türü</label>
-                        <select asp-for="LeaveTypeId" asp-items="Model.LeaveTypes" class="form-select"></select>
-                        <span asp-validation-for="LeaveTypeId" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Başlangıç</label>
-                        <input asp-for="StartDate" type="date" class="form-control" />
-                        <span asp-validation-for="StartDate" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Bitiş</label>
-                        <input asp-for="EndDate" type="date" class="form-control" />
-                        <span asp-validation-for="EndDate" class="text-danger"></span>
-                    </div>
+<style>
+    .bakiye-serit {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+        background: var(--kt-border); border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md); overflow: hidden; margin-bottom: 18px;
+    }
+    @@media (max-width: 600px) { .bakiye-serit { grid-template-columns: repeat(2, 1fr); } }
+    .bakiye-hucre { background: var(--kt-paper); padding: 12px 14px; text-align: center; }
+    .bakiye-hucre .et { font-size: 10.5px; font-weight: 700; color: var(--kt-ink-500); text-transform: uppercase; letter-spacing: .05em; }
+    .bakiye-hucre .dg { font-size: 22px; font-weight: 700; color: var(--kt-ink-900); line-height: 1.15; margin-top: 3px; }
+    .bakiye-hucre.kalan .dg { color: var(--kt-pos); }
+
+    .hesap-kutu {
+        margin-top: 10px; padding: 14px 16px; border-radius: var(--kt-r-md);
+        background: var(--kt-bg); border: 1px solid var(--kt-border);
+        display: none;
+    }
+    .hesap-kutu.gorunur { display: block; }
+    .hesap-kutu.yeterli { background: var(--kt-pos-50); border-color: #a7f3d0; }
+    .hesap-kutu.yetersiz { background: var(--kt-neg-50); border-color: #fecaca; }
+    .hesap-satir { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; font-size: 13px; }
+    .hesap-satir + .hesap-satir { border-top: 1px dashed var(--kt-border); }
+    .hesap-satir .lbl { color: var(--kt-ink-500); }
+    .hesap-satir .val { font-weight: 700; color: var(--kt-ink-900); font-variant-numeric: tabular-nums; }
+    .hesap-vurgu { font-size: 16px; }
+    .hesap-uyari { margin-top: 8px; font-size: 12.5px; font-weight: 600; }
+
+    .tur-bilgi {
+        margin-top: 6px; font-size: 12px; color: var(--kt-ink-500);
+        display: none; align-items: flex-start; gap: 6px; line-height: 1.5;
+    }
+    .tur-bilgi.gorunur { display: flex; }
+</style>
+
+<div class="kt-page">
+
+    <div class="kt-header theme-primary">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-calendar-plus"></i></div>
+                <div>
+                    <h1>Yeni İzin Talebi</h1>
+                    <p>Tarih aralığını seçin, kaç gün düşeceğini anında görün</p>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Açıklama</label>
-                    <textarea asp-for="Reason" class="form-control" rows="3"></textarea>
-                    <span asp-validation-for="Reason" class="text-danger"></span>
-                </div>
-
-                <button type="submit" class="btn btn-success">
-                    <i class="fa fa-paper-plane"></i> Gönder
-                </button>
-                <a asp-action="MyLeaves" class="btn btn-secondary ms-2">Vazgeç</a>
-            </form>
+            </div>
+            <div class="kt-header-actions">
+                <a asp-action="MyLeaves" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> İzinlerim
+                </a>
+            </div>
         </div>
+    </div>
+
+    @if (!Model.LeaveTypes.Any())
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:14px 18px;">
+            <div style="font-weight:600; font-size:13.5px; color:var(--kt-ink-900);">
+                <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>
+                Sistemde tanımlı izin türü yok
+            </div>
+            <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:3px;">
+                Talep oluşturulamaz. İnsan Kaynakları ile görüşün.
+            </div>
+        </div>
+    }
+
+    @if (!b.HasRecord)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-warn); padding:14px 18px;">
+            <div style="font-weight:600; font-size:13.5px; color:var(--kt-ink-900);">
+                <i class="fas fa-triangle-exclamation" style="color:var(--kt-warn); margin-right:7px;"></i>
+                @DateTime.Now.Year yılı izin hakedişiniz tanımlanmamış
+            </div>
+            <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:3px;">
+                Yıllık haktan düşen bir izin talebi açamazsınız. İnsan Kaynakları ile görüşün.
+            </div>
+        </div>
+    }
+
+    @* ═══ BAKİYE ŞERİDİ ═══ *@
+    <div class="bakiye-serit">
+        <div class="bakiye-hucre"><div class="et">Hakediş</div><div class="dg">@b.Entitlement</div></div>
+        <div class="bakiye-hucre"><div class="et">Kullanılan</div><div class="dg">@b.UsedDays</div></div>
+        <div class="bakiye-hucre"><div class="et">Bekleyen</div><div class="dg">@b.PendingDays</div></div>
+        <div class="bakiye-hucre kalan"><div class="et">Kullanılabilir</div><div class="dg">@b.ProjectedRemainingDays</div></div>
+    </div>
+
+    <div class="kt-card">
+        <form asp-action="Create" method="post" id="izinForm">
+            @Html.AntiForgeryToken()
+
+            @* Cumartesi istisnası çalışan tarafında seçilmez —
+               varsayılan olarak cumartesi iş günü sayılır ve izinden düşer. *@
+            <input type="hidden" asp-for="SaturdayExcluded" value="false" />
+
+            <div asp-validation-summary="ModelOnly" class="kt-form-error active"
+                 style="@(ViewData.ModelState.ErrorCount > 0 ? "" : "display:none")"></div>
+
+            <div class="kt-section section-primary">
+                <div class="kt-section-icon"><i class="fas fa-calendar-days"></i></div>
+                <div>
+                    <span class="kt-section-title">İzin Bilgileri</span>
+                    <span class="kt-section-desc">Tür ve tarih aralığını belirtin</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-4">
+                    <div class="kt-form-group">
+                        <label class="kt-label">İzin Türü <span class="req">*</span></label>
+                        <select asp-for="LeaveTypeId" asp-items="Model.LeaveTypes" class="kt-select" id="leaveTypeId">
+                            <option value="0">— İzin türü seçiniz —</option>
+                        </select>
+                        <div class="tur-bilgi" id="turBilgi">
+                            <i class="fas fa-circle-info"></i>
+                            <span id="turBilgiMetin"></span>
+                        </div>
+                        <span asp-validation-for="LeaveTypeId" class="field-validation-error"
+                              style="font-size:12px; color:var(--kt-neg);"></span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Başlangıç Tarihi <span class="req">*</span></label>
+                        <input asp-for="StartDate" type="date" class="kt-input" id="startDate" />
+                        <span asp-validation-for="StartDate" class="field-validation-error"
+                              style="font-size:12px; color:var(--kt-neg);"></span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Bitiş Tarihi <span class="req">*</span></label>
+                        <input asp-for="EndDate" type="date" class="kt-input" id="endDate" />
+                        <span asp-validation-for="EndDate" class="field-validation-error"
+                              style="font-size:12px; color:var(--kt-neg);"></span>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    @* ═══ CANLI GÜN HESABI ═══ *@
+                    <div class="hesap-kutu" id="hesapKutu">
+                        <div class="hesap-satir">
+                            <span class="lbl">Takvim günü</span>
+                            <span class="val" id="hTakvim">—</span>
+                        </div>
+                        <div class="hesap-satir">
+                            <span class="lbl">İzinden düşecek iş günü</span>
+                            <span class="val hesap-vurgu" id="hIsGunu">—</span>
+                        </div>
+                        <div class="hesap-satir">
+                            <span class="lbl">Kullanılabilir bakiyeniz</span>
+                            <span class="val" id="hKullanilabilir">—</span>
+                        </div>
+                        <div class="hesap-satir">
+                            <span class="lbl">Bu izinden sonra kalacak</span>
+                            <span class="val" id="hKalan">—</span>
+                        </div>
+                        <div class="hesap-uyari" id="hUyari"></div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Açıklama</label>
+                        <textarea asp-for="Reason" class="kt-textarea" rows="3"
+                                  placeholder="İzin nedeniniz veya iletmek istediğiniz not (opsiyonel)"></textarea>
+                        <span asp-validation-for="Reason" class="field-validation-error"
+                              style="font-size:12px; color:var(--kt-neg);"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-hint">
+                <i class="fas fa-circle-info"></i>
+                Pazar günleri ve resmi tatiller izin süresinden sayılmaz. Cumartesi iş günü sayılır.
+            </div>
+
+            <div class="kt-actions">
+                <a asp-action="MyLeaves" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> Vazgeç
+                </a>
+                <button type="submit" class="kt-btn kt-btn-primary" id="gonderBtn"
+                        @(Model.LeaveTypes.Any() ? "" : "disabled")>
+                    <i class="fas fa-paper-plane"></i> Talebi Gönder
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        const start   = document.getElementById('startDate');
+        const end     = document.getElementById('endDate');
+        const tur     = document.getElementById('leaveTypeId');
+        const kutu    = document.getElementById('hesapKutu');
+        const hTakvim = document.getElementById('hTakvim');
+        const hIs     = document.getElementById('hIsGunu');
+        const hKul    = document.getElementById('hKullanilabilir');
+        const hKalan  = document.getElementById('hKalan');
+        const hUyari  = document.getElementById('hUyari');
+        const turBilgi     = document.getElementById('turBilgi');
+        const turBilgiText = document.getElementById('turBilgiMetin');
+
+        // Hangi izin türleri yıllık haktan düşüyor
+        const haktanDuser = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QuotaDeductingTypes));
+
+        let bekleyen = null;
+
+        function duserMi() {
+            const id = tur ? tur.value : '0';
+            return haktanDuser[id] === true;
+        }
+
+        function turBilgiGuncelle() {
+            if (!tur || tur.value === '0' || tur.value === '') {
+                turBilgi.classList.remove('gorunur');
+                return;
+            }
+            turBilgi.classList.add('gorunur');
+            turBilgiText.textContent = duserMi()
+                ? 'Bu izin yıllık izin hakkınızdan düşer.'
+                : 'Bu izin yıllık izin hakkınızdan düşmez.';
+        }
+
+        async function hesapla() {
+            if (!start.value || !end.value) { kutu.classList.remove('gorunur'); return; }
+            if (new Date(end.value) < new Date(start.value)) {
+                kutu.classList.add('gorunur');
+                kutu.className = 'hesap-kutu gorunur yetersiz';
+                hUyari.textContent = 'Bitiş tarihi başlangıçtan önce olamaz.';
+                hUyari.style.color = 'var(--kt-neg)';
+                hTakvim.textContent = hIs.textContent = hKul.textContent = hKalan.textContent = '—';
+                return;
+            }
+
+            clearTimeout(bekleyen);
+            bekleyen = setTimeout(async () => {
+                try {
+                    const url = '@Url.Action("GunHesapla", "LeaveRequest")'
+                              + `?baslangic=${start.value}&bitis=${end.value}&cumartesiHaric=false`;
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) throw new Error(res.status);
+                    const d = await res.json();
+
+                    kutu.classList.add('gorunur');
+
+                    if (!d.basarili) {
+                        kutu.className = 'hesap-kutu gorunur yetersiz';
+                        hUyari.textContent = d.mesaj || 'Hesaplanamadı.';
+                        hUyari.style.color = 'var(--kt-neg)';
+                        return;
+                    }
+
+                    hTakvim.textContent = d.takvimGunu + ' gün';
+                    hIs.textContent     = d.isGunu + ' iş günü';
+
+                    if (duserMi()) {
+                        hKul.textContent   = d.kullanilabilir + ' gün';
+                        hKalan.textContent = d.kalanSonrasi + ' gün';
+                        kutu.className = 'hesap-kutu gorunur ' + (d.yeterli ? 'yeterli' : 'yetersiz');
+                        hUyari.textContent = d.yeterli
+                            ? ''
+                            : `Yetersiz bakiye — ${d.isGunu} gün talep ediyorsunuz, ${d.kullanilabilir} gün kullanılabilir.`;
+                        hUyari.style.color = d.yeterli ? '' : 'var(--kt-neg)';
+                    } else {
+                        hKul.textContent   = 'yıllık haktan düşmez';
+                        hKalan.textContent = d.kullanilabilir + ' gün (değişmez)';
+                        kutu.className = 'hesap-kutu gorunur';
+                        hUyari.textContent = '';
+                    }
+                } catch {
+                    kutu.classList.remove('gorunur');
+                }
+            }, 250);
+        }
+
+        [start, end].forEach(el => { if (el) el.addEventListener('change', hesapla); });
+
+        if (tur) {
+            tur.addEventListener('change', () => { turBilgiGuncelle(); hesapla(); });
+        }
+
+        // Başlangıç seçilince bitiş ondan önce olmasın
+        start.addEventListener('change', () => {
+            if (end.value && new Date(end.value) < new Date(start.value)) end.value = start.value;
+            end.min = start.value;
+        });
+
+        if (start.value) end.min = start.value;
+        turBilgiGuncelle();
+        hesapla();
+    })();
+    </script>
 }

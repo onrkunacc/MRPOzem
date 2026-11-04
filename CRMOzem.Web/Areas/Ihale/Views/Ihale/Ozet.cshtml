@@ -2,6 +2,21 @@
 @{
     ViewData["Title"] = "Maliyet Özeti";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Kalemlerden türetilen toplamlar
+    var toplamTestMiktari = Model.Ihale.IhaleKalemler.Sum(k => k.TestMiktari);
+    var toplamSutPuan     = Model.Ihale.IhaleKalemler.Sum(k => k.ToplamSUT);
+
+    // Birim bazlı test / puan — Birim Bazlı Özet tablosunda eşleştirmek için
+    var kalemBirimMap = Model.Ihale.IhaleKalemler
+        .GroupBy(k => k.Birim?.BirimKodu ?? "-")
+        .ToDictionary(
+            g => g.Key,
+            g => new
+            {
+                Test = g.Sum(x => x.TestMiktari),
+                Puan = g.Sum(x => x.ToplamSUT)
+            });
 }
 <link rel="stylesheet" href="~/css/tendercss.css" />
 
@@ -52,6 +67,30 @@
     </div>
 </div>
 
+<!-- ── Kalem Özet Şeridi ──────────────────────────────────────────── -->
+<div class="kalem-ozet-bar">
+    <div class="kozet-item">
+        <span class="kozet-label">Kalem Sayısı</span>
+        <span class="kozet-value">@Model.Ihale.IhaleKalemler.Count</span>
+    </div>
+    <div class="kozet-item kozet-item--test">
+        <span class="kozet-label">Toplam Test Miktarı</span>
+        <span class="kozet-value">@toplamTestMiktari.ToString("N0")</span>
+    </div>
+    <div class="kozet-item kozet-item--puan">
+        <span class="kozet-label">Toplam SUT Puanı</span>
+        <span class="kozet-value">@toplamSutPuan.ToString("N2")</span>
+    </div>
+    <div class="kozet-item kozet-item--tutar">
+        <span class="kozet-label">Toplam SUT Fiyat</span>
+        <span class="kozet-value">@Model.ToplamSutFiyat.ToString("N2") ₺</span>
+    </div>
+    <div class="kozet-item kozet-item--oran">
+        <span class="kozet-label">Maliyet / SUT Puanı</span>
+        <span class="kozet-value">@Model.ToplamMaliyetSutPuani.ToString("N4")</span>
+    </div>
+</div>
+
 <!-- ── Ana Grid: Maliyet + Grafik ────────────────────────────────── -->
 <div class="ozet-main-grid">
 
@@ -90,6 +129,10 @@
                 <span class="amount">@Model.GenelToplam.ToString("N2") ₺</span>
             </div>
             <div class="maliyet-divider"></div>
+            <div class="maliyet-row ratio">
+                <span class="maliyet-label">Toplam Test Miktarı</span>
+                <span class="amount">@toplamTestMiktari.ToString("N0")</span>
+            </div>
             <div class="maliyet-row ratio">
                 <span class="maliyet-label">Toplam SUT Puanı</span>
                 <span class="amount">@Model.ToplamSutPuani.ToString("N2")</span>
@@ -164,6 +207,8 @@
                 <tr>
                     <th>Birim Kodu</th>
                     <th>Birim Adı</th>
+                    <th class="text-right">Test Miktarı</th>
+                    <th class="text-right">SUT Puanı</th>
                     <th class="text-right">Personel (₺)</th>
                     <th class="text-right">Ek Gider (₺)</th>
                     <th class="text-right">SUT Fiyat (₺)</th>
@@ -173,9 +218,12 @@
             <tbody>
                 @foreach (var b in Model.BirimOzetler)
                 {
+                    kalemBirimMap.TryGetValue(b.BirimKodu ?? "-", out var km);
                     <tr>
                         <td><span class="badge-birim">@b.BirimKodu</span></td>
                         <td>@b.BirimAdi</td>
+                        <td class="text-right font-mono">@(km != null ? km.Test.ToString("N0") : "—")</td>
+                        <td class="text-right font-mono">@(km != null ? km.Puan.ToString("N2") : "—")</td>
                         <td class="text-right font-mono">@b.PersonelTRY.ToString("N2")</td>
                         <td class="text-right font-mono">@b.EkGiderTRY.ToString("N2")</td>
                         <td class="text-right font-mono">@b.ToplamSUT.ToString("N2")</td>
@@ -186,6 +234,8 @@
             <tfoot>
                 <tr>
                     <td colspan="2"><strong>GENEL TOPLAM</strong></td>
+                    <td class="text-right font-mono"><strong>@toplamTestMiktari.ToString("N0")</strong></td>
+                    <td class="text-right font-mono"><strong>@toplamSutPuan.ToString("N2")</strong></td>
                     <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.PersonelTRY).ToString("N2")</strong></td>
                     <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.EkGiderTRY).ToString("N2")</strong></td>
                     <td class="text-right font-mono"><strong>@Model.BirimOzetler.Sum(b => b.ToplamSUT).ToString("N2")</strong></td>
@@ -319,7 +369,10 @@
                 <div class="detail-section-header">
                     <span>🔬 İhale Kalemleri</span>
                     <span class="detail-section-total">
-                        @Model.Ihale.IhaleKalemler.Count kalem — Toplam SUT Fiyat: @Model.ToplamSutFiyat.ToString("N2") ₺
+                        @Model.Ihale.IhaleKalemler.Count kalem —
+                        @toplamTestMiktari.ToString("N0") test —
+                        @toplamSutPuan.ToString("N2") puan —
+                        @Model.ToplamSutFiyat.ToString("N2") ₺
                     </span>
                 </div>
                 <div class="table-wrap">
@@ -354,9 +407,30 @@
                             }
                         </tbody>
                         <tfoot>
+                            @* Birim bazlı ara toplamlar *@
+                            @foreach (var birimGrup in Model.Ihale.IhaleKalemler
+                                                .Where(k => k.BirimId != null)
+                                                .GroupBy(k => new { k.BirimId, Kod = k.Birim == null ? null : k.Birim.BirimKodu })
+                                                .OrderBy(g => g.Key.Kod))
+                            {
+                                <tr>
+                                    <td colspan="4" style="text-align:right; color:#4a5568; font-size:.8rem;">
+                                        <span class="badge-birim">@birimGrup.Key.Kod</span> ara toplamı
+                                    </td>
+                                    <td class="text-right font-mono" style="color:#4a5568;">@birimGrup.Sum(k => k.TestMiktari).ToString("N0")</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-right font-mono" style="color:#4a5568;">@birimGrup.Sum(k => k.ToplamSUT).ToString("N2")</td>
+                                    <td class="text-right font-mono" style="color:#4a5568;">@birimGrup.Sum(k => k.ToplamSutFiyat).ToString("N2")</td>
+                                </tr>
+                            }
+                            @* Genel toplam *@
                             <tr>
-                                <td colspan="7"><strong>TOPLAM</strong></td>
-                                <td class="text-right font-mono"><strong>@Model.Ihale.IhaleKalemler.Sum(k => k.ToplamSUT).ToString("N2")</strong></td>
+                                <td colspan="4"><strong>GENEL TOPLAM</strong></td>
+                                <td class="text-right font-mono"><strong>@toplamTestMiktari.ToString("N0")</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-right font-mono"><strong>@toplamSutPuan.ToString("N2")</strong></td>
                                 <td class="text-right font-mono"><strong>@Model.ToplamSutFiyat.ToString("N2") ₺</strong></td>
                             </tr>
                         </tfoot>
@@ -372,6 +446,61 @@
      STİLLER
 ══════════════════════════════════════════════════════════════ -->
 <style>
+    /* ── Kalem özet şeridi ───────────────────────────────────────── */
+    .kalem-ozet-bar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1px;
+        background: #e3e8f0;
+        border: 1px solid #e3e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+    }
+
+    @@media (max-width: 1000px) {
+        .kalem-ozet-bar { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @@media (max-width: 620px) {
+        .kalem-ozet-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .kozet-item {
+        background: #fff;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        border-left: 3px solid transparent;
+    }
+
+    .kozet-item--test  { border-left-color: #0ea5e9; }
+    .kozet-item--puan  { border-left-color: #8b5cf6; }
+    .kozet-item--tutar { border-left-color: #10b981; }
+    .kozet-item--oran  { border-left-color: #f59e0b; }
+
+    .kozet-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .kozet-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a202c;
+        font-family: 'Courier New', monospace;
+        line-height: 1.2;
+    }
+
+    .kozet-item--test  .kozet-value { color: #0369a1; }
+    .kozet-item--puan  .kozet-value { color: #6d28d9; }
+    .kozet-item--tutar .kozet-value { color: #047857; }
+    .kozet-item--oran  .kozet-value { color: #b45309; }
+
     /* Maliyet kartı ek stiller */
     .maliyet-label {
         display: flex;
@@ -581,6 +710,10 @@
         .detail-table th {
             font-size: .68rem;
         }
+
+    @@media print {
+        .kalem-ozet-bar { break-inside: avoid; }
+    }
 </style>
 
 <!-- ═══════════════════════════════════════════════════════════════

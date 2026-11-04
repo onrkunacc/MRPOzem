@@ -1,85 +1,291 @@
-﻿@model List<CRMOzem.Core.Models.LeaveRequest>
-
+﻿@model CRMOzem.Core.ViewModels.LeaveAdminIndexVm
 @{
     ViewData["Title"] = "İzin Talepleri";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+
+    string DurumBadge(string? kod) => kod switch
+    {
+        "Pending" => "kt-badge-warning",
+        "Approved" => "kt-badge-success",
+        "Rejected" => "kt-badge-danger",
+        "Cancelled" => "kt-badge-secondary",
+        _ => "kt-badge-secondary"
+    };
 }
 
-<div class="container mt-4">
-    <div class="card shadow-lg border-0">
-        <div class="card-body">
-            <h3 class="fw-bold text-primary mb-4">
-                <i class="fa fa-user-clock"></i> Tüm İzin Talepleri
-            </h3>
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Index")
 
-            @if (Model.Any())
-            {
-                <table class="table table-bordered table-hover">
-                    <thead class="table-light">
+<div class="kt-page" style="padding-top:0;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═══ KPI ═══ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-warn">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Onay Bekleyen</div>
+                <div class="kt-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.PendingCount</div>
+            <div class="kt-kpi-foot">talep</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Onaylanan</div>
+                <div class="kt-kpi-icon"><i class="fas fa-circle-check"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.ApprovedCount</div>
+            <div class="kt-kpi-foot">toplam @Model.ApprovedDays gün</div>
+        </div>
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Bugün İzinli</div>
+                <div class="kt-kpi-icon"><i class="fas fa-user-clock"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.TodayOnLeaveCount</div>
+            <div class="kt-kpi-foot">çalışan</div>
+        </div>
+        <div class="kt-kpi accent-dark">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Talep</div>
+                <div class="kt-kpi-icon"><i class="fas fa-list"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.TotalCount</div>
+            <div class="kt-kpi-foot">@Model.Year yılı</div>
+        </div>
+    </div>
+
+    @* ═══ FİLTRE ═══ *@
+    <div class="kt-card" style="padding:12px 18px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <div class="kt-chip-row">
+            <a class="kt-chip @(Model.StatusCode == "Pending" ? "active" : "")"
+               asp-action="Index" asp-route-yil="@Model.Year" asp-route-durum="Pending">
+                Bekleyen <strong style="margin-left:4px;">@Model.PendingCount</strong>
+            </a>
+            <a class="kt-chip @(Model.StatusCode == "Approved" ? "active" : "")"
+               asp-action="Index" asp-route-yil="@Model.Year" asp-route-durum="Approved">
+                Onaylanan <strong style="margin-left:4px;">@Model.ApprovedCount</strong>
+            </a>
+            <a class="kt-chip @(Model.StatusCode == "Rejected" ? "active" : "")"
+               asp-action="Index" asp-route-yil="@Model.Year" asp-route-durum="Rejected">
+                Reddedilen <strong style="margin-left:4px;">@Model.RejectedCount</strong>
+            </a>
+            <a class="kt-chip @(Model.StatusCode == "Cancelled" ? "active" : "")"
+               asp-action="Index" asp-route-yil="@Model.Year" asp-route-durum="Cancelled">
+                İptal <strong style="margin-left:4px;">@Model.CancelledCount</strong>
+            </a>
+            <a class="kt-chip @(Model.StatusCode == null ? "active" : "")"
+               asp-action="Index" asp-route-yil="@Model.Year" asp-route-durum="">
+                Tümü <strong style="margin-left:4px;">@Model.TotalCount</strong>
+            </a>
+        </div>
+
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+            <input type="text" id="talepAra" class="kt-input" placeholder="Çalışan ara..." style="width:200px;" />
+            <form method="get" style="display:inline;">
+                <input type="hidden" name="durum" value="@Model.StatusCode" />
+                <select name="yil" class="kt-select" style="width:110px;" onchange="this.form.submit()">
+                    @foreach (var y in Model.AvailableYears)
+                    {
+                        <option value="@y" selected="@(y == Model.Year)">@y</option>
+                    }
+                </select>
+            </form>
+        </div>
+    </div>
+
+    @* ═══ TABLO ═══ *@
+    <div class="kt-card kt-card-flush">
+        @if (Model.Requests.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="talepTablo">
+                    <thead>
                         <tr>
-                            <th>Kullanıcı</th>
+                            <th>Çalışan</th>
                             <th>İzin Türü</th>
-                            <th>Tarih</th>
-                            <th>Açıklama</th>
+                            <th>Tarih Aralığı</th>
+                            <th class="text-center">Gün</th>
+                            <th class="text-center">Onay Sonrası</th>
                             <th>Durum</th>
-                            <th>İşlem</th>
+                            <th>Açıklama</th>
+                            <th class="text-center" style="width:1%;">İşlem</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @foreach (var it in Model.Requests)
                         {
-                            <tr>
-                                <td>@item.User?.FullName</td>
-                                <td>@item.LeaveType?.Name</td>
-                                <td>@item.StartDate.ToShortDateString() - @item.EndDate.ToShortDateString()</td>
-                                <td>@item.Reason</td>
-                                <td>
-                                    <span class="badge bg-@GetStatusColor(item.Status?.Code)">
-                                        @item.Status?.Name
-                                    </span>
+                            var kod = it.Status?.Code;
+                            var bekliyor = kod == "Pending";
+                            Model.KalanSonrasi.TryGetValue(it.Id, out var kalanSonrasi);
+
+                            <tr data-ara="@($"{it.User?.FullName} {it.LeaveType?.Name} {it.Reason}".ToLower())">
+                                <td class="kt-cell-primary">
+                                    @(it.User?.FullName ?? "—")
+                                    @if (!string.IsNullOrWhiteSpace(it.User?.Title))
+                                    {
+                                        <div style="font-size:11px; color:var(--kt-ink-400);">@it.User.Title</div>
+                                    }
                                 </td>
                                 <td>
-                                    @if (item.Status?.Code == "Pending")
+                                    @it.LeaveType?.Name
+                                    @if (it.LeaveType != null && !it.LeaveType.IsDeductedFromQuota)
                                     {
-                                        <form asp-action="Approve" asp-route-id="@item.Id" method="post" class="d-inline">
-                                            <button class="btn btn-sm btn-success">
-                                                <i class="fa fa-check"></i> Onayla
-                                            </button>
-                                        </form>
-                                        <form asp-action="Reject" asp-route-id="@item.Id" method="post" class="d-inline ms-1">
-                                            <button class="btn btn-sm btn-danger">
-                                                <i class="fa fa-times"></i> Reddet
-                                            </button>
-                                        </form>
+                                        <div style="font-size:11px; color:var(--kt-ink-400);">haktan düşmez</div>
+                                    }
+                                </td>
+                                <td style="white-space:nowrap;">
+                                    <strong>@it.StartDate.ToString("dd.MM.yyyy")</strong> –
+                                    <strong>@it.EndDate.ToString("dd.MM.yyyy")</strong>
+                                    <div style="font-size:11px; color:var(--kt-ink-400);">
+                                        @it.StartDate.ToString("ddd", tr) → @it.EndDate.ToString("ddd", tr)
+                                        @if (it.SaturdayExcluded) { <text> · cmt hariç</text> }
+                                    </div>
+                                </td>
+                                <td class="text-center"><strong style="font-size:15px;">@it.TotalDays</strong></td>
+                                <td class="text-center">
+                                    @if (bekliyor && it.LeaveType?.IsDeductedFromQuota == true)
+                                    {
+                                        <span class="@(kalanSonrasi < 0 ? "kt-money-neg" : "kt-money-pos")"
+                                              style="font-weight:700;">@kalanSonrasi gün</span>
                                     }
                                     else
                                     {
-                                        <em class="text-muted">İşlem Yapıldı</em>
+                                        <span class="text-muted">—</span>
                                     }
+                                </td>
+                                <td>
+                                    <span class="kt-badge @DurumBadge(kod)">@it.Status?.Name</span>
+                                    @if (it.DecisionAt.HasValue)
+                                    {
+                                        <div style="font-size:10.5px; color:var(--kt-ink-400); margin-top:3px;">
+                                            @it.DecisionByName · @it.DecisionAt.Value.ToString("dd.MM.yyyy")
+                                        </div>
+                                    }
+                                </td>
+                                <td style="max-width:240px; font-size:12.5px; color:var(--kt-ink-500);">
+                                    @(string.IsNullOrWhiteSpace(it.Reason) ? "—" : it.Reason)
+                                    @if (!string.IsNullOrWhiteSpace(it.DecisionNote))
+                                    {
+                                        <div style="margin-top:3px; color:@(kod == "Rejected" ? "var(--kt-neg)" : "var(--kt-ink-700)");">
+                                            <i class="fas fa-reply" style="font-size:10px;"></i> @it.DecisionNote
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                        <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                           asp-action="Detail" asp-route-id="@it.Id" title="Detay">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        @if (bekliyor)
+                                        {
+                                            <form asp-action="Approve" method="post" style="display:inline;"
+                                                  onsubmit="return confirm('@(it.User?.FullName) için @it.TotalDays günlük izni onaylıyor musunuz?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@it.Id" />
+                                                <button type="submit" class="kt-btn kt-btn-sm kt-btn-success" title="Onayla">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                            <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost"
+                                                    style="color:var(--kt-neg);" title="Reddet"
+                                                    onclick="redAc(@it.Id, '@(it.User?.FullName?.Replace("'", "\\'"))')">
+                                                <i class="fas fa-xmark"></i>
+                                            </button>
+                                        }
+                                        @if (kod == "Approved")
+                                        {
+                                            <a class="kt-btn kt-btn-sm kt-btn-secondary"
+                                               asp-action="Belge" asp-route-id="@it.Id" target="_blank" title="İzin belgesi">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <div class="alert alert-info">Bekleyen herhangi bir izin talebi bulunmamaktadır.</div>
-            }
-        </div>
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-inbox"></i>
+                <p>Bu filtreyle gösterilecek talep yok</p>
+            </div>
+        }
     </div>
 </div>
 
-@functions {
-    string GetStatusColor(string code)
-    {
-        return code switch
-        {
-            "Pending" => "warning",
-            "Approved" => "success",
-            "Rejected" => "danger",
-            "Cancelled" => "secondary",
-            _ => "light"
-        };
+@* ═══ RED MODAL ═══ *@
+<div class="kt-modal-backdrop" id="redModal">
+    <div class="kt-modal kt-modal-sm">
+        <div class="kt-modal-head">
+            <h5 class="kt-modal-title"><i class="fas fa-ban" style="color:var(--kt-neg);"></i> Talebi Reddet</h5>
+            <button type="button" class="kt-modal-close" onclick="redKapat()">&times;</button>
+        </div>
+        <form asp-action="Reject" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="redId" />
+            <div class="kt-modal-body">
+                <p style="font-size:13px; color:var(--kt-ink-500); margin:0 0 12px;">
+                    <strong id="redAd" style="color:var(--kt-ink-900);"></strong> adlı çalışanın izin talebi reddedilecek.
+                </p>
+                <div class="kt-form-group">
+                    <label class="kt-label">Red Gerekçesi <span class="req">*</span></label>
+                    <textarea name="gerekce" class="kt-textarea" rows="3" required
+                              placeholder="Çalışan bu açıklamayı görecek"></textarea>
+                </div>
+            </div>
+            <div class="kt-modal-foot">
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="redKapat()">Vazgeç</button>
+                <button type="submit" class="kt-btn kt-btn-danger"><i class="fas fa-ban"></i> Reddet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function redAc(id, ad) {
+        document.getElementById('redId').value = id;
+        document.getElementById('redAd').textContent = ad || 'Çalışan';
+        document.getElementById('redModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
     }
+    function redKapat() {
+        document.getElementById('redModal').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    document.getElementById('redModal').addEventListener('click', e => {
+        if (e.target.id === 'redModal') redKapat();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') redKapat(); });
+
+    (function () {
+        const ara = document.getElementById('talepAra');
+        if (!ara) return;
+        ara.addEventListener('input', () => {
+            const q = ara.value.trim().toLowerCase();
+            document.querySelectorAll('#talepTablo tbody tr').forEach(tr => {
+                tr.style.display = (!q || (tr.dataset.ara || '').includes(q)) ? '' : 'none';
+            });
+        });
+    })();
+</script>
 }

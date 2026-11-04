@@ -1,0 +1,202 @@
+﻿@model CRMOzem.Core.ViewModels.PersonelEditVm
+@{
+    ViewData["Title"] = "Özlük Bilgileri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Personel")
+
+<style>
+    .pd-grid { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+    @@media (max-width: 1100px) { .pd-grid { grid-template-columns: 1fr; } }
+    .pd-bilgi {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 9px 0; border-bottom: 1px solid var(--kt-border); font-size: 13px;
+    }
+    .pd-bilgi:last-child { border-bottom: none; }
+    .pd-bilgi .et { color: var(--kt-ink-500); font-size: 12px; }
+    .pd-bilgi .dg { font-weight: 700; color: var(--kt-ink-900); }
+</style>
+
+<div class="kt-page" style="padding-top:0;">
+
+    <div class="pd-grid">
+
+        @* ═══ FORM ═══ *@
+        <div class="kt-card">
+            <div class="kt-flex-between" style="margin-bottom:18px;">
+                <div>
+                    <div style="font-size:18px; font-weight:700; color:var(--kt-ink-900);">@Model.FullName</div>
+                    <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:2px;">
+                        @(Model.UserName ?? "—")
+                    </div>
+                </div>
+            </div>
+
+            <form asp-action="PersonelDuzenle" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="UserId" />
+
+                <div asp-validation-summary="ModelOnly" class="kt-form-error active"
+                     style="@(ViewData.ModelState.ErrorCount > 0 ? "" : "display:none")"></div>
+
+                <div class="kt-section section-primary">
+                    <div class="kt-section-icon"><i class="fas fa-id-card"></i></div>
+                    <div>
+                        <span class="kt-section-title">Kimlik ve Görev</span>
+                        <span class="kt-section-desc">İzin belgesinde bu bilgiler yazdırılır</span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Unvan</label>
+                            <input asp-for="Title" class="kt-input" placeholder="Örn: Satış Temsilcisi" />
+                            <span asp-validation-for="Title" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Departman</label>
+                            <input asp-for="Departman" class="kt-input" placeholder="Örn: Lojistik" />
+                            <span asp-validation-for="Departman" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">TC Kimlik No</label>
+                            <input asp-for="TcKimlikNo" class="kt-input" maxlength="11" inputmode="numeric"
+                                   placeholder="11 haneli" />
+                            <span asp-validation-for="TcKimlikNo" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kt-section section-money">
+                    <div class="kt-section-icon"><i class="fas fa-calendar-day"></i></div>
+                    <div>
+                        <span class="kt-section-title">Tarihler</span>
+                        <span class="kt-section-desc">İzin hakedişi bu tarihlerden hesaplanır</span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="kt-form-group">
+                            <label class="kt-label">İşe Giriş Tarihi</label>
+                            <input asp-for="IseGirisTarihi" type="date" class="kt-input" id="iseGiris" />
+                            <div class="kt-hint">
+                                <i class="fas fa-circle-info"></i> Kıdem hesabının temeli
+                            </div>
+                            <span asp-validation-for="IseGirisTarihi" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Doğum Tarihi</label>
+                            <input asp-for="DogumTarihi" type="date" class="kt-input" id="dogum" />
+                            <div class="kt-hint">
+                                <i class="fas fa-circle-info"></i> 18 yaş altı / 50 yaş üstü kuralı için
+                            </div>
+                            <span asp-validation-for="DogumTarihi" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="kt-form-group">
+                            <label class="kt-label">İşten Çıkış Tarihi</label>
+                            <input asp-for="IstenCikisTarihi" type="date" class="kt-input" />
+                            <div class="kt-hint">
+                                <i class="fas fa-circle-info"></i> Doluysa çalışan pasif sayılır
+                            </div>
+                            <span asp-validation-for="IstenCikisTarihi" style="font-size:12px; color:var(--kt-neg);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kt-actions">
+                    <a asp-action="Personel" class="kt-btn kt-btn-ghost">
+                        <i class="fas fa-arrow-left"></i> Listeye Dön
+                    </a>
+                    <button type="submit" class="kt-btn kt-btn-primary">
+                        <i class="fas fa-floppy-disk"></i> Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        @* ═══ SAĞ PANEL ═══ *@
+        <div>
+            <div class="kt-card">
+                <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500);
+                            text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                    Hesaplanan Değerler
+                </div>
+
+                <div class="pd-bilgi">
+                    <span class="et">Kıdem</span>
+                    <span class="dg">@Model.Kidem yıl</span>
+                </div>
+                <div class="pd-bilgi">
+                    <span class="et">Yaş</span>
+                    <span class="dg">@(Model.Yas > 0 ? $"{Model.Yas}" : "—")</span>
+                </div>
+                <div class="pd-bilgi">
+                    <span class="et">@DateTime.Now.Year hakedişi</span>
+                    <span class="dg" style="font-size:17px; color:var(--kt-primary);">@Model.BuYilHakedis gün</span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.HakedisAciklamasi))
+                {
+                    <div class="kt-hint" style="margin-top:10px;">
+                        <i class="fas fa-scale-balanced"></i> @Model.HakedisAciklamasi
+                    </div>
+                }
+
+                <div class="kt-hint" style="margin-top:10px;">
+                    <i class="fas fa-circle-info"></i>
+                    Bu değerler yalnızca öneridir. Bakiye ekranından elle girilen hakediş geçerli olur.
+                </div>
+            </div>
+
+            @if (Model.Bakiyeler.Any())
+            {
+                <div class="kt-card">
+                    <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500);
+                                text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                        Yıllara Göre Bakiye
+                    </div>
+
+                    @foreach (var b in Model.Bakiyeler)
+                    {
+                        <div style="padding:10px 0; border-bottom:1px solid var(--kt-border);">
+                            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                                <strong style="font-size:13.5px; color:var(--kt-ink-900);">@b.Year</strong>
+                                <span style="font-size:15px; font-weight:700;
+                                             color:@(b.RemainingDays > 0 ? "var(--kt-pos)" : "var(--kt-neg)");">
+                                    @b.RemainingDays gün kalan
+                                </span>
+                            </div>
+                            <div style="font-size:11.5px; color:var(--kt-ink-500); margin-top:3px;">
+                                hakediş @b.TotalDays
+                                @if (b.CarriedOverDays > 0) { <text>+ devreden @b.CarriedOverDays</text> }
+                                · kullanılan @b.UsedDays
+                                @if (b.PendingDays > 0) { <text>· bekleyen @b.PendingDays</text> }
+                            </div>
+                        </div>
+                    }
+
+                    <a class="kt-btn kt-btn-ghost" style="width:100%; justify-content:center; margin-top:12px;"
+                       asp-action="Bakiyeler" asp-route-yil="@DateTime.Now.Year">
+                        <i class="fas fa-scale-balanced"></i> Bakiye Ekranı
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

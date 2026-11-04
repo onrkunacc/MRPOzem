@@ -1,0 +1,705 @@
+﻿@using CRMOzem.Core.Enums
+@using CRMOzem.Core.Models
+@using CRMOzem.Web.Areas.BirimFiyat.Controllers
+@model CRMOzem.Web.Areas.BirimFiyat.Models.BirimFiyatIndexVm
+@{
+    ViewData["Title"] = "Birim Fiyat Karşılaştırma";
+
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+
+    // Klasör ağacını düz listeye çevir (girinti Seviye ile verilir)
+    var duzKlasorler = new List<BirimFiyatKlasor>();
+    Duzlestir(Model.KlasorAgaci, duzKlasorler);
+}
+
+@functions {
+    static void Duzlestir(IEnumerable<BirimFiyatKlasor> kaynak, List<BirimFiyatKlasor> hedef)
+    {
+        foreach (var k in kaynak)
+        {
+            hedef.Add(k);
+            Duzlestir(k.AltKlasorler, hedef);
+        }
+    }
+
+    /// Metni tek tırnaklı bir JS dizgisinin içine güvenle koyar.
+    static string JsMetin(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Replace("\\", "\\\\")
+                .Replace("'", "\\'")
+                .Replace("\r", "")
+                .Replace("\n", " ");
+    }
+
+    static string DurumRozet(KarsilastirmaDurumu d) => d switch
+    {
+        KarsilastirmaDurumu.Taslak => "bf-badge-gray",
+        KarsilastirmaDurumu.DosyaBekliyor => "bf-badge-warn",
+        KarsilastirmaDurumu.Hesaplandi => "bf-badge-success",
+        KarsilastirmaDurumu.Arsiv => "bf-badge-gray",
+        _ => "bf-badge-gray"
+    };
+
+    static string DurumAdi(KarsilastirmaDurumu d) => d switch
+    {
+        KarsilastirmaDurumu.Taslak => "Taslak",
+        KarsilastirmaDurumu.DosyaBekliyor => "Dosya bekliyor",
+        KarsilastirmaDurumu.Hesaplandi => "Hesaplandı",
+        KarsilastirmaDurumu.Arsiv => "Arşiv",
+        _ => d.ToString()
+    };
+}
+
+<link rel="stylesheet" href="~/css/birim-fiyat.css" asp-append-version="true" />
+<style>
+    .bf-split {
+        display: grid;
+        grid-template-columns: 268px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+    }
+
+    /* ── Klasör ağacı ───────────────────────────────────────── */
+    .bf-tree { position: sticky; top: 14px; }
+
+    .bf-tree-list { padding: 6px; }
+
+    .bf-tree-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 9px;
+        border-radius: var(--bf-r-sm);
+        color: var(--bf-text-2);
+        font-size: 12.5px;
+        text-decoration: none;
+        transition: background .13s;
+        position: relative;
+    }
+
+    .bf-tree-item:hover { background: var(--bf-surface-alt); color: var(--bf-text); text-decoration: none; }
+
+    .bf-tree-item.is-active {
+        background: var(--bf-primary-sf);
+        color: var(--bf-primary-dk);
+        font-weight: 700;
+    }
+
+    .bf-tree-item .dot {
+        width: 7px; height: 7px;
+        border-radius: 2px;
+        flex: 0 0 7px;
+        background: var(--bf-border-str);
+    }
+
+    .bf-tree-item.is-active .dot { background: var(--bf-primary); }
+
+    .bf-tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .bf-tree-count {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--bf-faint);
+        background: var(--bf-surface-alt);
+        border: 1px solid var(--bf-border);
+        border-radius: 999px;
+        padding: 1px 7px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .bf-tree-item.is-active .bf-tree-count {
+        background: #fff;
+        border-color: #c7d2fe;
+        color: var(--bf-primary-dk);
+    }
+
+    .bf-tree-edit {
+        opacity: 0;
+        background: none; border: none; cursor: pointer;
+        color: var(--bf-faint); padding: 0 2px; font-size: 13px; line-height: 1;
+    }
+
+    .bf-tree-item:hover .bf-tree-edit { opacity: 1; }
+    .bf-tree-edit:hover { color: var(--bf-primary); }
+
+    /* ── Yol (breadcrumb) ───────────────────────────────────── */
+    .bf-yol {
+        display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        font-size: 12px; color: var(--bf-muted);
+        margin-bottom: 14px;
+    }
+
+    .bf-yol a { color: var(--bf-muted); text-decoration: none; }
+    .bf-yol a:hover { color: var(--bf-primary); text-decoration: underline; }
+    .bf-yol .sep { color: var(--bf-faint); }
+    .bf-yol .cur { color: var(--bf-text); font-weight: 700; }
+
+    /* ── Karşılaştırma kartları ─────────────────────────────── */
+    .bf-kart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+        gap: 14px;
+    }
+
+    .bf-kart {
+        background: var(--bf-surface);
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-r);
+        box-shadow: var(--bf-sh);
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow .18s, transform .18s, border-color .18s;
+        overflow: hidden;
+    }
+
+    .bf-kart:hover {
+        box-shadow: var(--bf-sh-2);
+        transform: translateY(-2px);
+        border-color: var(--bf-border-str);
+    }
+
+    .bf-kart-ust {
+        padding: 13px 15px 11px;
+        border-bottom: 1px solid var(--bf-border);
+    }
+
+    .bf-kart-satir1 {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 10px; margin-bottom: 7px;
+    }
+
+    .bf-kart-ad {
+        font-size: 13.5px; font-weight: 700; line-height: 1.35;
+        color: var(--bf-text); text-decoration: none;
+        display: block;
+    }
+    .bf-kart-ad:hover { color: var(--bf-primary); text-decoration: none; }
+
+    .bf-kart-etiketler { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+
+    .bf-kart-etiket {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 10.5px; color: var(--bf-muted);
+        background: var(--bf-surface-alt);
+        border: 1px solid var(--bf-border);
+        border-radius: 5px;
+        padding: 2px 7px;
+        max-width: 100%;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .bf-kart-kpi {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-bottom: 1px solid var(--bf-border);
+    }
+
+    .bf-kpi {
+        padding: 10px 8px;
+        text-align: center;
+        border-right: 1px solid var(--bf-border);
+    }
+    .bf-kpi:last-child { border-right: none; }
+
+    .bf-kpi-val {
+        font-size: 15px; font-weight: 700; line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+    }
+    .bf-kpi-lbl {
+        font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .05em; color: var(--bf-faint); margin-top: 3px;
+    }
+
+    .bf-kart-alt {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 8px; padding: 9px 12px;
+        background: var(--bf-surface-alt);
+    }
+
+    .bf-kart-tarih { font-size: 11px; color: var(--bf-faint); }
+    .bf-kart-islem { display: flex; gap: 5px; }
+
+    @@media (max-width: 991px) {
+        .bf-split { grid-template-columns: 1fr; }
+        .bf-tree { position: static; }
+    }
+</style>
+
+<div class="bf-wrap">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bf-note bf-note-success"><i class="fe fe-check-circle"></i><div>@TempData["SuccessMessage"]</div></div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="bf-note bf-note-warn"><i class="fe fe-alert-triangle"></i><div>@TempData["Warning"]</div></div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="bf-note bf-note-danger"><i class="fe fe-x-circle"></i><div>@TempData["Error"]</div></div>
+    }
+
+    <!-- ══ Başlık ══ -->
+    <div class="bf-head">
+        <div class="bf-head-left">
+            <div class="bf-head-icon"><i class="fe fe-git-compare"></i></div>
+            <div>
+                <h1>Birim Fiyat Karşılaştırma</h1>
+                <div class="bf-head-sub">Tedarikçi ve kendi faturalarımızdaki birim fiyatları ürün ve dönem bazında karşılaştırın</div>
+            </div>
+        </div>
+
+        <div class="bf-head-actions">
+            <form method="get" asp-action="Index" style="display:flex; gap:6px;">
+                <input type="hidden" name="klasorId" value="@Model.AktifKlasorId" />
+                <input type="search" name="arama" class="bf-input" style="width:210px;"
+                       placeholder="Ara: ad, ihale, hastane…" value="@Model.Arama" />
+                <button type="submit" class="bf-btn bf-btn-icon" title="Ara"><i class="fe fe-search"></i></button>
+                @if (Model.AramaModu)
+                {
+                    <a asp-action="Index" asp-route-klasorId="@Model.AktifKlasorId" class="bf-btn bf-btn-icon" title="Aramayı temizle">
+                        <i class="fe fe-x"></i>
+                    </a>
+                }
+            </form>
+
+            <a asp-action="SablonIndir" class="bf-btn" title="Boş veri şablonunu indir">
+                <i class="fe fe-download"></i> Şablon
+            </a>
+
+            <a asp-action="Olustur" asp-route-klasorId="@Model.AktifKlasorId" class="bf-btn bf-btn-primary">
+                <i class="fe fe-plus"></i> Yeni Karşılaştırma
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ Özet şeridi ══ -->
+    <div class="bf-stats">
+        <div class="bf-stat is-primary">
+            <div class="bf-stat-label">Toplam Karşılaştırma</div>
+            <div class="bf-stat-value">@Model.ToplamKarsilastirma.ToString("N0", tr)</div>
+            <div class="bf-stat-note">@duzKlasorler.Count klasör</div>
+        </div>
+
+        <div class="bf-stat is-success">
+            <div class="bf-stat-label">Hesaplanmış</div>
+            <div class="bf-stat-value">@Model.HesaplananSayisi.ToString("N0", tr)</div>
+            <div class="bf-stat-note">
+                @(Model.ToplamKarsilastirma - Model.HesaplananSayisi) tanesi bekliyor
+            </div>
+        </div>
+
+        <div class="bf-stat is-danger">
+            <div class="bf-stat-label">Dikkat Gerektiren Satır</div>
+            <div class="bf-stat-value">@Model.DikkatGerektirenToplam.ToString("N0", tr)</div>
+            <div class="bf-stat-note">Tolerans dışı fark bulunan ürünler</div>
+        </div>
+
+        <div class="bf-stat @(Model.ToplamFarkTl >= 0 ? "is-warn" : "is-info")">
+            <div class="bf-stat-label">Toplam Fark</div>
+            <div class="bf-stat-value">@Model.ToplamFarkTl.ToString("N2", tr) ₺</div>
+            <div class="bf-stat-note">Tüm hesaplanmış karşılaştırmalar</div>
+        </div>
+    </div>
+
+    <!-- ══ İçerik ══ -->
+    <div class="bf-split">
+
+        <!-- ── Klasör ağacı ── -->
+        <div class="bf-card bf-tree">
+            <div class="bf-card-head">
+                <h2 class="bf-card-title">Klasörler</h2>
+                <button type="button" class="bf-btn bf-btn-sm bf-btn-icon"
+                        onclick="bfKlasorAc(0, null)" title="Yeni klasör">
+                    <i class="fe fe-folder-plus"></i>
+                </button>
+            </div>
+
+            <div class="bf-card-body is-flush">
+                <div class="bf-tree-list">
+                    <a asp-action="Index" class="bf-tree-item @(Model.AktifKlasorId == null && !Model.AramaModu ? "is-active" : "")">
+                        <span class="dot"></span>
+                        <span class="bf-tree-name">Klasörsüz</span>
+                    </a>
+
+                    @foreach (var k in duzKlasorler)
+                    {
+                        var aktif = Model.AktifKlasorId == k.Id && !Model.AramaModu;
+                        <a asp-action="Index" asp-route-klasorId="@k.Id"
+                           class="bf-tree-item @(aktif ? "is-active" : "")"
+                           style="padding-left:@(9 + k.Seviye * 14)px;"
+                           title="@k.Ad@(string.IsNullOrWhiteSpace(k.Aciklama) ? "" : " — " + k.Aciklama)">
+                            <span class="dot" style="@(string.IsNullOrWhiteSpace(k.Renk) ? "" : $"background:{k.Renk};")"></span>
+                            <span class="bf-tree-name">@k.Ad</span>
+                            @if (k.ToplamKarsilastirmaAdedi > 0)
+                            {
+                                <span class="bf-tree-count">@k.ToplamKarsilastirmaAdedi</span>
+                            }
+                            <button type="button" class="bf-tree-edit" title="Düzenle"
+                                    onclick="event.preventDefault(); event.stopPropagation(); bfKlasorAc(@k.Id, @(k.UstKlasorId?.ToString() ?? "null"), '@JsMetin(k.Ad)', '@JsMetin(k.Aciklama)', '@(k.Renk ?? "")');">
+                                <i class="fe fe-edit-2"></i>
+                            </button>
+                        </a>
+                    }
+
+                    @if (duzKlasorler.Count == 0)
+                    {
+                        <div style="padding:16px 10px; text-align:center; color:var(--bf-faint); font-size:11.5px;">
+                            Henüz klasör yok.<br />Sağ üstteki + ile oluşturun.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Karşılaştırmalar ── -->
+        <div>
+            @if (Model.AramaModu)
+            {
+                <div class="bf-yol">
+                    <i class="fe fe-search"></i>
+                    <span class="cur">"@Model.Arama"</span>
+                    <span class="sep">·</span>
+                    <span>@Model.Karsilastirmalar.Count sonuç</span>
+                </div>
+            }
+            else if (Model.Yol.Count > 0)
+            {
+                <div class="bf-yol">
+                    <a asp-action="Index"><i class="fe fe-home"></i></a>
+                    @for (var i = 0; i < Model.Yol.Count; i++)
+                    {
+                        <span class="sep">/</span>
+                        if (i == Model.Yol.Count - 1)
+                        {
+                            <span class="cur">@Model.Yol[i].Ad</span>
+                        }
+                        else
+                        {
+                            <a asp-action="Index" asp-route-klasorId="@Model.Yol[i].Id">@Model.Yol[i].Ad</a>
+                        }
+                    }
+                </div>
+            }
+
+            @if (Model.Karsilastirmalar.Count == 0)
+            {
+                <div class="bf-card">
+                    <div class="bf-empty">
+                        <div class="bf-empty-icon"><i class="fe fe-inbox"></i></div>
+                        <h3>@(Model.AramaModu ? "Sonuç bulunamadı" : "Bu klasörde karşılaştırma yok")</h3>
+                        <p>
+                            @if (Model.AramaModu)
+                            {
+                                <text>Farklı bir arama deneyin.</text>
+                            }
+                            else
+                            {
+                                <text>İki Excel yükleyip birim fiyatları karşılaştırmak için yeni bir karşılaştırma oluşturun.</text>
+                            }
+                        </p>
+                        @if (!Model.AramaModu)
+                        {
+                            <a asp-action="Olustur" asp-route-klasorId="@Model.AktifKlasorId" class="bf-btn bf-btn-primary">
+                                <i class="fe fe-plus"></i> Yeni Karşılaştırma
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="bf-kart-grid">
+                    @foreach (var k in Model.Karsilastirmalar)
+                    {
+                        <div class="bf-kart">
+                            <div class="bf-kart-ust">
+                                <div class="bf-kart-satir1">
+                                    <a asp-action="Detay" asp-route-id="@k.Id" class="bf-kart-ad">@k.Ad</a>
+                                    <span class="bf-badge @DurumRozet(k.Durum)">@DurumAdi(k.Durum)</span>
+                                </div>
+
+                                <div style="font-size:11.5px; color:var(--bf-muted);">
+                                    @k.TedarikciEtiket (@k.TedarikciParaBirimi)
+                                    <i class="fe fe-arrow-right" style="font-size:10px; margin:0 2px;"></i>
+                                    @k.BizEtiket (@k.BizParaBirimi)
+                                </div>
+
+                                <div class="bf-kart-etiketler">
+                                    @if (Model.AramaModu && k.Klasor != null)
+                                    {
+                                        <span class="bf-kart-etiket"><i class="fe fe-folder"></i> @k.Klasor.Ad</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(k.IhaleAdi))
+                                    {
+                                        <span class="bf-kart-etiket" title="@k.IhaleAdi"><i class="fe fe-file-text"></i> @k.IhaleAdi</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(k.HastaneAdi))
+                                    {
+                                        <span class="bf-kart-etiket" title="@k.HastaneAdi"><i class="fe fe-home"></i> @k.HastaneAdi</span>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (k.Durum == KarsilastirmaDurumu.Hesaplandi)
+                            {
+                                <div class="bf-kart-kpi">
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val">@k.ToplamEslesen.ToString("N0", tr)</div>
+                                        <div class="bf-kpi-lbl">Eşleşen</div>
+                                    </div>
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val" style="color:var(--bf-danger);">@k.FarkliUrunSayisi.ToString("N0", tr)</div>
+                                        <div class="bf-kpi-lbl">Dikkat</div>
+                                    </div>
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val" style="font-size:13px; color:@(k.ToplamFarkTl >= 0 ? "var(--bf-danger)" : "var(--bf-success)");">
+                                            @k.ToplamFarkTl.ToString("N0", tr) ₺
+                                        </div>
+                                        <div class="bf-kpi-lbl">Fark</div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="bf-kart-kpi">
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val" style="font-size:13px; color:@(k.TedarikciSatirSayisi > 0 ? "var(--bf-success)" : "var(--bf-faint)");">
+                                            @(k.TedarikciSatirSayisi > 0 ? k.TedarikciSatirSayisi.ToString("N0", tr) : "—")
+                                        </div>
+                                        <div class="bf-kpi-lbl">@k.TedarikciEtiket</div>
+                                    </div>
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val" style="font-size:13px; color:@(k.BizSatirSayisi > 0 ? "var(--bf-success)" : "var(--bf-faint)");">
+                                            @(k.BizSatirSayisi > 0 ? k.BizSatirSayisi.ToString("N0", tr) : "—")
+                                        </div>
+                                        <div class="bf-kpi-lbl">@k.BizEtiket</div>
+                                    </div>
+                                    <div class="bf-kpi">
+                                        <div class="bf-kpi-val" style="font-size:13px; color:var(--bf-faint);">—</div>
+                                        <div class="bf-kpi-lbl">Fark</div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="bf-kart-alt">
+                                <span class="bf-kart-tarih">
+                                    @(k.SonHesaplamaTarihi?.ToString("dd.MM.yyyy HH:mm", tr)
+                                      ?? k.OlusturmaTarihi.ToString("dd.MM.yyyy", tr))
+                                </span>
+                                <div class="bf-kart-islem">
+                                    <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn bf-btn-sm">
+                                        <i class="fe fe-eye"></i> Aç
+                                    </a>
+                                    <button type="button" class="bf-btn bf-btn-sm bf-btn-icon" title="Başka klasöre taşı"
+                                            onclick="bfTasiAc(@k.Id, '@JsMetin(k.Ad)')">
+                                        <i class="fe fe-corner-up-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- ══════ Klasör modalı ══════ -->
+<div class="bf-modal-bg" id="bfKlasorModal">
+    <div class="bf-modal">
+        <div class="bf-modal-head">
+            <h3 id="bfKlasorBaslik">Yeni Klasör</h3>
+            <button type="button" class="bf-modal-close" onclick="bfKapat('bfKlasorModal')">&times;</button>
+        </div>
+        <div class="bf-modal-body">
+            <input type="hidden" id="bfKlasorId" value="0" />
+
+            <div class="bf-field">
+                <label class="bf-label">Klasör Adı <span class="bf-req">*</span></label>
+                <input type="text" id="bfKlasorAd" class="bf-input" maxlength="200" placeholder="Örn: 2026 Abbott Sözleşmesi" />
+            </div>
+
+            <div class="bf-field">
+                <label class="bf-label">Üst Klasör</label>
+                <select id="bfKlasorUst" class="bf-select">
+                    <option value="">— Kök seviye —</option>
+                    @foreach (var k in duzKlasorler)
+                    {
+                        <option value="@k.Id">@(new string(' ', k.Seviye * 3))@(k.Seviye > 0 ? "└ " : "")@k.Ad</option>
+                    }
+                </select>
+            </div>
+
+            <div class="bf-field">
+                <label class="bf-label">Renk</label>
+                <input type="color" id="bfKlasorRenk" class="bf-input" style="height:38px; padding:3px;" value="#4f46e5" />
+                <div class="bf-hint">Ağaçtaki noktanın rengi. Klasörleri gözle ayırmak için.</div>
+            </div>
+
+            <div class="bf-field">
+                <label class="bf-label">Açıklama</label>
+                <textarea id="bfKlasorAciklama" class="bf-textarea" maxlength="1000"></textarea>
+            </div>
+
+            <div id="bfKlasorHata" class="bf-note bf-note-danger" style="display:none;"></div>
+        </div>
+        <div class="bf-modal-foot">
+            <button type="button" class="bf-btn bf-btn-danger" id="bfKlasorSilBtn" style="display:none;" onclick="bfKlasorSil()">
+                <i class="fe fe-trash-2"></i> Sil
+            </button>
+            <button type="button" class="bf-btn" onclick="bfKapat('bfKlasorModal')">Vazgeç</button>
+            <button type="button" class="bf-btn bf-btn-primary" onclick="bfKlasorKaydet()">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════ Taşıma modalı ══════ -->
+<div class="bf-modal-bg" id="bfTasiModal">
+    <div class="bf-modal">
+        <div class="bf-modal-head">
+            <h3>Klasöre Taşı</h3>
+            <button type="button" class="bf-modal-close" onclick="bfKapat('bfTasiModal')">&times;</button>
+        </div>
+        <div class="bf-modal-body">
+            <input type="hidden" id="bfTasiId" />
+            <p class="bf-muted" style="margin-bottom:12px; font-size:12.5px;">
+                <strong id="bfTasiAd"></strong> hangi klasöre taşınsın?
+            </p>
+            <select id="bfTasiHedef" class="bf-select">
+                <option value="">— Kök (klasörsüz) —</option>
+                @foreach (var k in duzKlasorler)
+                {
+                    <option value="@k.Id">@(new string(' ', k.Seviye * 3))@(k.Seviye > 0 ? "└ " : "")@k.Ad</option>
+                }
+            </select>
+            <div id="bfTasiHata" class="bf-note bf-note-danger" style="display:none; margin-top:12px;"></div>
+        </div>
+        <div class="bf-modal-foot">
+            <button type="button" class="bf-btn" onclick="bfKapat('bfTasiModal')">Vazgeç</button>
+            <button type="button" class="bf-btn bf-btn-primary" onclick="bfTasi()">Taşı</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        function bfToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        function bfAc(id)   { document.getElementById(id).classList.add('is-open'); }
+        function bfKapat(id){ document.getElementById(id).classList.remove('is-open'); }
+
+        function bfHata(kutuId, mesaj) {
+            var el = document.getElementById(kutuId);
+            if (!mesaj) { el.style.display = 'none'; return; }
+            el.textContent = mesaj;
+            el.style.display = 'block';
+        }
+
+        // ── Klasör ──────────────────────────────────────────────
+        function bfKlasorAc(id, ustId, ad, aciklama, renk) {
+            document.getElementById('bfKlasorId').value = id || 0;
+            document.getElementById('bfKlasorAd').value = ad || '';
+            document.getElementById('bfKlasorAciklama').value = aciklama || '';
+            document.getElementById('bfKlasorRenk').value = renk || '#4f46e5';
+            document.getElementById('bfKlasorUst').value = (ustId === null || ustId === undefined) ? '' : ustId;
+            document.getElementById('bfKlasorBaslik').textContent = id ? 'Klasörü Düzenle' : 'Yeni Klasör';
+            document.getElementById('bfKlasorSilBtn').style.display = id ? 'inline-flex' : 'none';
+
+            // Kendini üst klasör olarak seçmeyi engelle
+            var sec = document.getElementById('bfKlasorUst');
+            for (var i = 0; i < sec.options.length; i++) {
+                sec.options[i].disabled = (id && sec.options[i].value == String(id));
+            }
+
+            bfHata('bfKlasorHata', null);
+            bfAc('bfKlasorModal');
+            setTimeout(function () { document.getElementById('bfKlasorAd').focus(); }, 60);
+        }
+
+        function bfKlasorKaydet() {
+            var ad = document.getElementById('bfKlasorAd').value.trim();
+            if (!ad) { bfHata('bfKlasorHata', 'Klasör adı zorunludur.'); return; }
+
+            var fd = new FormData();
+            fd.append('id', document.getElementById('bfKlasorId').value);
+            fd.append('ad', ad);
+            fd.append('ustKlasorId', document.getElementById('bfKlasorUst').value);
+            fd.append('aciklama', document.getElementById('bfKlasorAciklama').value);
+            fd.append('renk', document.getElementById('bfKlasorRenk').value);
+            fd.append('__RequestVerificationToken', bfToken());
+
+            fetch('@Url.Action("KlasorKaydet")', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d.success) { location.reload(); }
+                    else { bfHata('bfKlasorHata', d.message || 'Kaydedilemedi.'); }
+                })
+                .catch(function () { bfHata('bfKlasorHata', 'Sunucuya ulaşılamadı.'); });
+        }
+
+        function bfKlasorSil() {
+            var id = document.getElementById('bfKlasorId').value;
+            if (!id || id === '0') return;
+            if (!confirm('Bu klasör silinsin mi?')) return;
+
+            var fd = new FormData();
+            fd.append('id', id);
+            fd.append('__RequestVerificationToken', bfToken());
+
+            fetch('@Url.Action("KlasorSil")', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d.success) { location.href = '@Url.Action("Index")'; }
+                    else { bfHata('bfKlasorHata', d.message || 'Silinemedi.'); }
+                })
+                .catch(function () { bfHata('bfKlasorHata', 'Sunucuya ulaşılamadı.'); });
+        }
+
+        // ── Taşıma ──────────────────────────────────────────────
+        function bfTasiAc(id, ad) {
+            document.getElementById('bfTasiId').value = id;
+            document.getElementById('bfTasiAd').textContent = ad;
+            document.getElementById('bfTasiHedef').value = '@(Model.AktifKlasorId?.ToString() ?? "")';
+            bfHata('bfTasiHata', null);
+            bfAc('bfTasiModal');
+        }
+
+        function bfTasi() {
+            var fd = new FormData();
+            fd.append('id', document.getElementById('bfTasiId').value);
+            fd.append('hedefKlasorId', document.getElementById('bfTasiHedef').value);
+            fd.append('__RequestVerificationToken', bfToken());
+
+            fetch('@Url.Action("Tasi")', { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d.success) { location.reload(); }
+                    else { bfHata('bfTasiHata', d.message || 'Taşınamadı.'); }
+                })
+                .catch(function () { bfHata('bfTasiHata', 'Sunucuya ulaşılamadı.'); });
+        }
+
+        // Arka plana tıklayınca kapat
+        document.querySelectorAll('.bf-modal-bg').forEach(function (bg) {
+            bg.addEventListener('click', function (e) {
+                if (e.target === bg) bg.classList.remove('is-open');
+            });
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.bf-modal-bg.is-open').forEach(function (m) {
+                    m.classList.remove('is-open');
+                });
+            }
+        });
+    </script>
+}

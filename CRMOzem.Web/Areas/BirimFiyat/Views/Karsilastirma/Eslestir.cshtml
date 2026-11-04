@@ -1,0 +1,450 @@
+﻿@using CRMOzem.Core.Enums
+@using CRMOzem.Web.Areas.BirimFiyat.Models
+@model CRMOzem.Web.Areas.BirimFiyat.Models.YuklemeVm
+@{
+    ViewData["Title"] = "Kolon Eşleştirme";
+
+    var k = Model.Karsilastirma;
+    var o = Model.Onizleme;
+    var e = Model.Eslesme;
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+
+    var alanlar = new[]
+    {
+        (Ad: "ReferansKolon",    Etiket: "Referans No",    Zorunlu: true,  Secili: e.ReferansKolon,
+         Not: "Ürün kodu / katalog no. İki dosyanın eşleştiği anahtar budur."),
+        (Ad: "BirimFiyatKolon",  Etiket: "Birim Fiyat",    Zorunlu: true,  Secili: e.BirimFiyatKolon,
+         Not: $"{Model.ParaBirimi} cinsinden birim fiyat."),
+        (Ad: "UrunAdiKolon",     Etiket: "Ürün Adı",       Zorunlu: false, Secili: e.UrunAdiKolon,
+         Not: "Raporda okunabilirlik için. Eşleştirmede kullanılmaz."),
+        (Ad: "TarihKolon",       Etiket: "Fatura Tarihi",  Zorunlu: false, Secili: e.TarihKolon,
+         Not: "Dönem eşleştirmesi ve TCMB kuru bu tarihe göre belirlenir."),
+        (Ad: "MiktarKolon",      Etiket: "Miktar",         Zorunlu: false, Secili: e.MiktarKolon,
+         Not: "Varsa farkın toplam tutar etkisi hesaplanır."),
+        (Ad: "FaturaNoKolon",    Etiket: "Fatura No",      Zorunlu: false, Secili: e.FaturaNoKolon,
+         Not: "Geri izleme için saklanır."),
+        (Ad: "BirimKolon",       Etiket: "Ölçü Birimi",    Zorunlu: false, Secili: e.BirimKolon,
+         Not: "Adet, kutu, test vb."),
+        (Ad: "KurKolon",         Etiket: "Kur",            Zorunlu: false, Secili: e.KurKolon,
+         Not: "Yalnızca kur kaynağı 'Excel kolonu' seçiliyse kullanılır.")
+    };
+}
+
+<link rel="stylesheet" href="~/css/birim-fiyat.css" asp-append-version="true" />
+
+<style>
+    .bf-adim {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 16px; flex-wrap: wrap;
+    }
+
+    .bf-adim-item {
+        display: flex; align-items: center; gap: 7px;
+        font-size: 11.5px; font-weight: 600; color: var(--bf-faint);
+    }
+
+    .bf-adim-no {
+        width: 21px; height: 21px; border-radius: 50%;
+        background: var(--bf-border); color: var(--bf-muted);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10.5px; font-weight: 700;
+    }
+
+    .bf-adim-item.is-done .bf-adim-no { background: var(--bf-success); color: #fff; }
+    .bf-adim-item.is-done { color: var(--bf-success); }
+    .bf-adim-item.is-now  .bf-adim-no { background: var(--bf-primary); color: #fff; }
+    .bf-adim-item.is-now  { color: var(--bf-primary-dk); }
+
+    .bf-adim-ok { color: var(--bf-border-str); font-size: 12px; }
+
+    .bf-eslestir-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+        gap: 14px;
+    }
+
+    .bf-alan {
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-r-sm);
+        padding: 11px 13px;
+        background: var(--bf-surface);
+    }
+
+    .bf-alan.is-zorunlu { border-left: 3px solid var(--bf-primary); }
+    .bf-alan.is-eksik   { border-left: 3px solid var(--bf-danger); background: var(--bf-danger-sf); }
+
+    .bf-alan-ad {
+        font-size: 12px; font-weight: 700; margin-bottom: 6px;
+        display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    }
+
+    /* ── Önizleme tablosu ───────────────────────────────────── */
+    .bf-onizleme { overflow-x: auto; border-top: 1px solid var(--bf-border); }
+
+    .bf-onizleme table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        white-space: nowrap;
+    }
+
+    .bf-onizleme th, .bf-onizleme td {
+        padding: 6px 9px;
+        border-right: 1px solid var(--bf-border);
+        border-bottom: 1px solid #f1f5f9;
+        max-width: 190px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .bf-onizleme thead th {
+        background: var(--bf-surface-alt);
+        text-align: left;
+        font-weight: 700;
+        color: var(--bf-text-2);
+        position: sticky; top: 0; z-index: 2;
+    }
+
+    .bf-onizleme .kolon-harf {
+        display: block;
+        font-size: 9.5px;
+        color: var(--bf-faint);
+        font-weight: 700;
+        letter-spacing: .05em;
+    }
+
+    .bf-onizleme .satir-no {
+        background: var(--bf-surface-alt);
+        color: var(--bf-faint);
+        font-size: 10px;
+        text-align: center;
+        font-family: var(--bf-mono);
+        width: 38px;
+        position: sticky; left: 0; z-index: 1;
+    }
+
+    .bf-onizleme th.is-secili {
+        background: var(--bf-primary-sf);
+        color: var(--bf-primary-dk);
+        box-shadow: inset 0 -2px 0 var(--bf-primary);
+    }
+
+    .bf-onizleme td.is-secili { background: var(--bf-primary-sf); }
+
+    .bf-onizleme .rol {
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--bf-primary);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-top: 2px;
+    }
+
+    .bf-kaynak-bar {
+        display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--bf-border);
+        background: var(--bf-surface-alt);
+    }
+</style>
+
+<div class="bf-wrap">
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="bf-note bf-note-danger"><i class="fe fe-x-circle"></i><div>@TempData["Error"]</div></div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="bf-note bf-note-warn"><i class="fe fe-alert-triangle"></i><div>@TempData["Warning"]</div></div>
+    }
+
+    <!-- ══ Başlık ══ -->
+    <div class="bf-head">
+        <div class="bf-head-left">
+            <div class="bf-head-icon"><i class="fe fe-columns"></i></div>
+            <div>
+                <h1>Kolon Eşleştirme — @Model.TarafAdi</h1>
+                <div class="bf-head-sub">
+                    @k.Ad · <span class="bf-mono">@o.DosyaAdi</span>
+                </div>
+            </div>
+        </div>
+        <div class="bf-head-actions">
+            <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn">
+                <i class="fe fe-x"></i> Vazgeç
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ Adımlar ══ -->
+    <div class="bf-adim">
+        <div class="bf-adim-item is-done"><span class="bf-adim-no"><i class="fe fe-check"></i></span> Dosya yüklendi</div>
+        <i class="fe fe-chevron-right bf-adim-ok"></i>
+        <div class="bf-adim-item is-now"><span class="bf-adim-no">2</span> Kolonları eşleştir</div>
+        <i class="fe fe-chevron-right bf-adim-ok"></i>
+        <div class="bf-adim-item"><span class="bf-adim-no">3</span> Karşılaştır</div>
+    </div>
+
+    @if (!o.Basarili)
+    {
+        <div class="bf-card">
+            <div class="bf-empty">
+                <div class="bf-empty-icon"><i class="fe fe-alert-circle"></i></div>
+                <h3>Dosya okunamadı</h3>
+                <p>@o.Hata</p>
+                <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn bf-btn-primary">Geri dön ve tekrar yükle</a>
+            </div>
+        </div>
+    }
+    else
+    {
+
+    <div class="bf-note bf-note-info">
+        <i class="fe fe-info"></i>
+        <div>
+            Sistem kolonları başlık adlarından tahmin etti. Aşağıdaki önizlemede doğruluğunu kontrol edin,
+            yanlışsa düzeltin. <strong>Referans No</strong> ve <strong>Birim Fiyat</strong> zorunludur.
+            Dosyada <strong>@o.ToplamVeriSatiri.ToString("N0", tr)</strong> veri satırı var.
+        </div>
+    </div>
+
+    <form asp-action="EslestirOnayla" method="post" id="bfEslestirForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="KarsilastirmaId" value="@k.Id" />
+        <input type="hidden" name="Taraf" value="@((int)Model.Taraf)" />
+        <input type="hidden" name="SayfaAdi" value="@o.SecilenSayfa" />
+        <input type="hidden" name="BaslikSatiri" value="@e.BaslikSatiri" />
+
+        <!-- ══ Kaynak seçimi ══ -->
+        <div class="bf-card" style="margin-bottom:16px;">
+            <div class="bf-kaynak-bar">
+                <div style="min-width:180px;">
+                    <label class="bf-label">Sayfa</label>
+                    <select class="bf-select" id="bfSayfa" onchange="bfKaynakDegis()">
+                        @foreach (var s in o.SayfaAdlari)
+                        {
+                            <option value="@s" selected="@(s == o.SecilenSayfa)">@s</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="width:140px;">
+                    <label class="bf-label">Başlık Satırı</label>
+                    <input type="number" class="bf-input" id="bfBaslikSatiri" min="1" max="100"
+                           value="@e.BaslikSatiri" onchange="bfKaynakDegis()" />
+                </div>
+
+                <div style="flex:1; min-width:180px; padding-bottom:3px;">
+                    <div class="bf-hint" style="margin:0;">
+                        Başlıklar yanlış satırdan okunuyorsa numarayı değiştirin — önizleme yenilenir.
+                    </div>
+                </div>
+
+                <div style="padding-bottom:1px;">
+                    <span class="bf-badge bf-badge-primary">
+                        @Model.TarafAdi · @Model.ParaBirimi
+                    </span>
+                </div>
+            </div>
+
+            <!-- ══ Önizleme ══ -->
+            <div class="bf-onizleme">
+                <table id="bfOnizlemeTablo">
+                    <thead>
+                        <tr>
+                            <th class="satir-no">#</th>
+                            @for (var i = 0; i < o.Basliklar.Count; i++)
+                            {
+                                <th data-kolon="@i">
+                                    <span class="kolon-harf">@YuklemeVm.HarfKolon(i)</span>
+                                    @o.Basliklar[i]
+                                    <span class="rol" data-rol="@i"></span>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ var satirNo = e.BaslikSatiri; }
+                        @foreach (var satir in o.OrnekSatirlar)
+                        {
+                            satirNo++;
+                            <tr>
+                                <td class="satir-no">@satirNo</td>
+                                @for (var i = 0; i < o.Basliklar.Count; i++)
+                                {
+                                    <td data-kolon="@i" title="@(i < satir.Count ? satir[i] : "")">
+                                        @(i < satir.Count ? satir[i] : "")
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══ Alan eşleştirme ══ -->
+        <div class="bf-card" style="margin-bottom:16px;">
+            <div class="bf-card-head">
+                <h2 class="bf-card-title">Alanlar</h2>
+                <span class="bf-faint" style="font-size:11px;">Mavi çizgili alanlar zorunlu</span>
+            </div>
+            <div class="bf-card-body">
+                <div class="bf-eslestir-grid">
+                    @foreach (var a in alanlar)
+                    {
+                        var eksik = a.Zorunlu && a.Secili < 0;
+                        <div class="bf-alan @(a.Zorunlu ? "is-zorunlu" : "") @(eksik ? "is-eksik" : "")" id="bfAlan_@a.Ad">
+                            <div class="bf-alan-ad">
+                                <span>
+                                    @a.Etiket
+                                    @if (a.Zorunlu)
+                                    {
+                                        <span class="bf-req">*</span>
+                                    }
+                                </span>
+                                @if (a.Secili >= 0)
+                                {
+                                    <span class="bf-badge bf-badge-primary">@YuklemeVm.HarfKolon(a.Secili)</span>
+                                }
+                            </div>
+
+                            <select name="@a.Ad" class="bf-select bf-kolon-sec"
+                                    data-alan="@a.Ad" data-etiket="@a.Etiket" data-zorunlu="@a.Zorunlu.ToString().ToLower()"
+                                    onchange="bfKolonDegisti()">
+                                <option value="-1" selected="@(a.Secili < 0)">— Seçilmedi —</option>
+                                @for (var i = 0; i < o.Basliklar.Count; i++)
+                                {
+                                    <option value="@i" selected="@(i == a.Secili)">
+                                        @YuklemeVm.HarfKolon(i) · @o.Basliklar[i]
+                                    </option>
+                                }
+                            </select>
+
+                            <div class="bf-hint">@a.Not</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div id="bfEslestirHata" class="bf-note bf-note-danger" style="display:none;"></div>
+
+        <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn">
+                <i class="fe fe-arrow-left"></i> Vazgeç
+            </a>
+            <button type="submit" class="bf-btn bf-btn-primary" id="bfOnaylaBtn">
+                <i class="fe fe-check"></i> Eşleştirmeyi onayla ve @o.ToplamVeriSatiri.ToString("N0", tr) satırı al
+            </button>
+        </div>
+    </form>
+
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Sayfa veya başlık satırı değişince önizlemeyi yeniden yükle
+        function bfKaynakDegis() {
+            var sayfa = document.getElementById('bfSayfa').value;
+            var baslik = document.getElementById('bfBaslikSatiri').value || 1;
+
+            var url = '@Url.Action("Eslestir")'
+                + '?id=@k.Id'
+                + '&taraf=@((int)Model.Taraf)'
+                + '&sayfa=' + encodeURIComponent(sayfa)
+                + '&baslikSatiri=' + encodeURIComponent(baslik);
+
+            window.location.href = url;
+        }
+
+        // Seçilen kolonları önizlemede işaretle
+        function bfKolonDegisti() {
+            var tablo = document.getElementById('bfOnizlemeTablo');
+            if (!tablo) return;
+
+            tablo.querySelectorAll('.is-secili').forEach(function (el) {
+                el.classList.remove('is-secili');
+            });
+            tablo.querySelectorAll('.rol').forEach(function (el) {
+                el.textContent = '';
+            });
+
+            document.querySelectorAll('.bf-kolon-sec').forEach(function (sec) {
+                var idx = parseInt(sec.value, 10);
+                var alan = document.getElementById('bfAlan_' + sec.dataset.alan);
+                var rozet = alan.querySelector('.bf-badge');
+
+                // Zorunlu alan boşsa işaretle
+                if (sec.dataset.zorunlu === 'true') {
+                    if (idx < 0) { alan.classList.add('is-eksik'); }
+                    else { alan.classList.remove('is-eksik'); }
+                }
+
+                if (isNaN(idx) || idx < 0) {
+                    if (rozet) rozet.remove();
+                    return;
+                }
+
+                // Kolon harfi rozetini güncelle
+                var harf = bfHarf(idx);
+                if (rozet) {
+                    rozet.textContent = harf;
+                } else {
+                    var yeni = document.createElement('span');
+                    yeni.className = 'bf-badge bf-badge-primary';
+                    yeni.textContent = harf;
+                    alan.querySelector('.bf-alan-ad').appendChild(yeni);
+                }
+
+                // Önizlemede kolonu boya
+                tablo.querySelectorAll('[data-kolon="' + idx + '"]').forEach(function (h) {
+                    h.classList.add('is-secili');
+                });
+
+                var rol = tablo.querySelector('.rol[data-rol="' + idx + '"]');
+                if (rol) {
+                    rol.textContent = rol.textContent
+                        ? rol.textContent + ' + ' + sec.dataset.etiket
+                        : sec.dataset.etiket;
+                }
+            });
+        }
+
+        function bfHarf(index) {
+            var s = '', n = index;
+            do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0);
+            return s;
+        }
+
+        // Gönderim öncesi zorunlu alan kontrolü
+        var bfForm = document.getElementById('bfEslestirForm');
+        if (bfForm) bfForm.addEventListener('submit', function (ev) {
+            var eksikler = [];
+
+            document.querySelectorAll('.bf-kolon-sec').forEach(function (sec) {
+                if (sec.dataset.zorunlu === 'true' && parseInt(sec.value, 10) < 0) {
+                    eksikler.push(sec.dataset.etiket);
+                }
+            });
+
+            if (eksikler.length > 0) {
+                ev.preventDefault();
+                var kutu = document.getElementById('bfEslestirHata');
+                kutu.textContent = 'Şu alanlar seçilmeden devam edilemez: ' + eksikler.join(', ');
+                kutu.style.display = 'block';
+                kutu.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+
+            var btn = document.getElementById('bfOnaylaBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fe fe-loader"></i> Satırlar okunuyor…';
+        });
+
+        document.addEventListener('DOMContentLoaded', bfKolonDegisti);
+    </script>
+}

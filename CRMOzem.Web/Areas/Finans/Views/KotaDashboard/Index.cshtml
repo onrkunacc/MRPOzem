@@ -149,7 +149,7 @@
             </div>
             <div class="kt-kpi-value">$@Model.ToplamGiderUsd.ToString("N0")</div>
             <div class="kt-kpi-foot">
-                Abbott $@Model.AbbottGiderUsd.ToString("N0")
+                Abbott Fatura $@Model.AbbottGiderUsd.ToString("N0")
                 · 3rd $@Model.ThirdPartyGiderUsd.ToString("N0")
             </div>
         </div>
@@ -222,7 +222,7 @@
                             <th>İş Adı / Sorumlu</th>
                             <th>Bölge</th>
                             <th class="text-right">Proforma $</th>
-                            <th class="text-right">Abbott $</th>
+                            <th class="text-right">Abbott Fatura $</th>
                             <th class="text-right">3rd Party $</th>
                             <th class="text-right">Toplam Gider</th>
                             <th class="text-right">Gelir</th>
@@ -521,7 +521,7 @@
         new ApexCharts(document.querySelector("#chartGiderDagilim"), {
             chart: { type: 'donut', height: 300, fontFamily: 'inherit', foreColor: '#64748b' },
             series: [@Model.AbbottGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture), @Model.ThirdPartyGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture), @Model.DigerGiderUsd.ToString(System.Globalization.CultureInfo.InvariantCulture)],
-            labels: ['Abbott', '3rd Party', 'Diğer'],
+            labels: ['Abbott Fatura', '3rd Party', 'Diğer'],
             colors: ['#4f46e5', '#d97706', '#64748b'],
             legend: { position: 'bottom', fontSize: '12px' },
             plotOptions: { pie: { donut: { size: '72%', labels: { show: true, total: { show: true, label: 'Toplam', formatter: w => '$' + w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString('tr-TR') } } } } },

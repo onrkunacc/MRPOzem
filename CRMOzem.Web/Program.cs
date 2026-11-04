@@ -130,6 +130,11 @@ builder.Services.AddScoped<IFizikiSayimSyncService, FizikiSayimSyncService>();
 builder.Services.AddScoped<IDogrulamaService, DogrulamaService>();
 builder.Services.AddScoped<ILojistikDashboardService, LojistikDashboardService>();
 builder.Services.AddScoped<ISaglikRaporuService, SaglikRaporuService>();
+builder.Services.AddScoped<IResmiTatilService, ResmiTatilService>();
+builder.Services.AddScoped<ILeaveBelgeService, LeaveBelgeService>();
+builder.Services.AddHttpClient<IKurSaglayici, TcmbKurSaglayici>();
+builder.Services.AddScoped<IBirimFiyatExcelOkuyucu, BirimFiyatExcelOkuyucu>();
+builder.Services.AddScoped<IBirimFiyatService, BirimFiyatService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 
@@ -180,6 +185,7 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedRoleAsync(services);
     await UserSeeder.SeedUsersAsync(services);
     await TedarikciSeeder.SeedAsync(services);
+    await LeaveSeeder.SeedAsync(services);
 }
 
 //  Hata Yönetimi

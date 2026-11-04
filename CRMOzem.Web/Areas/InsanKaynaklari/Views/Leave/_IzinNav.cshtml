@@ -1,0 +1,84 @@
+﻿@model string
+@{
+    // Aktif sekme adı: Index / Bakiyeler / Takvim / Personel / ResmiTatiller
+    var aktif = Model ?? "Index";
+
+    string Cls(string ad) => aktif == ad ? "izin-nav-link aktif" : "izin-nav-link";
+}
+
+<style>
+    .izin-nav {
+        background: var(--kt-paper);
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-lg);
+        box-shadow: var(--kt-shadow-sm);
+        margin: 20px 20px 16px;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+    .izin-nav-baslik { display: flex; align-items: center; gap: 14px; }
+    .izin-nav-ikon {
+        width: 44px; height: 44px; border-radius: var(--kt-r-md);
+        background: var(--kt-ink-900); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 18px;
+        flex-shrink: 0;
+    }
+    .izin-nav-baslik h1 {
+        font-size: 19px; font-weight: 700; color: var(--kt-ink-900);
+        margin: 0 0 2px; letter-spacing: -.01em;
+    }
+    .izin-nav-baslik p { font-size: 12.5px; color: var(--kt-ink-500); margin: 0; }
+
+    .izin-nav-menu { display: flex; gap: 4px; flex-wrap: wrap; }
+    .izin-nav-link {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 14px; border-radius: var(--kt-r-sm);
+        font-size: 13px; font-weight: 500; text-decoration: none;
+        color: var(--kt-ink-700); border: 1px solid transparent;
+        transition: all .12s; white-space: nowrap;
+    }
+    .izin-nav-link:hover { background: var(--kt-bg-soft); color: var(--kt-ink-900); text-decoration: none; }
+    .izin-nav-link.aktif {
+        background: var(--kt-ink-900); color: #fff; border-color: var(--kt-ink-900);
+    }
+    .izin-nav-link.aktif:hover { background: var(--kt-ink-700); color: #fff; }
+    .izin-nav-link i { font-size: 12px; }
+
+    @@media (max-width: 768px) {
+        .izin-nav { margin: 12px 12px 12px; padding: 12px 14px; }
+        .izin-nav-menu { width: 100%; }
+        .izin-nav-link { flex: 1; justify-content: center; }
+    }
+</style>
+
+<div class="izin-nav">
+    <div class="izin-nav-baslik">
+        <div class="izin-nav-ikon"><i class="fas fa-umbrella-beach"></i></div>
+        <div>
+            <h1>İzin Yönetimi</h1>
+            <p>Talepler, bakiyeler, takvim ve özlük bilgileri</p>
+        </div>
+    </div>
+
+    <nav class="izin-nav-menu">
+        <a class="@Cls("Index")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
+            <i class="fas fa-inbox"></i> Talepler
+        </a>
+        <a class="@Cls("Bakiyeler")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Bakiyeler">
+            <i class="fas fa-scale-balanced"></i> Bakiyeler
+        </a>
+        <a class="@Cls("Takvim")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Takvim">
+            <i class="fas fa-calendar-days"></i> Takvim
+        </a>
+        <a class="@Cls("Personel")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Personel">
+            <i class="fas fa-users"></i> Personel
+        </a>
+        <a class="@Cls("ResmiTatiller")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="ResmiTatiller">
+            <i class="fas fa-flag"></i> Resmi Tatiller
+        </a>
+    </nav>
+</div>

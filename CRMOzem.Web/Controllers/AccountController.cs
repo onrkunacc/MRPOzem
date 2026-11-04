@@ -114,6 +114,8 @@ namespace CRMOzem.Web.Controllers
                 return Redirect("/Istatistik/Report/Index");
             if (roles.Contains("Lojistik"))
                 return Redirect("/Lojistik/Dashboard/Index");
+            if(roles.Contains("Birim"))
+                return Redirect("/BirimFiyat/Karsilastirma/Index");
 
             return RedirectToAction("Index", "Home");
         }

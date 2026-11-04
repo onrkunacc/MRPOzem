@@ -59,6 +59,11 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<SiparisTalepKalem> SiparisTalepKalemleri { get; set; } = null!;
         public DbSet<HospitalEslesmesi> HospitalEslesmeleri { get; set; } = null!;
         public DbSet<FizikiSayimHastaneEslesmesi> FizikiSayimHastaneEslesmeleri { get; set; } = null!;
+        public DbSet<ResmiTatil> ResmiTatiller { get; set; } = null!;
+        public DbSet<BirimFiyatKlasor> BirimFiyatKlasorleri { get; set; }
+        public DbSet<BirimFiyatKarsilastirma> BirimFiyatKarsilastirmalari { get; set; }
+        public DbSet<BirimFiyatSatir> BirimFiyatSatirlari { get; set; }
+        public DbSet<BirimFiyatSonuc> BirimFiyatSonuclari { get; set; }
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
         { 
         
@@ -450,6 +455,56 @@ namespace CRMOzem.DataAccess.Context
                  .WithMany()
                  .HasForeignKey(x => x.InternalHospitalID)
                  .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ResmiTatil>(e =>
+            {
+                e.ToTable("ResmiTatiller", "ozem");
+                e.HasIndex(x => x.Tarih).IsUnique();
+                e.HasIndex(x => x.Yil);
+            });
+
+            builder.Entity<BirimFiyatKlasor>(e =>
+            {
+                e.HasOne(x => x.UstKlasor)
+                 .WithMany(x => x.AltKlasorler)
+                 .HasForeignKey(x => x.UstKlasorId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasIndex(x => x.UstKlasorId);
+            });
+
+            builder.Entity<BirimFiyatKarsilastirma>(e =>
+            {
+                e.HasOne(x => x.Klasor)
+                 .WithMany(x => x.Karsilastirmalar)
+                 .HasForeignKey(x => x.KlasorId)
+                 .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasIndex(x => x.KlasorId);
+                e.HasIndex(x => x.OlusturmaTarihi);
+            });
+
+            builder.Entity<BirimFiyatSatir>(e =>
+            {
+                e.HasOne(x => x.Karsilastirma)
+                 .WithMany(x => x.Satirlar)
+                 .HasForeignKey(x => x.KarsilastirmaId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                // Eşleştirmenin döndüğü indeks
+                e.HasIndex(x => new { x.KarsilastirmaId, x.Taraf, x.ReferansNormalize, x.Donem });
+            });
+
+            builder.Entity<BirimFiyatSonuc>(e =>
+            {
+                e.HasOne(x => x.Karsilastirma)
+                 .WithMany(x => x.Sonuclar)
+                 .HasForeignKey(x => x.KarsilastirmaId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(x => new { x.KarsilastirmaId, x.Durum });
+                e.HasIndex(x => new { x.KarsilastirmaId, x.DikkatGerektiriyor });
             });
 
         }

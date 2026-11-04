@@ -222,6 +222,13 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("DefaultPaymentMethod")
                         .HasColumnType("int");
 
+                    b.Property<string>("Departman")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("DogumTarihi")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -235,6 +242,12 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("IseGirisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("IstenCikisTarihi")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -261,6 +274,10 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TcKimlikNo")
+                        .HasMaxLength(11)
+                        .HasColumnType("nvarchar(11)");
 
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
@@ -360,6 +377,369 @@ namespace CRMOzem.DataAccess.Migrations
                             BirimAdi = "Hepatit",
                             BirimKodu = "HEP"
                         });
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKarsilastirma", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Ad")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("BizDosyaAdi")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("BizEtiket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BizParaBirimi")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<int>("BizSatirSayisi")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("BizYuklemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Durum")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EslestirmeKurali")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FarkliUrunSayisi")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GuncellemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HastaneAdi")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int?>("HospitalID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IhaleAdi")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int?>("IhaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KlasorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("KurKaynagi")
+                        .HasColumnType("int");
+
+                    b.Property<int>("KuruBulunamayanSatir")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OlusturanKullanici")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OrtalamaSapmaYuzde")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<decimal?>("SabitKur")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime?>("SonHesaplamaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TedarikciDosyaAdi")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("TedarikciEtiket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TedarikciParaBirimi")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<int>("TedarikciSatirSayisi")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("TedarikciYuklemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ToleransYuzde")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<int>("ToplamEslesen")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ToplamFarkTl")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ToplamFarkUsd")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ToplamSadeceBiz")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToplamSadeceTedarikci")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KlasorId");
+
+                    b.HasIndex("OlusturmaTarihi");
+
+                    b.ToTable("BirimFiyatKarsilastirmalari", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKlasor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Ad")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("GuncellemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OlusturanKullanici")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Renk")
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)");
+
+                    b.Property<int>("Sira")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UstKlasorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UstKlasorId");
+
+                    b.ToTable("BirimFiyatKlasorleri", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatSatir", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Birim")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("BirimFiyat")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("BirimFiyatTl")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("BirimFiyatUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("Donem")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FaturaNo")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("FaturaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("KarsilastirmaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("KaynakSatirNo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Kur")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime?>("KurTarihi")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("Miktar")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ParaBirimi")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("ReferansNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReferansNormalize")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Taraf")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UrunAdi")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Uyari")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KarsilastirmaId", "Taraf", "ReferansNormalize", "Donem");
+
+                    b.ToTable("BirimFiyatSatirlari", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatSonuc", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("BizFiyatTl")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("BizFiyatUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("BizSatirAdedi")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BizSatirId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("BizTarih")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("DikkatGerektiriyor")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("Donem")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Durum")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("FarkTl")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("FarkUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("FarkYuzde")
+                        .HasColumnType("decimal(12,4)");
+
+                    b.Property<int>("KarsilastirmaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Kur")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime?>("KurTarihi")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("Miktar")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Not")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReferansNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReferansNormalize")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("TedarikciFiyatTl")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("TedarikciFiyatUsd")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("TedarikciSatirAdedi")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TedarikciSatirId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("TedarikciTarih")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("TutarEtkisiTl")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UrunAdi")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Yon")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KarsilastirmaId", "DikkatGerektiriyor");
+
+                    b.HasIndex("KarsilastirmaId", "Durum");
+
+                    b.ToTable("BirimFiyatSonuclari", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.CariGruplari", b =>
@@ -1364,6 +1744,21 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DecisionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DecisionByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
@@ -1376,6 +1771,9 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("SaturdayExcluded")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -1383,6 +1781,9 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasColumnType("time");
 
                     b.Property<int>("StatusId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalDays")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
@@ -1560,6 +1961,45 @@ namespace CRMOzem.DataAccess.Migrations
                     b.HasIndex("IhaleId");
 
                     b.ToTable("PersonelGiderler", "ozem");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.ResmiTatil", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Ad")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("TamGun")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("Tarih")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Yil")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Tarih")
+                        .IsUnique();
+
+                    b.HasIndex("Yil");
+
+                    b.ToTable("ResmiTatiller", "ozem");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.SiparisTalep", b =>
@@ -2079,6 +2519,19 @@ namespace CRMOzem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Aciklama")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("CarriedOverDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KidemYili")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ManuelGirildi")
+                        .HasColumnType("bit");
+
                     b.Property<int>("TotalDays")
                         .HasColumnType("int");
 
@@ -2299,6 +2752,48 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("Asset");
 
                     b.Navigation("Assignment");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKarsilastirma", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.BirimFiyatKlasor", "Klasor")
+                        .WithMany("Karsilastirmalar")
+                        .HasForeignKey("KlasorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Klasor");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKlasor", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.BirimFiyatKlasor", "UstKlasor")
+                        .WithMany("AltKlasorler")
+                        .HasForeignKey("UstKlasorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("UstKlasor");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatSatir", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.BirimFiyatKarsilastirma", "Karsilastirma")
+                        .WithMany("Satirlar")
+                        .HasForeignKey("KarsilastirmaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Karsilastirma");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatSonuc", b =>
+                {
+                    b.HasOne("CRMOzem.Core.Models.BirimFiyatKarsilastirma", "Karsilastirma")
+                        .WithMany("Sonuclar")
+                        .HasForeignKey("KarsilastirmaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Karsilastirma");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.Cariler", b =>
@@ -2811,6 +3306,20 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Navigation("IhaleKalemler");
 
                     b.Navigation("PersonelGiderler");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKarsilastirma", b =>
+                {
+                    b.Navigation("Satirlar");
+
+                    b.Navigation("Sonuclar");
+                });
+
+            modelBuilder.Entity("CRMOzem.Core.Models.BirimFiyatKlasor", b =>
+                {
+                    b.Navigation("AltKlasorler");
+
+                    b.Navigation("Karsilastirmalar");
                 });
 
             modelBuilder.Entity("CRMOzem.Core.Models.CariGruplari", b =>

@@ -1,9 +1,13 @@
 ﻿@model CRMOzem.Core.ViewModels.KotaHareketDetayVm
 @using CRMOzem.Core.Enums
 @using CRMOzem.Core.ViewModels
+@using System.Globalization
 @{
     ViewData["Title"] = "Kota Hareketleri";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tr  = new CultureInfo("tr-TR");
+    var inv = CultureInfo.InvariantCulture;
 
     var k = Model.Kota;
     var toplamGider = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gider).Sum(h => h.TutarUsd);
@@ -12,15 +16,194 @@
     var pos         = brutFark >= 0;
     var kullanim    = k.ProformaTutarUsd > 0 ? (toplamGider / k.ProformaTutarUsd) * 100 : 0;
     var kullanimCls = kullanim > 100 ? "neg" : kullanim > 80 ? "warn" : "pos";
+
+    var toplamGiderTl = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gider).Sum(h => h.TutarTl ?? 0);
+    var toplamGelirTl = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gelir).Sum(h => h.TutarTl ?? 0);
+    var brutFarkTl    = toplamGelirTl - toplamGiderTl;
+
+    var hastaneKolonVar = Model.Hareketler.Any(h => h.HospitalID.HasValue);
+
+    // ── Para biçimleyiciler ──
+    string Usd(decimal v, bool isaretli = false)
+        => (isaretli ? (v >= 0 ? "+" : "-") : "") + "$" + Math.Abs(v).ToString("N2");
+    string Tl(decimal v, bool isaretli = false)
+        => (isaretli ? (v >= 0 ? "+" : "-") : "") + "₺" + Math.Abs(v).ToString("N2");
+
+    // ═════════ AYLIK KIRILIM ═════════
+    // İlk hareketten son harekete kadar ay ay; arada hareket olmayan aylar da
+    // listelensin ki fatura kesilmemiş ay gözden kaçmasın.
+    var aylikSatirlar = new List<(DateTime Ay, decimal Gelir, decimal Gider,
+                                  decimal GelirTl, decimal GiderTl, int Adet)>();
+
+    if (Model.Hareketler.Any())
+    {
+        var ilkTarih = Model.Hareketler.Min(h => h.Tarih);
+        var sonTarih = Model.Hareketler.Max(h => h.Tarih);
+        var ilkAy = new DateTime(ilkTarih.Year, ilkTarih.Month, 1);
+        var sonAy = new DateTime(sonTarih.Year, sonTarih.Month, 1);
+
+        for (var ay = ilkAy; ay <= sonAy; ay = ay.AddMonths(1))
+        {
+            var grup = Model.Hareketler
+                .Where(h => h.Tarih.Year == ay.Year && h.Tarih.Month == ay.Month)
+                .ToList();
+
+            aylikSatirlar.Add((
+                ay,
+                grup.Where(x => x.Tur == KotaHareketTuru.Gelir).Sum(x => x.TutarUsd),
+                grup.Where(x => x.Tur == KotaHareketTuru.Gider).Sum(x => x.TutarUsd),
+                grup.Where(x => x.Tur == KotaHareketTuru.Gelir).Sum(x => x.TutarTl ?? 0),
+                grup.Where(x => x.Tur == KotaHareketTuru.Gider).Sum(x => x.TutarTl ?? 0),
+                grup.Count
+            ));
+        }
+    }
+
+    var maxAylikHacim = aylikSatirlar.Any()
+        ? aylikSatirlar.Max(x => Math.Max(x.Gelir, x.Gider))
+        : 0m;
+
+    string BarW(decimal deger)
+    {
+        if (maxAylikHacim <= 0 || deger <= 0) return "0";
+        return ((double)(deger / maxAylikHacim) * 100.0).ToString("F1", inv);
+    }
 }
 
-@await Html.PartialAsync("_KotaDesignSystem")
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    /* ═════════ AYLIK GELİR / GİDER TABLOSU ═════════ */
+    .kt-monthly-wrap { overflow-x: auto; }
+
+    .kt-monthly {
+        width: 100%;
+        border-collapse: collapse;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .kt-monthly thead th {
+        padding: 10px 16px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--kt-ink-500);
+        background: var(--kt-bg-soft);
+        border-bottom: 1px solid var(--kt-border);
+        white-space: nowrap;
+        text-align: left;
+    }
+    .kt-monthly thead th.num { text-align: right; }
+
+    .kt-monthly tbody td {
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--kt-border);
+        font-size: 13px;
+        vertical-align: middle;
+    }
+    .kt-monthly tbody td.num { text-align: right; white-space: nowrap; }
+    .kt-monthly tbody tr:hover { background: var(--kt-bg-soft); }
+    .kt-monthly tbody tr.ay-bos td { color: var(--kt-ink-400); background: #fcfcfd; }
+
+    .ay-adi {
+        font-weight: 700;
+        color: var(--kt-ink-900);
+        font-size: 13.5px;
+        text-transform: capitalize;
+        white-space: nowrap;
+    }
+    .ay-bos .ay-adi { color: var(--kt-ink-400); font-weight: 600; }
+    .ay-adet { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; }
+
+    .tutar-usd { font-weight: 700; font-size: 13.5px; display: block; }
+    .tutar-tl  { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; display: block; }
+
+    .m-gelir { color: var(--kt-pos); }
+    .m-gider { color: var(--kt-neg); }
+    .m-sifir { color: var(--kt-ink-400); font-weight: 500; }
+
+    .m-bar {
+        height: 3px;
+        border-radius: 999px;
+        margin-top: 5px;
+        background: var(--kt-bg-soft);
+        overflow: hidden;
+        min-width: 54px;
+    }
+    .m-bar > i { display: block; height: 100%; border-radius: 999px; }
+    .m-bar.gelir > i { background: var(--kt-pos); }
+    .m-bar.gider > i { background: var(--kt-neg); }
+
+    .fark-chip {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: var(--kt-r-sm);
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .fark-chip.pos { background: var(--kt-pos-50); color: var(--kt-pos-700); }
+    .fark-chip.neg { background: var(--kt-neg-50); color: var(--kt-neg-700); }
+    .fark-chip.nul { background: var(--kt-bg-soft); color: var(--kt-ink-400); font-weight: 500; }
+
+    .marj-val { font-size: 12.5px; font-weight: 600; }
+    .kumul-val { font-weight: 700; font-size: 13px; }
+    .kumul-val.pos { color: var(--kt-pos); }
+    .kumul-val.neg { color: var(--kt-neg); }
+
+    /* ── Dip toplam ── */
+    .kt-monthly tfoot td {
+        padding: 14px 16px;
+        background: var(--kt-ink-900);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+    }
+    .kt-monthly tfoot td.num { text-align: right; white-space: nowrap; }
+    .kt-monthly tfoot .dip-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--kt-ink-400);
+        display: block;
+        margin-bottom: 2px;
+    }
+    .kt-monthly tfoot .dip-tl { font-size: 11px; font-weight: 500; color: var(--kt-ink-400); display: block; margin-top: 2px; }
+    .kt-monthly tfoot .dip-gelir   { color: #6ee7b7; }
+    .kt-monthly tfoot .dip-gider   { color: #fca5a5; }
+    .kt-monthly tfoot .dip-net-pos { color: #6ee7b7; }
+    .kt-monthly tfoot .dip-net-neg { color: #fca5a5; }
+
+    /* ── Hareketler tablosu dip toplamı ── */
+    .kt-table tfoot .foot-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--kt-ink-500);
+        font-weight: 700;
+    }
+    .kt-table tfoot tr.net-row td {
+        background: var(--kt-ink-900);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        border-top: none;
+    }
+    .kt-table tfoot tr.net-row .foot-label { color: var(--kt-ink-400); }
+
+    @@media (max-width: 768px) {
+        .kt-monthly thead th, .kt-monthly tbody td, .kt-monthly tfoot td { padding: 9px 10px; font-size: 12px; }
+        .col-marj { display: none; }
+    }
+</style>
 
 <div class="kt-page">
 
     @* ═════════ HERO HEADER ═════════ *@
     <div class="kt-card" style="padding:0; overflow:hidden; margin-bottom:20px;">
-        <div style="padding: 28px 32px; background: linear-gradient(135deg, var(--kt-ink-900) 0%, #1e293b 100%); color:#fff;">
+        <div style="padding: 28px 32px; background: var(--kt-ink-900); color:#fff;">
             <div class="kt-flex-between">
                 <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
                     @if (!string.IsNullOrEmpty(k.KotaKodu))
@@ -74,7 +257,7 @@
             </div>
         </div>
 
-        @* Alt şerit: proforma + progress *@
+        @* Alt şerit: proforma + kullanım *@
         <div style="padding: 20px 32px; background:#fff;">
             <div class="kt-flex-between" style="margin-bottom:10px;">
                 <div>
@@ -95,7 +278,7 @@
                 </div>
             </div>
             <div class="kt-progress">
-                <div class="kt-progress-bar @kullanimCls" style="width:@(Math.Min(kullanim, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                <div class="kt-progress-bar @kullanimCls" style="width:@(Math.Min(kullanim, 100).ToString("F0", inv))%;"></div>
             </div>
             <div class="kt-flex-between" style="margin-top:6px; font-size:12px; color:var(--kt-ink-500);">
                 <span>Harcanan: $@toplamGider.ToString("N0")</span>
@@ -130,6 +313,16 @@
             <div class="kt-kpi-value" style="color:@(pos ? "var(--kt-pos)" : "var(--kt-neg)");">
                 @(pos ? "+" : "")$@brutFark.ToString("N0")
             </div>
+            <div class="kt-kpi-foot">
+                @if (toplamGelir > 0)
+                {
+                    <span>marj %@(((brutFark / toplamGelir) * 100).ToString("N1"))</span>
+                }
+                else
+                {
+                    <span>gelir girilmemiş</span>
+                }
+            </div>
         </div>
         <div class="kt-kpi accent-primary">
             <div class="kt-kpi-head">
@@ -137,9 +330,165 @@
                 <div class="kt-kpi-icon"><i class="fas fa-list"></i></div>
             </div>
             <div class="kt-kpi-value">@Model.Hareketler.Count</div>
-            <div class="kt-kpi-foot">kayıt</div>
+            <div class="kt-kpi-foot">@aylikSatirlar.Count(x => x.Adet > 0) ayda kayıt var</div>
         </div>
     </div>
+
+    @* ═════════════════════════════════════════════════════════
+       AYLIK GELİR / GİDER / BRÜT FARK  — bu kotanın ay ay dökümü
+       ═════════════════════════════════════════════════════════ *@
+    @if (aylikSatirlar.Any())
+    {
+        <div class="kt-card kt-card-flush">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border);">
+                <div class="kt-flex kt-gap-md">
+                    <div class="kt-section-icon"><i class="fas fa-calendar-days"></i></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Aylık Gelir / Gider Dağılımı</div>
+                        <div style="font-size:12px; color:var(--kt-ink-500);">
+                            @aylikSatirlar.First().Ay.ToString("MMMM yyyy", tr) — @aylikSatirlar.Last().Ay.ToString("MMMM yyyy", tr)
+                            · @aylikSatirlar.Count ay
+                            @if (aylikSatirlar.Any(x => x.Adet == 0))
+                            {
+                                <span> · </span>
+                                <span style="color:var(--kt-warn);">@aylikSatirlar.Count(x => x.Adet == 0) ayda hiç hareket yok</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-monthly-wrap">
+                <table class="kt-monthly">
+                    <thead>
+                        <tr>
+                            <th>Ay</th>
+                            <th class="num">Gelir (USD)</th>
+                            <th class="num">Gider (USD)</th>
+                            <th class="num">Brüt Fark</th>
+                            <th class="num col-marj">Fark %</th>
+                            <th class="num">Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ decimal kumulatif = 0m; }
+                        @foreach (var s in aylikSatirlar)
+                        {
+                            var fark = s.Gelir - s.Gider;
+                            kumulatif += fark;
+                            var bos = s.Adet == 0;
+                            var farkCls = bos ? "nul" : (fark > 0 ? "pos" : fark < 0 ? "neg" : "nul");
+                            var marj = s.Gelir > 0 ? (fark / s.Gelir) * 100 : (decimal?)null;
+
+                            <tr class="@(bos ? "ay-bos" : "")">
+                                <td>
+                                    <div class="ay-adi">@s.Ay.ToString("MMMM yyyy", tr)</div>
+                                    <div class="ay-adet">@(bos ? "hareket yok" : $"{s.Adet} hareket")</div>
+                                </td>
+
+                                <td class="num">
+                                    @if (s.Gelir > 0)
+                                    {
+                                        <span class="tutar-usd m-gelir">@Usd(s.Gelir, true)</span>
+                                        @if (s.GelirTl > 0)
+                                        {
+                                            <span class="tutar-tl">@Tl(s.GelirTl)</span>
+                                        }
+                                        <div class="m-bar gelir"><i style="width:@BarW(s.Gelir)%;"></i></div>
+                                    }
+                                    else
+                                    {
+                                        <span class="tutar-usd m-sifir">—</span>
+                                    }
+                                </td>
+
+                                <td class="num">
+                                    @if (s.Gider > 0)
+                                    {
+                                        <span class="tutar-usd m-gider">-@Usd(s.Gider)</span>
+                                        @if (s.GiderTl > 0)
+                                        {
+                                            <span class="tutar-tl">@Tl(s.GiderTl)</span>
+                                        }
+                                        <div class="m-bar gider"><i style="width:@BarW(s.Gider)%;"></i></div>
+                                    }
+                                    else
+                                    {
+                                        <span class="tutar-usd m-sifir">—</span>
+                                    }
+                                </td>
+
+                                <td class="num">
+                                    <span class="fark-chip @farkCls">@(bos ? "—" : Usd(fark, true))</span>
+                                </td>
+
+                                <td class="num col-marj">
+                                    @if (marj.HasValue)
+                                    {
+                                        <span class="marj-val" style="color:@(marj.Value >= 0 ? "var(--kt-pos)" : "var(--kt-neg)");">
+                                            %@marj.Value.ToString("N1")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="m-sifir">—</span>
+                                    }
+                                </td>
+
+                                <td class="num">
+                                    <span class="kumul-val @(kumulatif >= 0 ? "pos" : "neg")">@Usd(kumulatif, true)</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                    @* ─── DİP TOPLAM ─── *@
+                    <tfoot>
+                        <tr>
+                            <td>
+                                <span class="dip-label">Dip Toplam</span>
+                                @Model.Hareketler.Count hareket · @aylikSatirlar.Count ay
+                            </td>
+                            <td class="num">
+                                <span class="dip-gelir">@Usd(toplamGelir, true)</span>
+                                @if (toplamGelirTl > 0)
+                                {
+                                    <span class="dip-tl">@Tl(toplamGelirTl)</span>
+                                }
+                            </td>
+                            <td class="num">
+                                <span class="dip-gider">-@Usd(toplamGider)</span>
+                                @if (toplamGiderTl > 0)
+                                {
+                                    <span class="dip-tl">@Tl(toplamGiderTl)</span>
+                                }
+                            </td>
+                            <td class="num">
+                                <span class="@(pos ? "dip-net-pos" : "dip-net-neg")">@Usd(brutFark, true)</span>
+                                @if (brutFarkTl != 0)
+                                {
+                                    <span class="dip-tl">@Tl(brutFarkTl, true)</span>
+                                }
+                            </td>
+                            <td class="num col-marj">
+                                @if (toplamGelir > 0)
+                                {
+                                    <span class="@(pos ? "dip-net-pos" : "dip-net-neg")">%@(((brutFark / toplamGelir) * 100).ToString("N1"))</span>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--kt-ink-500);">—</span>
+                                }
+                            </td>
+                            <td class="num">
+                                <span class="@(pos ? "dip-net-pos" : "dip-net-neg")">@Usd(brutFark, true)</span>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
 
     @* ═════════ İŞLEM BUTONLARI ═════════ *@
     <div class="kt-card" style="padding:14px 20px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -150,8 +499,8 @@
             <i class="fas fa-pen"></i> Kotayı Düzenle
         </a>
         <div style="margin-left:auto; display:flex; gap:8px;">
-            <input type="text" id="hareketSearch" class="kt-input" placeholder="🔍 Hareket ara..." style="width:220px;" />
-            <select id="turFilter" class="kt-input" style="width:140px;">
+            <input type="text" id="hareketSearch" class="kt-input" placeholder="Hareket ara..." style="width:220px;" />
+            <select id="turFilter" class="kt-select" style="width:150px;">
                 <option value="">Tümü</option>
                 <option value="0">Giderler</option>
                 <option value="1">Gelirler</option>
@@ -181,7 +530,7 @@
                             <th>Tür</th>
                             <th>Tedarikçi / Müşteri</th>
                             <th>Grup</th>
-                            @if (Model.Hareketler.Any(h => h.HospitalID.HasValue))
+                            @if (hastaneKolonVar)
                             {
                                 <th>Hastane</th>
                             }
@@ -218,7 +567,7 @@
                                     }
                                     else { <span class="text-muted">—</span> }
                                 </td>
-                                @if (Model.Hareketler.Any(x => x.HospitalID.HasValue))
+                                @if (hastaneKolonVar)
                                 {
                                     <td>
                                         @if (!string.IsNullOrEmpty(h.HospitalName))
@@ -233,11 +582,11 @@
                                 </td>
                                 <td class="text-right">
                                     <span class="@(gider ? "kt-money-neg" : "kt-money-pos")" style="font-size:14px;">
-                                        @(gider ? "-" : "+")$@h.TutarUsd.ToString("N2")
+                                        @(gider ? "-" + Usd(h.TutarUsd) : Usd(h.TutarUsd, true))
                                     </span>
                                 </td>
                                 <td class="text-right kt-money-muted" style="font-size:12.5px;">
-                                    @(h.TutarTl.HasValue ? $"₺{h.TutarTl.Value:N2}" : "—")
+                                    @(h.TutarTl.HasValue ? Tl(h.TutarTl.Value) : "—")
                                 </td>
                                 <td class="text-center">
                                     <div style="display:flex; gap:4px; justify-content:flex-end;">
@@ -257,6 +606,36 @@
                             </tr>
                         }
                     </tbody>
+
+                    @* ─── DİP TOPLAM ─── *@
+                    <tfoot>
+                        <tr>
+                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
+                                <span class="foot-label">Toplam Gelir</span>
+                            </td>
+                            <td class="text-right kt-money-pos">@Usd(toplamGelir, true)</td>
+                            <td class="text-right kt-money-muted">@(toplamGelirTl > 0 ? Tl(toplamGelirTl) : "—")</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
+                                <span class="foot-label">Toplam Gider</span>
+                            </td>
+                            <td class="text-right kt-money-neg">-@Usd(toplamGider)</td>
+                            <td class="text-right kt-money-muted">@(toplamGiderTl > 0 ? Tl(toplamGiderTl) : "—")</td>
+                            <td></td>
+                        </tr>
+                        <tr class="net-row">
+                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
+                                <span class="foot-label">Net Brüt Fark</span>
+                            </td>
+                            <td class="text-right" style="color:@(pos ? "#6ee7b7" : "#fca5a5");">@Usd(brutFark, true)</td>
+                            <td class="text-right" style="color:var(--kt-ink-400); font-weight:600;">
+                                @(brutFarkTl != 0 ? Tl(brutFarkTl, true) : "—")
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         }
@@ -274,6 +653,7 @@
 
 </div>
 
+@section Scripts {
 <script>
 (function () {
     function applyFilters() {
@@ -285,9 +665,10 @@
             tr.style.display = (okQ && okT) ? '' : 'none';
         });
     }
-    const s = document.getElementById('hareketSearch');
+    const s  = document.getElementById('hareketSearch');
     const tf = document.getElementById('turFilter');
-    if (s) s.addEventListener('input', applyFilters);
+    if (s)  s.addEventListener('input', applyFilters);
     if (tf) tf.addEventListener('change', applyFilters);
 })();
 </script>
+}

@@ -282,7 +282,21 @@
     <!-- ══ KALEMLER ═════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-kalemler">
         <div class="panel-toolbar">
-            <span class="panel-count">@Model.IhaleKalemler.Count kalem</span>
+            <div class="kozet-chips">
+                <span class="panel-count">@Model.IhaleKalemler.Count kalem</span>
+                <span class="kozet-chip kozet-chip--test">
+                    <span class="kozet-chip-label">Toplam Test</span>
+                    <span class="kozet-chip-val">@Model.IhaleKalemler.Sum(k => k.TestMiktari).ToString("N0")</span>
+                </span>
+                <span class="kozet-chip kozet-chip--puan">
+                    <span class="kozet-chip-label">Toplam SUT Puanı</span>
+                    <span class="kozet-chip-val">@Model.IhaleKalemler.Sum(k => k.ToplamSUT).ToString("N2")</span>
+                </span>
+                <span class="kozet-chip kozet-chip--tutar">
+                    <span class="kozet-chip-label">Toplam SUT Fiyat</span>
+                    <span class="kozet-chip-val">@Model.IhaleKalemler.Sum(k => k.ToplamSutFiyat).ToString("N2") ₺</span>
+                </span>
+            </div>
             <button type="button" class="btn btn-sm btn-primary" onclick="showModal('kalemTopluModal')">+ Kalem Ekle</button>
         </div>
         <div class="table-wrap">
@@ -386,10 +400,15 @@
                                         .OrderBy(g => g.Key.BirimKodu))
                     {
                         <tr class="tfoot-birim-row">
-                            <td colspan="7" style="text-align:right; color:#4a5568; font-size:.8rem; padding-right:8px;">
+                            <td colspan="4" style="text-align:right; color:#4a5568; font-size:.8rem; padding-right:8px;">
                                 <span class="badge-birim">@birimGrup.Key.BirimKodu</span>
                                 @birimGrup.Key.BirimAdi ara toplamı
                             </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @birimGrup.Sum(k => k.TestMiktari).ToString("N0")
+                            </td>
+                            <td></td>
+                            <td></td>
                             <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
                                 @birimGrup.Sum(k => k.ToplamSUT).ToString("N2")
                             </td>
@@ -403,10 +422,15 @@
                     @if (Model.IhaleKalemler.Any(k => k.BirimId == null))
                     {
                         <tr class="tfoot-birim-row">
-                            <td colspan="7" style="text-align:right; color:#a0aec0; font-size:.8rem;">
+                            <td colspan="4" style="text-align:right; color:#a0aec0; font-size:.8rem;">
                                 <span class="badge-birim" style="background:#f3f4f6;color:#6b7280;">-</span>
                                 Birimsiz ara toplamı
                             </td>
+                            <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
+                                @Model.IhaleKalemler.Where(k => k.BirimId == null).Sum(k => k.TestMiktari).ToString("N0")
+                            </td>
+                            <td></td>
+                            <td></td>
                             <td class="text-right font-mono" style="color:#4a5568; font-size:.85rem;">
                                 @Model.IhaleKalemler.Where(k => k.BirimId == null).Sum(k => k.ToplamSUT).ToString("N2")
                             </td>
@@ -418,7 +442,10 @@
                     }
                     <!-- Genel toplam -->
                     <tr class="tfoot-total-row">
-                        <td colspan="7"><strong>GENEL TOPLAM</strong></td>
+                        <td colspan="4"><strong>GENEL TOPLAM</strong></td>
+                        <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.TestMiktari).ToString("N0")</strong></td>
+                        <td></td>
+                        <td></td>
                         <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.ToplamSUT).ToString("N2")</strong></td>
                         <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.ToplamSutFiyat).ToString("N2") ₺</strong></td>
                         <td></td>
@@ -647,6 +674,77 @@
      STİLLER
 ════════════════════════════════════════════════════════════════════ -->
 <style>
+    .kozet-chips {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .kozet-chip {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 5px 12px;
+        border-radius: 8px;
+        background: #f8f9fc;
+        border: 1px solid #e3e8f0;
+        border-left-width: 3px;
+        line-height: 1.25;
+    }
+
+    .kozet-chip--test {
+        border-left-color: #0ea5e9;
+    }
+
+    .kozet-chip--puan {
+        border-left-color: #8b5cf6;
+    }
+
+    .kozet-chip--tutar {
+        border-left-color: #10b981;
+    }
+
+    .kozet-chip-label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        white-space: nowrap;
+    }
+
+    .kozet-chip-val {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1a202c;
+        font-family: 'Courier New', monospace;
+        white-space: nowrap;
+    }
+
+    .kozet-chip--test .kozet-chip-val {
+        color: #0369a1;
+    }
+
+    .kozet-chip--puan .kozet-chip-val {
+        color: #6d28d9;
+    }
+
+    .kozet-chip--tutar .kozet-chip-val {
+        color: #047857;
+    }
+
+    @@media (max-width: 760px) {
+        .kozet-chips {
+            width: 100%;
+        }
+
+        .kozet-chip {
+            flex: 1;
+            min-width: 110px;
+        }
+    }
+
     .th-modal--wide {
         max-width: 980px;
     }

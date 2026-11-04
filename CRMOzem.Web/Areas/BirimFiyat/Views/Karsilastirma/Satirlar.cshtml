@@ -1,0 +1,211 @@
+﻿@using CRMOzem.Core.Enums
+@using CRMOzem.Core.Models
+@model List<CRMOzem.Core.Models.BirimFiyatSatir>
+@{
+    var k = (BirimFiyatKarsilastirma)ViewBag.Karsilastirma;
+    var taraf = (KarsilastirmaTarafi)ViewBag.Taraf;
+    var tarafAdi = (string)ViewBag.TarafAdi;
+
+    ViewData["Title"] = tarafAdi + " — Yüklenen Satırlar";
+
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+
+    var paraBirimi = taraf == KarsilastirmaTarafi.Tedarikci ? k.TedarikciParaBirimi : k.BizParaBirimi;
+    var dosyaAdi = taraf == KarsilastirmaTarafi.Tedarikci ? k.TedarikciDosyaAdi : k.BizDosyaAdi;
+
+    var uyarili = Model.Count(s => !string.IsNullOrWhiteSpace(s.Uyari));
+    var tarihsiz = Model.Count(s => !s.FaturaTarihi.HasValue);
+    var donemler = Model.Where(s => s.Donem.HasValue).Select(s => s.Donem!.Value).Distinct().OrderBy(d => d).ToList();
+}
+
+<link rel="stylesheet" href="~/css/birim-fiyat.css" asp-append-version="true" />    
+
+<style>
+    .bf-satir-kaydir { max-height: 700px; overflow: auto; }
+    .bf-uyari-hucre { font-size: 10.5px; color: var(--bf-warn); }
+    .bf-table tbody tr.is-uyari { background: var(--bf-warn-sf); }
+    .bf-table tbody tr.is-uyari:hover { background: #fef3c7; }
+</style>
+
+<div class="bf-wrap">
+
+    <!-- ══ Başlık ══ -->
+    <div class="bf-head">
+        <div class="bf-head-left">
+            <div class="bf-head-icon"><i class="fe fe-list"></i></div>
+            <div>
+                <h1>@tarafAdi — Yüklenen Satırlar</h1>
+                <div class="bf-head-sub">
+                    @k.Ad
+                    @if (!string.IsNullOrWhiteSpace(dosyaAdi))
+                    {
+                        <text> · <span class="bf-mono">@dosyaAdi</span></text>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="bf-head-actions">
+            <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn">
+                <i class="fe fe-arrow-left"></i> Karşılaştırmaya dön
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ Özet ══ -->
+    <div class="bf-stats">
+        <div class="bf-stat is-primary">
+            <div class="bf-stat-label">Toplam Satır</div>
+            <div class="bf-stat-value">@Model.Count.ToString("N0", tr)</div>
+            <div class="bf-stat-note">Para birimi: @paraBirimi</div>
+        </div>
+
+        <div class="bf-stat is-info">
+            <div class="bf-stat-label">Farklı Ürün</div>
+            <div class="bf-stat-value">@Model.Select(s => s.ReferansNormalize).Distinct().Count().ToString("N0", tr)</div>
+            <div class="bf-stat-note">Normalize referans sayısı</div>
+        </div>
+
+        <div class="bf-stat is-success">
+            <div class="bf-stat-label">Dönem</div>
+            <div class="bf-stat-value">@donemler.Count.ToString("N0", tr)</div>
+            <div class="bf-stat-note">
+                @if (donemler.Count > 0)
+                {
+                    @($"{donemler.First():MM.yyyy} – {donemler.Last():MM.yyyy}")
+                }
+                else
+                {
+                    <text>Tarih bilgisi yok</text>
+                }
+            </div>
+        </div>
+
+        <div class="bf-stat @(uyarili > 0 || tarihsiz > 0 ? "is-warn" : "is-success")">
+            <div class="bf-stat-label">Uyarılı Satır</div>
+            <div class="bf-stat-value">@uyarili.ToString("N0", tr)</div>
+            <div class="bf-stat-note">
+                @if (tarihsiz > 0)
+                {
+                    <text>@tarihsiz satırda fatura tarihi yok</text>
+                }
+                else
+                {
+                    <text>Tüm satırlar temiz</text>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (tarihsiz > 0 && k.EslestirmeKurali == EslestirmeKurali.ReferansVeAy)
+    {
+        <div class="bf-note bf-note-warn">
+            <i class="fe fe-alert-triangle"></i>
+            <div>
+                <strong>@tarihsiz satırda fatura tarihi yok.</strong>
+                Eşleştirme kuralı "referans + aynı ay" olduğu için bu satırlar dönem eşleştirmesine giremez
+                ve eşleşmemiş olarak raporlanır. Tarih kolonunu doğru eşleştirdiğinizden emin olun,
+                ya da ayarlardan kuralı "Sadece referans no" yapın.
+            </div>
+        </div>
+    }
+
+    <!-- ══ Tablo ══ -->
+    <div class="bf-card">
+        <div class="bf-card-head">
+            <h2 class="bf-card-title">Ham Satırlar</h2>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <input type="search" id="bfSatirAra" class="bf-input"
+                       style="width:200px; padding:5px 10px; font-size:12px;"
+                       placeholder="Referans veya ürün ara…" oninput="bfSatirFiltre()" />
+                <span class="bf-faint" style="font-size:11px;" id="bfSatirSayac">@Model.Count satır</span>
+            </div>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <div class="bf-empty">
+                <div class="bf-empty-icon"><i class="fe fe-inbox"></i></div>
+                <h3>Henüz satır yok</h3>
+                <p>Bu taraf için bir Excel dosyası yüklenmemiş.</p>
+                <a asp-action="Detay" asp-route-id="@k.Id" class="bf-btn bf-btn-primary">Dosya yükle</a>
+            </div>
+        }
+        else
+        {
+            <div class="bf-satir-kaydir">
+                <table class="bf-table" id="bfSatirTablo">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">Excel</th>
+                            <th>Referans</th>
+                            <th>Ürün Adı</th>
+                            <th>Fatura Tarihi</th>
+                            <th>Dönem</th>
+                            <th class="num">Birim Fiyat (@paraBirimi)</th>
+                            <th class="num">Miktar</th>
+                            <th>Birim</th>
+                            <th class="num">Kur</th>
+                            <th class="num">TL Karşılığı</th>
+                            <th>Fatura No</th>
+                            <th>Uyarı</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model)
+                        {
+                            var uyariVar = !string.IsNullOrWhiteSpace(s.Uyari);
+                            <tr class="@(uyariVar ? "is-uyari" : "")"
+                                data-ara="@((s.ReferansNo + " " + s.UrunAdi + " " + s.ReferansNormalize).ToLower(tr))">
+                                <td class="bf-mono bf-faint" style="font-size:10.5px;">@s.KaynakSatirNo</td>
+                                <td class="bf-mono bf-nowrap">@(s.ReferansNo ?? "—")</td>
+                                <td style="max-width:280px;">
+                                    <div class="bf-truncate" title="@s.UrunAdi">@(s.UrunAdi ?? "—")</div>
+                                </td>
+                                <td class="bf-nowrap">@(s.FaturaTarihi?.ToString("dd.MM.yyyy", tr) ?? "—")</td>
+                                <td class="bf-nowrap">@(s.Donem?.ToString("MM.yyyy", tr) ?? "—")</td>
+                                <td class="num">@s.BirimFiyat.ToString("N4", tr)</td>
+                                <td class="num">@(s.Miktar?.ToString("N2", tr) ?? "—")</td>
+                                <td>@(s.Birim ?? "—")</td>
+                                <td class="num bf-faint" title="@(s.KurTarihi?.ToString("dd.MM.yyyy", tr) ?? "")">
+                                    @(s.Kur?.ToString("N4", tr) ?? "—")
+                                </td>
+                                <td class="num">@(s.BirimFiyatTl?.ToString("N2", tr) ?? "—")</td>
+                                <td class="bf-truncate" style="max-width:130px;" title="@s.FaturaNo">@(s.FaturaNo ?? "—")</td>
+                                <td class="bf-uyari-hucre">@(s.Uyari ?? "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5">TOPLAM · @Model.Count.ToString("N0", tr) satır</td>
+                            <td class="num">Ort. @Model.Average(s => s.BirimFiyat).ToString("N4", tr)</td>
+                            <td class="num">@Model.Sum(s => s.Miktar ?? 0m).ToString("N2", tr)</td>
+                            <td colspan="5"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function bfSatirFiltre() {
+            var q = (document.getElementById('bfSatirAra').value || '').toLowerCase().trim();
+            var tablo = document.getElementById('bfSatirTablo');
+            if (!tablo) return;
+
+            var satirlar = tablo.querySelectorAll('tbody tr');
+            var gorunen = 0;
+
+            satirlar.forEach(function (tr) {
+                var eslesti = !q || (tr.dataset.ara || '').indexOf(q) !== -1;
+                tr.style.display = eslesti ? '' : 'none';
+                if (eslesti) gorunen++;
+            });
+
+            document.getElementById('bfSatirSayac').textContent = gorunen + ' satır';
+        }
+    </script>
+}

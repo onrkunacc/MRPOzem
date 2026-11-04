@@ -30,7 +30,8 @@ namespace CRMOzem.DataAccess.Seeders
                 ("lojistik", "Lojistik", "lojistik@ozemmedikal.com", "555-000-0002", "Lojistik Sorumlusu", "Lojistik"),
                 ("istatistikgiris", "İstatistik Giriş", "istgiris@ozemmedikal.com", "555-000-0003", "İstatistik Giriş", "İstatistikGiris"),
                 ("kotatakip", "Kota Takip Kullanıcısı", "kotatakip@ozemmedikal.com", "555-000-0005", "Kota Takip", "KotaTakip"),
-                ("kota","Kota Takip Kullanıcısı","kota@ozemmedikal.com","555-555-5555","Kota Takip","KotaTakip")
+                ("kota","Kota Takip Kullanıcısı","kota@ozemmedikal.com","555-555-5555","Kota Takip","KotaTakip"),
+                ("ozemfatura","Birim Fiyat Kullanıcısı","ozemfatura@ozemmedikal.com","555-555-5555","Birim Fiyat","Birim")
             };
 
             foreach (var (UserName, FullName, Email, PhoneNumber, Title, Role) in users)

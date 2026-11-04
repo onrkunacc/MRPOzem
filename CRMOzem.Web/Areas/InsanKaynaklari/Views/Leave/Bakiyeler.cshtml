@@ -1,0 +1,392 @@
+﻿@model CRMOzem.Core.ViewModels.LeaveBalanceListVm
+@{
+    ViewData["Title"] = "İzin Bakiyeleri";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Bakiyeler")
+
+<style>
+    .bk-oran { height: 5px; background: var(--kt-bg-soft); border-radius: 999px; overflow: hidden; margin-top: 5px; min-width: 70px; }
+    .bk-oran > i { display: block; height: 100%; border-radius: 999px; background: var(--kt-primary); }
+    .bk-oran.dolu > i { background: var(--kt-neg); }
+    .bk-oran.yuksek > i { background: var(--kt-warn); }
+    .bk-sat-eksik { background: #fffdf5; }
+    .bk-rozet {
+        font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+    .bk-manuel { background: var(--kt-primary-50); color: var(--kt-primary-700); }
+    .bk-oto { background: var(--kt-bg-soft); color: var(--kt-ink-500); }
+</style>
+
+<div class="kt-page" style="padding-top:0;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═══ ÖZET ═══ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Toplam Hakediş</div>
+                <div class="kt-kpi-icon"><i class="fas fa-calendar-check"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.ToplamHakedis</div>
+            <div class="kt-kpi-foot">@Model.Balances.Count çalışan</div>
+        </div>
+        <div class="kt-kpi accent-neg">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Kullanılan</div>
+                <div class="kt-kpi-icon"><i class="fas fa-plane-departure"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.ToplamKullanilan</div>
+            <div class="kt-kpi-foot">gün</div>
+        </div>
+        <div class="kt-kpi accent-warn">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Bekleyen</div>
+                <div class="kt-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.ToplamBekleyen</div>
+            <div class="kt-kpi-foot">gün onay bekliyor</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Kalan</div>
+                <div class="kt-kpi-icon"><i class="fas fa-piggy-bank"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.ToplamKalan</div>
+            <div class="kt-kpi-foot">
+                @if (Model.HakedisGirilmemisSayisi > 0)
+                {
+                    <span style="color:var(--kt-warn);">@Model.HakedisGirilmemisSayisi kişide hakediş yok</span>
+                }
+                else
+                {
+                    <text>gün</text>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ═══ ARAÇ ÇUBUĞU ═══ *@
+    <div class="kt-card" style="padding:12px 18px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <form method="get" style="display:inline;">
+            <select name="yil" class="kt-select" style="width:120px;" onchange="this.form.submit()">
+                @foreach (var y in Model.AvailableYears)
+                {
+                    <option value="@y" selected="@(y == Model.Year)">@y</option>
+                }
+            </select>
+        </form>
+
+        <button type="button" class="kt-btn kt-btn-dark" onclick="yilAc()">
+            <i class="fas fa-wand-magic-sparkles"></i> @Model.Year Yılını Kıdemden Oluştur
+        </button>
+
+        @if (Model.IseGirisEksikSayisi > 0)
+        {
+            <a class="kt-btn kt-btn-ghost" asp-action="Personel" style="color:var(--kt-warn);">
+                <i class="fas fa-triangle-exclamation"></i>
+                @Model.IseGirisEksikSayisi kişide işe giriş tarihi eksik
+            </a>
+        }
+
+        <input type="text" id="bkAra" class="kt-input" placeholder="Çalışan ara..."
+               style="width:200px; margin-left:auto;" />
+    </div>
+
+    @* ═══ TABLO ═══ *@
+    <div class="kt-card kt-card-flush">
+        <div class="kt-table-wrap">
+            <table class="kt-table" id="bkTablo">
+                <thead>
+                    <tr>
+                        <th>Çalışan</th>
+                        <th class="text-center">Kıdem</th>
+                        <th class="text-center">Hakediş</th>
+                        <th class="text-center">Devreden</th>
+                        <th class="text-center">Toplam</th>
+                        <th class="text-center">Kullanılan</th>
+                        <th class="text-center">Bekleyen</th>
+                        <th class="text-center">Kalan</th>
+                        <th class="text-center" style="width:1%;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in Model.Balances)
+                    {
+                        var oranCls = b.UsagePercent >= 100 ? "dolu" : b.UsagePercent >= 75 ? "yuksek" : "";
+                        <tr data-ara="@($"{b.FullName} {b.Title} {b.Departman}".ToLower())"
+                            class="@(b.HasRecord ? "" : "bk-sat-eksik")">
+                            <td class="kt-cell-primary">
+                                @b.FullName
+                                <div style="font-size:11px; color:var(--kt-ink-400);">
+                                    @(b.Title ?? "—")
+                                    @if (!string.IsNullOrWhiteSpace(b.Departman))
+                                    {
+                                        <text> · @b.Departman</text>
+                                    }
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                @if (b.IseGirisEksik)
+                                {
+                                    <span style="color:var(--kt-warn); font-size:11.5px;">
+                                        <i class="fas fa-triangle-exclamation"></i> tarih yok
+                                    </span>
+                                }
+                                else
+                                {
+                                    <strong>@b.KidemYili</strong>
+                                    <div style="font-size:10.5px; color:var(--kt-ink-400);">yıl</div>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <strong style="font-size:15px;">@b.TotalDays</strong>
+                                <div style="margin-top:3px;">
+                                    @if (!b.HasRecord)
+                                    {
+                                        <span class="bk-rozet" style="background:var(--kt-warn-50); color:var(--kt-warn);">girilmedi</span>
+                                    }
+                                    else if (b.ManuelGirildi)
+                                    {
+                                        <span class="bk-rozet bk-manuel">elle</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bk-rozet bk-oto">otomatik</span>
+                                    }
+                                </div>
+                                @if (b.AsgariAltinda)
+                                {
+                                    <div style="font-size:10.5px; color:var(--kt-neg); margin-top:3px;"
+                                         title="@b.HakedisAciklamasi">
+                                        kanuni: @b.OnerilenHakedis
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-center">@(b.CarriedOverDays > 0 ? b.CarriedOverDays.ToString() : "—")</td>
+                            <td class="text-center"><strong>@b.Entitlement</strong></td>
+                            <td class="text-center">
+                                @b.UsedDays
+                                <div class="bk-oran @oranCls">
+                                    <i style="width:@(Math.Min(b.UsagePercent, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></i>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                @if (b.PendingDays > 0)
+                                {
+                                    <span style="color:var(--kt-warn); font-weight:700;">@b.PendingDays</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <strong class="@(b.RemainingDays > 0 ? "kt-money-pos" : b.RemainingDays < 0 ? "kt-money-neg" : "")"
+                                        style="font-size:15px;">@b.RemainingDays</strong>
+                            </td>
+                            <td class="text-center">
+                                <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                    <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost" title="Hakediş düzenle"
+                                            onclick="bkAc('@b.UserId', '@b.FullName.Replace("'", "\\'")', @b.TotalDays, @b.CarriedOverDays, @b.OnerilenHakedis, '@(b.HakedisAciklamasi?.Replace("'", "\\'"))')">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    @if (!b.IseGirisEksik)
+                                    {
+                                        <form asp-action="OtomatikHesapla" method="post" style="display:inline;"
+                                              onsubmit="return confirm('@b.FullName.Replace("'", "\\'") için kıdeme göre @b.OnerilenHakedis gün hakediş yazılacak. Devam?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@b.UserId" />
+                                            <input type="hidden" name="yil" value="@Model.Year" />
+                                            <input type="hidden" name="devriAktar" value="true" />
+                                            <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost"
+                                                    title="Kıdemden hesapla (@b.OnerilenHakedis gün)">
+                                                <i class="fas fa-calculator"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-right"><span style="font-size:11px; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.06em;">Toplam</span></td>
+                        <td class="text-center">@Model.ToplamHakedis</td>
+                        <td class="text-center">@Model.ToplamKullanilan</td>
+                        <td class="text-center">@Model.ToplamBekleyen</td>
+                        <td class="text-center">@Model.ToplamKalan</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* ═══ HAKEDİŞ MODAL ═══ *@
+<div class="kt-modal-backdrop" id="bkModal">
+    <div class="kt-modal kt-modal-sm">
+        <div class="kt-modal-head">
+            <h5 class="kt-modal-title"><i class="fas fa-scale-balanced"></i> Hakediş Düzenle</h5>
+            <button type="button" class="kt-modal-close" onclick="bkKapat()">&times;</button>
+        </div>
+        <form asp-action="BakiyeKaydet" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="userId" id="bkUserId" />
+            <input type="hidden" name="yil" value="@Model.Year" />
+            <div class="kt-modal-body">
+                <p style="font-size:13px; color:var(--kt-ink-500); margin:0 0 14px;">
+                    <strong id="bkAd" style="color:var(--kt-ink-900);"></strong> · @Model.Year yılı
+                </p>
+
+                <div id="bkOneri" class="kt-hint" style="margin:0 0 14px; padding:10px 12px; background:var(--kt-bg); border-radius:var(--kt-r-sm);">
+                    <i class="fas fa-circle-info"></i>
+                    <span id="bkOneriMetin"></span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Hakediş (gün) <span class="req">*</span></label>
+                            <input type="number" name="hakedis" id="bkHakedis" class="kt-input" min="0" max="365" required />
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Devreden (gün)</label>
+                            <input type="number" name="devreden" id="bkDevreden" class="kt-input" min="0" max="365" />
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Açıklama</label>
+                            <input type="text" name="aciklama" class="kt-input" maxlength="500"
+                                   placeholder="Opsiyonel not" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kt-hint">
+                    <i class="fas fa-lock"></i>
+                    Elle kaydedilen hakediş, toplu otomatik hesaplamada korunur — üzerine yazılmaz.
+                </div>
+            </div>
+            <div class="kt-modal-foot">
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="bkKapat()">Vazgeç</button>
+                <button type="submit" class="kt-btn kt-btn-primary"><i class="fas fa-floppy-disk"></i> Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ═══ YIL OLUŞTUR MODAL ═══ *@
+<div class="kt-modal-backdrop" id="yilModal">
+    <div class="kt-modal kt-modal-sm">
+        <div class="kt-modal-head">
+            <h5 class="kt-modal-title"><i class="fas fa-wand-magic-sparkles"></i> @Model.Year Yılını Oluştur</h5>
+            <button type="button" class="kt-modal-close" onclick="yilKapat()">&times;</button>
+        </div>
+        <form asp-action="YilOlustur" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="yil" value="@Model.Year" />
+            <div class="kt-modal-body">
+                <p style="font-size:13px; color:var(--kt-ink-700); margin:0 0 14px;">
+                    İşe giriş tarihi girilmiş tüm aktif çalışanlar için @Model.Year yılı hakedişi
+                    kıdemlerine göre hesaplanıp kaydedilecek.
+                </p>
+
+                <label class="kt-chip" style="display:flex; gap:9px; width:100%; cursor:pointer; padding:11px 13px;">
+                    <input type="checkbox" name="devriAktar" value="true" checked
+                           style="width:16px; height:16px; accent-color:var(--kt-primary);" />
+                    <span style="text-align:left;">
+                        Geçen yıldan kalan günleri devret
+                        <small style="display:block; font-size:11.5px; color:var(--kt-ink-400);">
+                            @(Model.Year - 1) yılında kullanılmayan günler devreden olarak eklenir
+                        </small>
+                    </span>
+                </label>
+
+                <label class="kt-chip" style="display:flex; gap:9px; width:100%; cursor:pointer; padding:11px 13px; margin-top:8px;">
+                    <input type="checkbox" name="manuelleriEz" value="true"
+                           style="width:16px; height:16px; accent-color:var(--kt-neg);" />
+                    <span style="text-align:left;">
+                        Elle girilmiş hakedişleri de üzerine yaz
+                        <small style="display:block; font-size:11.5px; color:var(--kt-neg);">
+                            İşaretlenmezse elle girilmiş kayıtlara dokunulmaz
+                        </small>
+                    </span>
+                </label>
+
+                <div class="kt-hint" style="margin-top:12px;">
+                    <i class="fas fa-scale-balanced"></i>
+                    Kural: 1–5 yıl 14 gün · 5–15 yıl 20 gün · 15+ yıl 26 gün ·
+                    18 yaş altı ve 50 yaş üstü en az 20 gün. İlk yılını doldurmayan çalışan 0 gün alır.
+                </div>
+            </div>
+            <div class="kt-modal-foot">
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="yilKapat()">Vazgeç</button>
+                <button type="submit" class="kt-btn kt-btn-dark"><i class="fas fa-check"></i> Oluştur</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function bkAc(id, ad, hakedis, devreden, oneri, aciklama) {
+        document.getElementById('bkUserId').value = id;
+        document.getElementById('bkAd').textContent = ad;
+        document.getElementById('bkHakedis').value = hakedis;
+        document.getElementById('bkDevreden').value = devreden;
+        document.getElementById('bkOneriMetin').textContent =
+            aciklama ? ('Kıdeme göre öneri: ' + oneri + ' gün — ' + aciklama) : ('Kıdeme göre öneri: ' + oneri + ' gün');
+        document.getElementById('bkModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function bkKapat() {
+        document.getElementById('bkModal').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    function yilAc() {
+        document.getElementById('yilModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function yilKapat() {
+        document.getElementById('yilModal').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    ['bkModal', 'yilModal'].forEach(id => {
+        document.getElementById(id).addEventListener('click', e => {
+            if (e.target.id === id) { bkKapat(); yilKapat(); }
+        });
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { bkKapat(); yilKapat(); } });
+
+    (function () {
+        const ara = document.getElementById('bkAra');
+        ara.addEventListener('input', () => {
+            const q = ara.value.trim().toLowerCase();
+            document.querySelectorAll('#bkTablo tbody tr').forEach(tr => {
+                tr.style.display = (!q || (tr.dataset.ara || '').includes(q)) ? '' : 'none';
+            });
+        });
+    })();
+</script>
+}

@@ -1,7 +1,15 @@
 ﻿@* ═══════════════════════════════════════════════════════════════════════
-   KT DESIGN SYSTEM — v2
+   KT DESIGN SYSTEM — v2.1
    Sade, sofistike. Lacivert/slate tabanlı, bol beyaz boşluk.
    Finansal pozitif = emerald, negatif = coral. Hiçbir yerde gradient / pembe / mor yok.
+
+   v2.1 (ekleme — mevcut kurallar değişmedi):
+     · Form bileşenleri: .kt-section, .kt-input-group, .kt-actions, .req, .kt-hint
+     · Hastane seçici: .hospital-picker ve alt bileşenleri
+     · Tür / para birimi seçiciler: .tur-option, .pb-option
+     · Kur & hesap kutuları: .kur-box, .hesap-box
+     · Uyumluluk takma adları: .kt-header-content, .theme-warning, .kt-btn-warning,
+       --kt-gray-*, --kt-danger, --kt-success
    ═══════════════════════════════════════════════════════════════════════ *@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,9 +45,11 @@
 
     --kt-warn:      #d97706;   /* amber-600 */
     --kt-warn-50:   #fffbeb;
+    --kt-warn-700:  #b45309;
 
     --kt-info:      #0284c7;   /* sky-600 */
     --kt-info-50:   #f0f9ff;
+    --kt-info-200:  #bae6fd;
 
     --kt-r-sm: 6px;
     --kt-r-md: 10px;
@@ -50,6 +60,20 @@
     --kt-shadow:    0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
     --kt-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07);
     --kt-shadow-lg: 0 20px 40px -12px rgba(15, 23, 42, 0.15);
+
+    /* ── v2.1 uyumluluk takma adları ──
+       Eski view'larda kalmış --kt-gray-* / --kt-danger referansları
+       tanımsız kalıp kuralı geçersiz kılmasın diye. */
+    --kt-gray-50:  #f8fafc;
+    --kt-gray-100: #f1f5f9;
+    --kt-gray-200: #e2e8f0;
+    --kt-gray-300: #cbd5e1;
+    --kt-gray-400: #94a3b8;
+    --kt-gray-600: #475569;
+    --kt-gray-900: #0f172a;
+    --kt-danger:   #dc2626;
+    --kt-success:  #059669;
+    --kt-primary-dark: #4338ca;
 }
 
 /* ═══════ BASE ═══════ */
@@ -646,4 +670,431 @@ select.kt-input {
 }
 .kt-toast.success { background: var(--kt-pos); }
 .kt-toast.error { background: var(--kt-neg); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v2.1 — FORM BİLEŞENLERİ
+   Buradan aşağısı eklemedir; yukarıdaki hiçbir kural değişmedi.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Uyumluluk takma adları ── */
+.kt-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.kt-header.theme-warning .kt-header-icon { background: var(--kt-warn); }
+.kt-header.theme-danger  .kt-header-icon { background: var(--kt-neg); }
+
+.kt-btn-warning { background: var(--kt-warn); color: #fff; }
+.kt-btn-warning:hover { background: var(--kt-warn-700); color: #fff; }
+
+/* ── Bölüm başlığı şeridi ──
+   Not: .kt-section içindeki .kt-section-title, yukarıdaki flex-konteyner
+   kuralını devralmasın diye burada sıfırlanıyor. */
+.kt-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--kt-bg);
+    border: 1px solid var(--kt-border);
+    border-left: 3px solid var(--kt-ink-900);
+    border-radius: var(--kt-r-md);
+    margin-bottom: 18px;
+}
+.kt-section > div:last-child { flex: 1; min-width: 0; }
+
+.kt-section .kt-section-title {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kt-ink-900);
+    letter-spacing: -0.005em;
+}
+.kt-section .kt-section-desc {
+    display: block;
+    font-size: 12px;
+    color: var(--kt-ink-500);
+    margin-top: 1px;
+    line-height: 1.45;
+}
+
+.kt-section.section-primary  { border-left-color: var(--kt-primary); }
+.kt-section.section-primary  .kt-section-icon { background: var(--kt-primary); }
+.kt-section.section-money    { border-left-color: var(--kt-warn); }
+.kt-section.section-money    .kt-section-icon { background: var(--kt-warn); }
+.kt-section.section-hospital { border-left-color: var(--kt-pos); }
+.kt-section.section-hospital .kt-section-icon { background: var(--kt-pos); }
+.kt-section.section-info     { border-left-color: var(--kt-info); }
+.kt-section.section-info     .kt-section-icon { background: var(--kt-info); }
+
+/* ── .kt-select için açılır ok ──
+   v2'de yalnızca select.kt-input'a ok tanımlıydı; .kt-select kullanan
+   alanlarda appearance:none yüzünden ok hiç görünmüyordu. */
+.kt-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+/* ── Zorunlu alan yıldızı ── */
+.req { color: var(--kt-neg); font-weight: 700; margin-left: 2px; }
+
+/* ── Alan altı ipucu ── */
+.kt-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--kt-ink-500);
+    margin-top: 6px;
+    line-height: 1.5;
+}
+.kt-hint i { margin-top: 2px; opacity: .75; }
+
+/* ── Ön ekli input (para birimi) ── */
+.kt-input-group {
+    display: flex;
+    align-items: stretch;
+    background: var(--kt-paper);
+    border: 1px solid var(--kt-border-strong);
+    border-radius: var(--kt-r-sm);
+    overflow: hidden;
+    transition: border-color .12s, box-shadow .12s;
+}
+.kt-input-group:focus-within {
+    border-color: var(--kt-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+.kt-input-group-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: var(--kt-bg-soft);
+    color: var(--kt-ink-700);
+    font-weight: 700;
+    font-size: 15px;
+    border-right: 1px solid var(--kt-border);
+    flex-shrink: 0;
+}
+.kt-input-group-prefix.is-usd { background: var(--kt-info-50); color: var(--kt-info); }
+.kt-input-group-prefix.is-try { background: var(--kt-warn-50); color: var(--kt-warn); }
+.kt-input-group > input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--kt-ink-900);
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Form alt aksiyon çubuğu ── */
+.kt-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--kt-border);
+}
+.kt-actions .kt-spacer { margin-right: auto; }
+
+/* ── Form içi hata kutusu ── */
+.kt-form-error, .modal-error {
+    display: none;
+    padding: 10px 12px;
+    background: var(--kt-neg-50);
+    border: 1px solid #fecaca;
+    color: var(--kt-neg-700);
+    border-radius: var(--kt-r-sm);
+    margin-top: 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+.kt-form-error.active, .modal-error.active { display: block; }
+
+/* ── Küçük modal ── */
+.kt-modal.kt-modal-sm { width: min(480px, 95vw); }
+
+/* ═══════ HASTANE SEÇİCİ ═══════ */
+.hospital-picker {
+    background: var(--kt-bg);
+    border: 1px solid var(--kt-border);
+    border-radius: var(--kt-r-md);
+    padding: 14px;
+}
+
+.hospital-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.hospital-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 12px 9px 34px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: var(--kt-ink-900);
+    border: 1px solid var(--kt-border-strong);
+    border-radius: var(--kt-r-sm);
+    background: var(--kt-paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 11px center;
+}
+.hospital-search:focus {
+    outline: none;
+    border-color: var(--kt-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.btn-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: var(--kt-r-sm);
+    border: 1px solid var(--kt-border-strong);
+    background: var(--kt-paper);
+    color: var(--kt-ink-700);
+    cursor: pointer;
+    transition: all .12s;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.btn-mini i { font-size: 11px; }
+.btn-mini-outline:hover { background: var(--kt-bg-soft); border-color: var(--kt-ink-400); color: var(--kt-ink-900); }
+.btn-mini-success {
+    background: var(--kt-pos);
+    border-color: var(--kt-pos);
+    color: #fff;
+}
+.btn-mini-success:hover { background: var(--kt-pos-700); border-color: var(--kt-pos-700); color: #fff; }
+
+.badge-selected {
+    margin-left: auto;
+    background: var(--kt-ink-900);
+    color: #fff;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.hospital-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 6px;
+    background: var(--kt-paper);
+    border: 1px solid var(--kt-border);
+    border-radius: var(--kt-r-sm);
+}
+.hospital-list::-webkit-scrollbar { width: 8px; }
+.hospital-list::-webkit-scrollbar-track { background: var(--kt-bg); border-radius: 4px; }
+.hospital-list::-webkit-scrollbar-thumb { background: var(--kt-border-strong); border-radius: 4px; }
+.hospital-list::-webkit-scrollbar-thumb:hover { background: var(--kt-ink-400); }
+
+.hospital-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+    border-radius: var(--kt-r-sm);
+    cursor: pointer;
+    transition: background .1s, border-color .1s;
+}
+.hospital-item:last-child { margin-bottom: 0; }
+.hospital-item:hover { background: var(--kt-bg-soft); }
+.hospital-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--kt-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+}
+.hospital-item span {
+    font-size: 13.5px;
+    color: var(--kt-ink-700);
+    line-height: 1.35;
+}
+.hospital-item:has(input:checked) {
+    background: var(--kt-primary-50);
+    border-color: #c7d2fe;
+}
+.hospital-item:has(input:checked) span {
+    color: var(--kt-primary-700);
+    font-weight: 600;
+}
+.hospital-item:has(input:focus-visible) {
+    outline: 2px solid var(--kt-primary);
+    outline-offset: 1px;
+}
+.hospital-item.yeni-eklendi { animation: ktFlashPos 2.2s ease; }
+@@keyframes ktFlashPos {
+    0%, 100% { background: transparent; border-color: transparent; }
+    20%, 70% { background: var(--kt-pos-50); border-color: var(--kt-pos); }
+}
+
+.hospital-empty {
+    padding: 36px 16px;
+    text-align: center;
+    color: var(--kt-ink-400);
+    font-size: 13px;
+}
+.hospital-empty-icon { font-size: 30px; margin-bottom: 8px; opacity: .5; }
+.hospital-empty small { display: block; margin-top: 4px; font-size: 12px; }
+
+/* ═══════ TÜR / PARA BİRİMİ SEÇİCİLER ═══════ */
+.tur-selector, .pb-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.tur-option {
+    position: relative;
+    cursor: pointer;
+    padding: 14px 12px;
+    text-align: center;
+    background: var(--kt-paper);
+    border: 1px solid var(--kt-border-strong);
+    border-radius: var(--kt-r-md);
+    transition: all .12s;
+}
+.tur-option:hover { border-color: var(--kt-ink-400); background: var(--kt-bg); }
+.tur-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tur-option:has(input:focus-visible) { outline: 2px solid var(--kt-primary); outline-offset: 2px; }
+
+.tur-option.active-gider {
+    border-color: var(--kt-neg);
+    background: var(--kt-neg-50);
+    box-shadow: inset 0 0 0 1px var(--kt-neg);
+}
+.tur-option.active-gelir {
+    border-color: var(--kt-pos);
+    background: var(--kt-pos-50);
+    box-shadow: inset 0 0 0 1px var(--kt-pos);
+}
+.tur-icon { font-size: 20px; line-height: 1; margin-bottom: 5px; }
+.tur-title { font-weight: 700; font-size: 14px; color: var(--kt-ink-900); }
+.tur-desc  { font-size: 11.5px; color: var(--kt-ink-500); margin-top: 2px; line-height: 1.35; }
+.tur-option.active-gider .tur-title { color: var(--kt-neg-700); }
+.tur-option.active-gelir .tur-title { color: var(--kt-pos-700); }
+
+.pb-option {
+    position: relative;
+    cursor: pointer;
+    padding: 10px 8px;
+    text-align: center;
+    background: var(--kt-paper);
+    border: 1px solid var(--kt-border-strong);
+    border-radius: var(--kt-r-sm);
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--kt-ink-700);
+    transition: all .12s;
+}
+.pb-option:hover { border-color: var(--kt-ink-400); background: var(--kt-bg); }
+.pb-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pb-option:has(input:focus-visible) { outline: 2px solid var(--kt-primary); outline-offset: 2px; }
+.pb-option.active-usd {
+    border-color: var(--kt-info);
+    background: var(--kt-info-50);
+    color: var(--kt-info);
+    box-shadow: inset 0 0 0 1px var(--kt-info);
+}
+.pb-option.active-try {
+    border-color: var(--kt-warn);
+    background: var(--kt-warn-50);
+    color: var(--kt-warn);
+    box-shadow: inset 0 0 0 1px var(--kt-warn);
+}
+
+/* ═══════ KUR & HESAP KUTULARI ═══════ */
+.kur-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--kt-ink-700);
+    background: var(--kt-info-50);
+    border: 1px solid var(--kt-info-200);
+    border-radius: var(--kt-r-md);
+}
+.kur-box.loading {
+    background: var(--kt-bg);
+    border-color: var(--kt-border);
+    color: var(--kt-ink-500);
+}
+.kur-box.error {
+    background: var(--kt-neg-50);
+    border-color: #fecaca;
+    color: var(--kt-neg-700);
+}
+
+.hesap-box {
+    padding: 14px 16px;
+    margin-top: 10px;
+    background: var(--kt-bg);
+    border: 1px solid var(--kt-border);
+    border-radius: var(--kt-r-md);
+}
+.hesap-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+}
+.hesap-row + .hesap-row { border-top: 1px dashed var(--kt-border); }
+.hesap-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--kt-ink-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.hesap-value {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--kt-ink-900);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ═══════ RESPONSIVE ═══════ */
+@@media (max-width: 768px) {
+    .kt-page { padding: 12px; }
+    .kt-card { padding: 16px; }
+    .kt-header { padding: 18px 16px; }
+    .kt-section { padding: 10px 12px; }
+    .kt-actions { justify-content: stretch; }
+    .kt-actions .kt-btn { flex: 1; justify-content: center; }
+    .kt-actions .kt-spacer { margin-right: 0; width: 100%; }
+}
 </style>
