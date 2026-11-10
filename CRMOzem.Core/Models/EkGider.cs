@@ -18,6 +18,14 @@ namespace CRMOzem.Core.Models
         public int? BirimId { get; set; }
         public Birim? Birim { get; set; }
 
+        /// <summary>
+        /// Şartnamedeki kısım numarası (1..Ihale.KisimSayisi).
+        /// null = tüm kısımlara ortak gider; kısım toplamlarına
+        /// dağıtılmaz, "Ortak Giderler" bloğunda raporlanır.
+        /// </summary>
+        [Display(Name = "Kısım")]
+        public int? KisimNo { get; set; }
+
         [Required, MaxLength(200)]
         public string GiderAdi { get; set; } = string.Empty;
 
@@ -45,5 +53,9 @@ namespace CRMOzem.Core.Models
         // TutarTRY = Miktar * BirimFiyat * Kur
         [NotMapped]
         public decimal TutarTRY => Miktar * BirimFiyat * Kur;
+
+        /// <summary>Ekranlarda gösterilecek kısım etiketi.</summary>
+        [NotMapped]
+        public string KisimEtiket => KisimNo.HasValue ? $"{KisimNo}. Kısım" : "Ortak";
     }
 }

@@ -19,5 +19,27 @@ namespace CRMOzem.Core.ViewModels
         public decimal ToplamMaliyetSutPuani { get; set; }
         public decimal ToplamSutPuani { get; set; }
         public List<BirimOzetSatir> BirimOzetler { get; set; } = new();
+
+        
+        public List<KisimOzetSatir> KisimOzetler { get; set; } = new();
+
+   
+        public KisimOzetSatir OrtakOzet { get; set; } = new();
+
+    
+        public bool KisimKirilimiVar =>
+            Ihale.KisimSayisi > 1 || KisimOzetler.Any(x => x.KayitVar);
+
+        public bool TanimDisiKisimVar => KisimOzetler.Any(x => x.TanimDisi && x.KayitVar);
+
+        /// <summary>Kısımlara dağıtılmamış ortak gider var mı?</summary>
+        public bool OrtakGiderVar => OrtakOzet.KayitVar;
+
+        /// <summary>
+        /// Kısımların toplamı + ortak = GenelToplam olmalı.
+        /// Ekranda mutabakat kontrolü için.
+        /// </summary>
+        public decimal KisimlarToplami =>
+            KisimOzetler.Sum(x => x.ToplamMaliyet) + OrtakOzet.ToplamMaliyet;
     }
 }

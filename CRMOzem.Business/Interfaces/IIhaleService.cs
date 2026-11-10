@@ -11,6 +11,10 @@ namespace CRMOzem.Business.Interfaces
     public interface IIhaleService
     {
         Task<List<Ihale>> GetAllAsync();
+
+        /// <summary>Liste ekranı için ihaleler + kısım ve maliyet özetleri.</summary>
+        Task<List<IhaleListeSatir>> GetListeAsync();
+
         Task<Ihale?> GetByIdAsync(int id);
         Task<int> CreateAsync(Ihale ihale);
         Task UpdateAsync(Ihale ihale);

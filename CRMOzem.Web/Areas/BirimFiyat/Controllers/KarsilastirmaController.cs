@@ -510,9 +510,7 @@ namespace CRMOzem.Web.Areas.BirimFiyat.Controllers
             return View(satirlar);
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  EXCEL ÇIKTISI
-        // ═══════════════════════════════════════════════════════════
+    
 
         [HttpGet]
         public async Task<IActionResult> SonucExcel(int id, CancellationToken ct)
@@ -626,16 +624,7 @@ namespace CRMOzem.Web.Areas.BirimFiyat.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ad);
         }
 
-        // ═══════════════════════════════════════════════════════════
-        //  ŞABLON İNDİRME
-        // ═══════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// Kullanıcının doldurup yükleyeceği Excel şablonu.
-        /// Başlık adları okuyucunun otomatik kolon tespitiyle birebir uyumludur —
-        /// bu şablonla yüklenen dosyada eşleştirme adımı kendiliğinden doğru gelir.
-        /// id/taraf verilirse açıklama sayfası o tarafa göre özelleşir.
-        /// </summary>
+      
         [HttpGet]
         public async Task<IActionResult> SablonIndir(int? id, KarsilastirmaTarafi? taraf, CancellationToken ct)
         {
@@ -694,7 +683,6 @@ namespace CRMOzem.Web.Areas.BirimFiyat.Controllers
             ws.SheetView.FreezeRows(1);
             ws.Range(1, 1, 1, kolonlar.Length).SetAutoFilter();
 
-            // 2. satır: silinmek üzere bırakılan sarı örnek satır
             var ornekSatir = new[]
             {
                 "07D8225", "Architect Troponin-I Reagent Kit", "15.01.2026",

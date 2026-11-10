@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using CRMOzem.Business.Interfaces;
+using CRMOzem.Core.Models;
 using CRMOzem.Core.ViewModels;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -25,7 +26,14 @@ namespace CRMOzem.Business.Services
             var wsOzet = wb.AddWorksheet("Maliyet Özeti");
             OzetSayfasiDoldur(wsOzet, model);
 
-            // ── 2. Sayfa: Personel ──────────────────────────────────────
+            // ── 2. Sayfa: Kısım Bazlı Özet ──────────────────────────────
+            if (model.KisimKirilimiVar)
+            {
+                var wsKisim = wb.AddWorksheet("Kısım Bazlı Özet");
+                KisimSayfasiDoldur(wsKisim, model);
+            }
+
+            // ── 3. Sayfa: Personel ──────────────────────────────────────
             var wsPersonel = wb.AddWorksheet("Personel Giderleri");
             PersonelSayfasiDoldur(wsPersonel, model);
 
@@ -70,6 +78,7 @@ namespace CRMOzem.Business.Services
             Param("İhale Tarihi", ihale.IhaleTarihi?.ToString("dd.MM.yyyy") ?? "—");
             Param("İhale Şekli", ihale.IhaleSekli ?? "—");
             Param("Süre (Gün)", ihale.IhaleSuresiGun.ToString());
+            Param("Şartname Kısım Sayısı", ihale.KisimSayisi.ToString());
             Param("Genel Gider Oranı", $"%{ihale.GenelGiderOran * 100:0.##}");
             Param("Kar Oranı", $"%{ihale.KarOran * 100:0.##}");
             Param("KDV Oranı", $"%{ihale.KDVOran * 100:0.##}");
@@ -120,7 +129,7 @@ namespace CRMOzem.Business.Services
 
         private void PersonelSayfasiDoldur(IXLWorksheet ws, OzetViewModel m)
         {
-            string[] headers = { "Birim", "Görev/Unvan", "Sayı", "Ücret Tipi", "Aylık Brüt (₺)", "Süre (Gün)", "Toplam (₺)" };
+            string[] headers = { "Kısım", "Birim", "Görev/Unvan", "Sayı", "Ücret Tipi", "Aylık Brüt (₺)", "Süre (Gün)", "Toplam (₺)" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -132,31 +141,36 @@ namespace CRMOzem.Business.Services
             int row = 2;
             foreach (var p in m.Ihale.PersonelGiderler)
             {
-                ws.Cell(row, 1).Value = p.Birim?.BirimKodu ?? "-";
-                ws.Cell(row, 2).Value = p.GorevUnvan;
-                ws.Cell(row, 3).Value = p.Sayi;
-                ws.Cell(row, 4).Value = p.UcretTipi;
-                ws.Cell(row, 5).Value = p.BirimFiyatAylik;
-                ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(row, 6).Value = m.Ihale.IhaleSuresiGun;
-                ws.Cell(row, 7).Value = p.ToplamTRY;
-                ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 1).Value = p.KisimEtiket;
+                ws.Cell(row, 2).Value = p.Birim?.BirimKodu ?? "-";
+                ws.Cell(row, 3).Value = p.GorevUnvan;
+                ws.Cell(row, 4).Value = p.Sayi;
+                ws.Cell(row, 5).Value = p.UcretTipi;
+                ws.Cell(row, 6).Value = p.BirimFiyatAylik;
+                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 7).Value = m.Ihale.IhaleSuresiGun;
+                ws.Cell(row, 8).Value = p.ToplamTRY;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
                 row++;
             }
 
-            // Toplam
-            ws.Cell(row, 6).Value = "TOPLAM";
-            ws.Cell(row, 6).Style.Font.Bold = true;
-            ws.Cell(row, 7).Value = m.PersonelToplam;
-            ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 7).Style.Font.Bold = true;
+            // Kısım ara toplamları
+            row = KisimAraToplam(ws, row, 8,
+                m.Ihale.PersonelGiderler.Select(x => (x.KisimNo, x.ToplamTRY)));
 
-            ws.Columns(1, 7).AdjustToContents();
+            // Toplam
+            ws.Cell(row, 7).Value = "TOPLAM";
+            ws.Cell(row, 7).Style.Font.Bold = true;
+            ws.Cell(row, 8).Value = m.PersonelToplam;
+            ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 8).Style.Font.Bold = true;
+
+            ws.Columns(1, 8).AdjustToContents();
         }
 
         private void EkGiderSayfasiDoldur(IXLWorksheet ws, OzetViewModel m)
         {
-            string[] headers = { "Birim", "Gider Adı", "Kategori", "Miktar", "Birim Fiyat", "Para Birimi", "Kur", "Tutar (₺)" };
+            string[] headers = { "Kısım", "Birim", "Gider Adı", "Kategori", "Miktar", "Birim Fiyat", "Para Birimi", "Kur", "Tutar (₺)" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -168,33 +182,38 @@ namespace CRMOzem.Business.Services
             int row = 2;
             foreach (var e in m.Ihale.EkGiderler)
             {
-                ws.Cell(row, 1).Value = e.Birim?.BirimKodu ?? "-";
-                ws.Cell(row, 2).Value = e.GiderAdi;
-                ws.Cell(row, 3).Value = e.Kategori;
-                ws.Cell(row, 4).Value = e.Miktar;
-                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.0000";
-                ws.Cell(row, 5).Value = e.BirimFiyat;
+                ws.Cell(row, 1).Value = e.KisimEtiket;
+                ws.Cell(row, 2).Value = e.Birim?.BirimKodu ?? "-";
+                ws.Cell(row, 3).Value = e.GiderAdi;
+                ws.Cell(row, 4).Value = e.Kategori;
+                ws.Cell(row, 5).Value = e.Miktar;
                 ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0.0000";
-                ws.Cell(row, 6).Value = e.ParaBirimi;
-                ws.Cell(row, 7).Value = e.Kur;
-                ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.0000";
-                ws.Cell(row, 8).Value = e.TutarTRY;
-                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 6).Value = e.BirimFiyat;
+                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.0000";
+                ws.Cell(row, 7).Value = e.ParaBirimi;
+                ws.Cell(row, 8).Value = e.Kur;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.0000";
+                ws.Cell(row, 9).Value = e.TutarTRY;
+                ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
                 row++;
             }
 
-            ws.Cell(row, 7).Value = "TOPLAM";
-            ws.Cell(row, 7).Style.Font.Bold = true;
-            ws.Cell(row, 8).Value = m.EkGiderToplam;
-            ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 8).Style.Font.Bold = true;
+            // Kısım ara toplamları
+            row = KisimAraToplam(ws, row, 9,
+                m.Ihale.EkGiderler.Select(x => (x.KisimNo, x.TutarTRY)));
 
-            ws.Columns(1, 8).AdjustToContents();
+            ws.Cell(row, 8).Value = "TOPLAM";
+            ws.Cell(row, 8).Style.Font.Bold = true;
+            ws.Cell(row, 9).Value = m.EkGiderToplam;
+            ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 9).Style.Font.Bold = true;
+
+            ws.Columns(1, 9).AdjustToContents();
         }
 
         private void KalemSayfasiDoldur(IXLWorksheet ws, OzetViewModel m)
         {
-            string[] headers = { "#", "Birim", "SUT Kodu", "Tetkik Adı", "Test Miktarı", "SUT Fiyat", "SUT Çarpan", "Toplam SUT", "Toplam SUT Fiyat" };
+            string[] headers = { "#", "Kısım", "Birim", "SUT Kodu", "Tetkik Adı", "Test Miktarı", "SUT Fiyat", "SUT Çarpan", "Toplam SUT", "Toplam SUT Fiyat" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -207,29 +226,166 @@ namespace CRMOzem.Business.Services
             foreach (var k in m.Ihale.IhaleKalemler.OrderBy(x => x.SiraNo))
             {
                 ws.Cell(row, 1).Value = k.SiraNo;
-                ws.Cell(row, 2).Value = k.Birim?.BirimKodu ?? "-";
-                ws.Cell(row, 3).Value = k.SutKodu;
-                ws.Cell(row, 4).Value = k.TetkikAdi;
-                ws.Cell(row, 5).Value = k.TestMiktari;
-                ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
-                ws.Cell(row, 6).Value = k.SutFiyat;
-                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.0000";
-                ws.Cell(row, 7).Value = k.SutCarpan;
-                ws.Cell(row, 7).Style.NumberFormat.Format = "0.000";
-                ws.Cell(row, 8).Value = k.ToplamSUT;
-                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(row, 9).Value = k.ToplamSutFiyat;
+                ws.Cell(row, 2).Value = k.KisimEtiket;
+                ws.Cell(row, 3).Value = k.Birim?.BirimKodu ?? "-";
+                ws.Cell(row, 4).Value = k.SutKodu;
+                ws.Cell(row, 5).Value = k.TetkikAdi;
+                ws.Cell(row, 6).Value = k.TestMiktari;
+                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+                ws.Cell(row, 7).Value = k.SutFiyat;
+                ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.0000";
+                ws.Cell(row, 8).Value = k.SutCarpan;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "0.000";
+                ws.Cell(row, 9).Value = k.ToplamSUT;
                 ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 10).Value = k.ToplamSutFiyat;
+                ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
                 row++;
             }
 
-            ws.Cell(row, 8).Value = "TOPLAM";
-            ws.Cell(row, 8).Style.Font.Bold = true;
-            ws.Cell(row, 9).Value = m.ToplamSutFiyat;
-            ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 9).Style.Font.Bold = true;
+            // Kısım ara toplamları
+            row = KisimAraToplam(ws, row, 10,
+                m.Ihale.IhaleKalemler.Select(x => (x.KisimNo, x.ToplamSutFiyat)));
 
-            ws.Columns(1, 9).AdjustToContents();
+            ws.Cell(row, 9).Value = "TOPLAM";
+            ws.Cell(row, 9).Style.Font.Bold = true;
+            ws.Cell(row, 10).Value = m.ToplamSutFiyat;
+            ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 10).Style.Font.Bold = true;
+
+            ws.Columns(1, 10).AdjustToContents();
+        }
+
+        /// <summary>
+        /// Detay sayfalarının altına kısım bazlı ara toplam satırları yazar.
+        /// Kısma atanmamış satırlar "Ortak" başlığıyla ayrı gösterilir.
+        /// </summary>
+        private int KisimAraToplam(IXLWorksheet ws, int row, int tutarKolonu,
+                                   IEnumerable<(int? KisimNo, decimal Tutar)> satirlar)
+        {
+            var liste = satirlar.ToList();
+            if (liste.Count == 0) return row;
+
+            var gruplar = liste
+                .GroupBy(x => x.KisimNo)
+                .OrderBy(g => g.Key ?? int.MaxValue)
+                .ToList();
+
+            // Tek grup varsa ara toplam anlamsız
+            if (gruplar.Count < 2) return row;
+
+            row++;
+            foreach (var g in gruplar)
+            {
+                var etiket = g.Key.HasValue ? $"{g.Key}. Kısım ara toplamı" : "Ortak ara toplamı";
+                ws.Cell(row, 1).Value = etiket;
+                ws.Cell(row, 1).Style.Font.Italic = true;
+                ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#4a5568");
+                ws.Cell(row, tutarKolonu).Value = g.Sum(x => x.Tutar);
+                ws.Cell(row, tutarKolonu).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, tutarKolonu).Style.Font.Italic = true;
+                ws.Range(row, 1, row, tutarKolonu).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8f9fc");
+                row++;
+            }
+
+            return row;
+        }
+
+        /// <summary>Kısım bazlı özet sayfası.</summary>
+        private void KisimSayfasiDoldur(IXLWorksheet ws, OzetViewModel m)
+        {
+            ws.Cell("A1").Value = "KISIM BAZLI MALİYET ÖZETİ";
+            ws.Cell("A1").Style.Font.Bold = true;
+            ws.Cell("A1").Style.Font.FontSize = 13;
+
+            ws.Cell("A2").Value = m.Ihale.IhaleAdi;
+            ws.Cell("A2").Style.Font.FontColor = XLColor.FromHtml("#4a5568");
+
+            ws.Cell("A3").Value = $"Şartname kısım sayısı: {m.Ihale.KisimSayisi}";
+            ws.Cell("A3").Style.Font.FontColor = XLColor.FromHtml("#4a5568");
+
+            if (m.OrtakGiderVar)
+            {
+                ws.Cell("A4").Value = "Not: Kısma atanmamış satırlar kısımlara dağıtılmaz, \"Ortak Giderler\" satırında toplanır.";
+                ws.Cell("A4").Style.Font.Italic = true;
+                ws.Cell("A4").Style.Font.FontColor = XLColor.FromHtml("#92400e");
+            }
+
+            string[] headers =
+            {
+                "Kısım", "Kalem", "Test Miktarı", "SUT Puanı", "Personel (₺)",
+                "Ek Gider (₺)", "Genel Gider (₺)", "SUT Fiyat (₺)", "Toplam Maliyet (₺)",
+                "Pay (%)", "Maliyet / SUT"
+            };
+
+            int baslikSatiri = 6;
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var c = ws.Cell(baslikSatiri, i + 1);
+                c.Value = headers[i];
+                c.Style.Font.Bold = true;
+                c.Style.Fill.BackgroundColor = XLColor.FromHtml("#3b82f6");
+                c.Style.Font.FontColor = XLColor.White;
+            }
+
+            int row = baslikSatiri + 1;
+
+            void SatirYaz(KisimOzetSatir ks, bool ortak)
+            {
+                ws.Cell(row, 1).Value = ortak ? "Ortak Giderler" : ks.Ad + (ks.TanimDisi ? " (tanım dışı)" : "");
+                ws.Cell(row, 2).Value = ks.KalemAdedi;
+                ws.Cell(row, 3).Value = ks.TestMiktari;
+                ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0";
+                ws.Cell(row, 4).Value = ks.ToplamSutPuani;
+                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 5).Value = ks.PersonelTRY;
+                ws.Cell(row, 6).Value = ks.EkGiderTRY;
+                ws.Cell(row, 7).Value = ks.GenelGider;
+                ws.Cell(row, 8).Value = ks.ToplamSutFiyat;
+                ws.Cell(row, 9).Value = ks.ToplamMaliyet;
+                ws.Range(row, 5, row, 9).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 9).Style.Font.Bold = true;
+                ws.Cell(row, 10).Value = ks.PayYuzde;
+                ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.0";
+                ws.Cell(row, 11).Value = ks.MaliyetSutPuani;
+                ws.Cell(row, 11).Style.NumberFormat.Format = "#,##0.0000";
+
+                if (ortak)
+                    ws.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.FromHtml("#f3f4f6");
+                else if (ks.TanimDisi)
+                    ws.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.FromHtml("#fff5f5");
+                else if (!ks.KayitVar)
+                    ws.Range(row, 1, row, 11).Style.Font.FontColor = XLColor.FromHtml("#a0aec0");
+
+                row++;
+            }
+
+            foreach (var ks in m.KisimOzetler) SatirYaz(ks, false);
+            if (m.OrtakGiderVar) SatirYaz(m.OrtakOzet, true);
+
+            // Dip toplam
+            ws.Cell(row, 1).Value = "GENEL TOPLAM";
+            ws.Cell(row, 2).Value = m.Ihale.IhaleKalemler.Count;
+            ws.Cell(row, 3).Value = m.Ihale.IhaleKalemler.Sum(x => x.TestMiktari);
+            ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0";
+            ws.Cell(row, 4).Value = m.ToplamSutPuani;
+            ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 5).Value = m.PersonelToplam;
+            ws.Cell(row, 6).Value = m.EkGiderToplam;
+            ws.Cell(row, 7).Value = m.GenelGider;
+            ws.Cell(row, 8).Value = m.ToplamSutFiyat;
+            ws.Cell(row, 9).Value = m.GenelToplam;
+            ws.Range(row, 5, row, 9).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 10).Value = 100;
+            ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.0";
+            ws.Cell(row, 11).Value = m.ToplamMaliyetSutPuani;
+            ws.Cell(row, 11).Style.NumberFormat.Format = "#,##0.0000";
+
+            ws.Range(row, 1, row, 11).Style.Font.Bold = true;
+            ws.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.FromHtml("#eff6ff");
+
+            ws.SheetView.FreezeRows(baslikSatiri);
+            ws.Columns(1, 11).AdjustToContents();
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -297,6 +453,7 @@ namespace CRMOzem.Business.Services
                         t.Cell().PaddingVertical(3).Text(v).FontColor("#1a202c");
                     }
                     PRow("Süre", $"{m.Ihale.IhaleSuresiGun} gün");
+                    PRow("Kısım Sayısı", m.Ihale.KisimSayisi.ToString());
                     PRow("Şekil", m.Ihale.IhaleSekli ?? "—");
                     PRow("Genel Gider", $"%{m.Ihale.GenelGiderOran * 100:0.##}");
                     PRow("KDV", $"%{m.Ihale.KDVOran * 100:0.##}");
@@ -319,6 +476,7 @@ namespace CRMOzem.Business.Services
                         if (bold) { t1.Bold(); t2.Bold(); }
                     }
 
+                    // Tutar satırı (₺)
                     MRow("Personel Toplam", m.PersonelToplam);
                     MRow("Ek Gider Toplam", m.EkGiderToplam);
                     MRow("Ara Toplam", m.PersonelToplam + m.EkGiderToplam, true, "#f8f9fc");
@@ -326,9 +484,106 @@ namespace CRMOzem.Business.Services
                     MRow("Toplam SUT Fiyat (Çarpanlı)", m.ToplamSutFiyat);
                     MRow("GENEL TOPLAM", m.GenelToplam, true, "#eff6ff");
 
+                    // Miktar satırı (birimsiz) — para birimi eklenmez
+                    void QRow(string l, string v, bool bold = false, string? bg = null)
+                    {
+                        var c1 = t.Cell().PaddingVertical(4).PaddingHorizontal(6);
+                        var c2 = t.Cell().PaddingVertical(4).PaddingHorizontal(6).AlignRight();
+                        if (bg != null) { c1 = c1.Background(bg); c2 = c2.Background(bg); }
+                        var t1 = c1.Text(l); var t2 = c2.Text(v);
+                        if (bold) { t1.Bold(); t2.Bold(); }
+                    }
+
+                    QRow("Toplam Kalem Sayısı", $"{m.Ihale.IhaleKalemler.Count:N0}");
+                    QRow("Toplam Test Miktarı", $"{m.Ihale.IhaleKalemler.Sum(x => x.TestMiktari):N0}", true, "#f8f9fc");
+                    QRow("Toplam SUT Puanı", $"{m.ToplamSutPuani:N2}", true, "#f8f9fc");
+
                     t.Cell().PaddingVertical(4).PaddingHorizontal(6).Text("Maliyet / SUT Puanı").SemiBold();
                     t.Cell().PaddingVertical(4).PaddingHorizontal(6).AlignRight().Text($"{m.ToplamMaliyetSutPuani:N4}").SemiBold();
                 });
+
+                // ── Kısım Bazlı Özet ─────────────────────────────────
+                if (m.KisimKirilimiVar)
+                {
+                    col.Item().PaddingTop(14).Text("Kısım Bazlı Özet").Bold().FontSize(10).FontColor("#3b82f6");
+
+                    if (m.OrtakGiderVar)
+                    {
+                        col.Item().PaddingTop(2).Text("Kısma atanmamış giderler kısımlara dağıtılmadı; \"Ortak Giderler\" satırında toplandı.")
+                            .FontSize(7.5f).Italic().FontColor("#92400e");
+                    }
+
+                    col.Item().PaddingTop(4).Table(t =>
+                    {
+                        // Genel gider kolonu bilerek yok: (personel + ek gider) × oran olarak
+                        // türetilebiliyor ve oran parametrelerde yazılı. Yerine test miktarı
+                        // ve SUT puanı gösteriliyor. Tutarlar tam lira (kuruşsuz).
+                        t.ColumnsDefinition(cd =>
+                        {
+                            cd.RelativeColumn(2.2f); cd.ConstantColumn(28); cd.ConstantColumn(44);
+                            cd.RelativeColumn(2); cd.RelativeColumn(2); cd.RelativeColumn(2);
+                            cd.RelativeColumn(2); cd.RelativeColumn(2.2f); cd.ConstantColumn(32);
+                        });
+
+                        void Hdr(string v) => t.Cell().Background("#3b82f6").PaddingVertical(4).PaddingHorizontal(3)
+                            .Text(v).FontColor("#ffffff").Bold().FontSize(7f);
+
+                        Hdr("Kısım"); Hdr("Kalem"); Hdr("Test Miktarı"); Hdr("SUT Puanı");
+                        Hdr("Personel ₺"); Hdr("Ek Gider ₺"); Hdr("SUT Fiyat ₺");
+                        Hdr("Toplam Maliyet ₺"); Hdr("Pay");
+
+                        void KisimSatir(KisimOzetSatir ks, string? bg)
+                        {
+                            void Cell(string v, bool bold = false, bool saga = true)
+                            {
+                                var cell = t.Cell().BorderBottom(1).BorderColor("#e3e8f0")
+                                    .PaddingVertical(3).PaddingHorizontal(3);
+                                if (bg != null) cell = cell.Background(bg);
+                                if (saga) cell = cell.AlignRight();
+                                var txt = cell.Text(v).FontSize(7f);
+                                if (bold) txt.Bold();
+                            }
+
+                            Cell(ks.Ad + (ks.TanimDisi ? " (tanım dışı)" : ""), false, false);
+                            Cell(ks.KalemAdedi > 0 ? ks.KalemAdedi.ToString("N0") : "—");
+                            Cell(ks.TestMiktari > 0 ? $"{ks.TestMiktari:N0}" : "—");
+                            Cell(ks.ToplamSutPuani > 0 ? $"{ks.ToplamSutPuani:N0}" : "—");
+                            Cell(ks.PersonelTRY > 0 ? $"{ks.PersonelTRY:N0}" : "—");
+                            Cell(ks.EkGiderTRY > 0 ? $"{ks.EkGiderTRY:N0}" : "—");
+                            Cell(ks.ToplamSutFiyat > 0 ? $"{ks.ToplamSutFiyat:N0}" : "—");
+                            Cell($"{ks.ToplamMaliyet:N0}", true);
+                            Cell(ks.KayitVar ? $"%{ks.PayYuzde:N1}" : "—");
+                        }
+
+                        foreach (var ks in m.KisimOzetler)
+                            KisimSatir(ks, ks.TanimDisi ? "#fff5f5" : (ks.KayitVar ? null : "#fcfcfd"));
+
+                        if (m.OrtakGiderVar)
+                            KisimSatir(m.OrtakOzet, "#f3f4f6");
+
+                        // Dip toplam
+                        void TCell(string v, bool saga = true)
+                        {
+                            var cell = t.Cell().Background("#eff6ff").PaddingVertical(3).PaddingHorizontal(3);
+                            if (saga) cell = cell.AlignRight();
+                            cell.Text(v).Bold().FontSize(7f);
+                        }
+
+                        TCell("GENEL TOPLAM", false);
+                        TCell(m.Ihale.IhaleKalemler.Count.ToString("N0"));
+                        TCell($"{m.Ihale.IhaleKalemler.Sum(x => x.TestMiktari):N0}");
+                        TCell($"{m.ToplamSutPuani:N0}");
+                        TCell($"{m.PersonelToplam:N0}");
+                        TCell($"{m.EkGiderToplam:N0}");
+                        TCell($"{m.ToplamSutFiyat:N0}");
+                        TCell($"{m.GenelToplam:N0}");
+                        TCell("%100,0");
+                    });
+
+                    col.Item().PaddingTop(3).Text(
+                        $"Genel gider kısım içinde (personel + ek gider) × %{m.Ihale.GenelGiderOran * 100:0.##} olarak hesaplandı ve toplam maliyete dahildir.")
+                        .FontSize(6.5f).Italic().FontColor("#718096");
+                }
 
                 // ── Personel ─────────────────────────────────────────
                 if (m.Ihale.PersonelGiderler.Any())
@@ -338,19 +593,20 @@ namespace CRMOzem.Business.Services
                     {
                         t.ColumnsDefinition(cd =>
                         {
-                            cd.ConstantColumn(40); cd.RelativeColumn(3); cd.ConstantColumn(30);
+                            cd.ConstantColumn(52); cd.ConstantColumn(40); cd.RelativeColumn(3); cd.ConstantColumn(30);
                             cd.RelativeColumn(2); cd.RelativeColumn(2); cd.RelativeColumn(2);
                         });
 
                         void Hdr(string v) => t.Cell().Background("#3b82f6").PaddingVertical(4).PaddingHorizontal(4)
                             .Text(v).FontColor("#ffffff").Bold().FontSize(8);
 
-                        Hdr("Birim"); Hdr("Görev/Unvan"); Hdr("Sayı"); Hdr("Ücret Tipi"); Hdr("Aylık Brüt"); Hdr("Toplam");
+                        Hdr("Kısım"); Hdr("Birim"); Hdr("Görev/Unvan"); Hdr("Sayı"); Hdr("Ücret Tipi"); Hdr("Aylık Brüt"); Hdr("Toplam");
 
                         foreach (var p in m.Ihale.PersonelGiderler)
                         {
                             void Cell(string v) => t.Cell().BorderBottom(1).BorderColor("#e3e8f0")
                                 .PaddingVertical(3).PaddingHorizontal(4).Text(v).FontSize(8);
+                            Cell(p.KisimEtiket);
                             Cell(p.Birim?.BirimKodu ?? "-");
                             Cell(p.GorevUnvan);
                             Cell(p.Sayi.ToString());
@@ -359,7 +615,7 @@ namespace CRMOzem.Business.Services
                             Cell($"{p.ToplamTRY:N2} ₺");
                         }
 
-                        t.Cell().ColumnSpan(5).PaddingVertical(3).PaddingHorizontal(4)
+                        t.Cell().ColumnSpan(6).PaddingVertical(3).PaddingHorizontal(4)
                             .Text("TOPLAM").Bold().FontSize(8);
                         t.Cell().PaddingVertical(3).PaddingHorizontal(4).AlignRight()
                             .Text($"{m.PersonelToplam:N2} ₺").Bold().FontSize(8);
@@ -374,19 +630,20 @@ namespace CRMOzem.Business.Services
                     {
                         t.ColumnsDefinition(cd =>
                         {
-                            cd.ConstantColumn(40); cd.RelativeColumn(3); cd.RelativeColumn(2);
+                            cd.ConstantColumn(52); cd.ConstantColumn(40); cd.RelativeColumn(3); cd.RelativeColumn(2);
                             cd.RelativeColumn(2); cd.ConstantColumn(35); cd.RelativeColumn(2);
                         });
 
                         void Hdr(string v) => t.Cell().Background("#3b82f6").PaddingVertical(4).PaddingHorizontal(4)
                             .Text(v).FontColor("#ffffff").Bold().FontSize(8);
 
-                        Hdr("Birim"); Hdr("Gider Adı"); Hdr("Kategori"); Hdr("Birim Fiyat"); Hdr("PB"); Hdr("Tutar");
+                        Hdr("Kısım"); Hdr("Birim"); Hdr("Gider Adı"); Hdr("Kategori"); Hdr("Birim Fiyat"); Hdr("PB"); Hdr("Tutar");
 
                         foreach (var e in m.Ihale.EkGiderler)
                         {
                             void Cell(string v) => t.Cell().BorderBottom(1).BorderColor("#e3e8f0")
                                 .PaddingVertical(3).PaddingHorizontal(4).Text(v).FontSize(8);
+                            Cell(e.KisimEtiket);
                             Cell(e.Birim?.BirimKodu ?? "-");
                             Cell(e.GiderAdi);
                             Cell(e.Kategori ?? "-");
@@ -395,7 +652,7 @@ namespace CRMOzem.Business.Services
                             Cell($"{e.TutarTRY:N2} ₺");
                         }
 
-                        t.Cell().ColumnSpan(5).PaddingVertical(3).PaddingHorizontal(4)
+                        t.Cell().ColumnSpan(6).PaddingVertical(3).PaddingHorizontal(4)
                             .Text("TOPLAM").Bold().FontSize(8);
                         t.Cell().PaddingVertical(3).PaddingHorizontal(4).AlignRight()
                             .Text($"{m.EkGiderToplam:N2} ₺").Bold().FontSize(8);
@@ -410,33 +667,51 @@ namespace CRMOzem.Business.Services
                     {
                         t.ColumnsDefinition(cd =>
                         {
-                            cd.ConstantColumn(20); cd.ConstantColumn(40); cd.ConstantColumn(55);
-                            cd.RelativeColumn(3); cd.RelativeColumn(2); cd.RelativeColumn(2); cd.RelativeColumn(2);
+                            cd.ConstantColumn(20); cd.ConstantColumn(48); cd.ConstantColumn(40); cd.ConstantColumn(55);
+                            cd.RelativeColumn(3); cd.RelativeColumn(1.9f); cd.RelativeColumn(1.9f);
+                            cd.RelativeColumn(1.9f); cd.RelativeColumn(1.9f);
                         });
 
                         void Hdr(string v) => t.Cell().Background("#3b82f6").PaddingVertical(4).PaddingHorizontal(4)
                             .Text(v).FontColor("#ffffff").Bold().FontSize(7.5f);
 
-                        Hdr("#"); Hdr("Birim"); Hdr("SUT Kodu"); Hdr("Tetkik Adı");
-                        Hdr("Miktar"); Hdr("SUT Fiyat"); Hdr("Toplam SUT Fiyat");
+                        Hdr("#"); Hdr("Kısım"); Hdr("Birim"); Hdr("SUT Kodu"); Hdr("Tetkik Adı");
+                        Hdr("Test Miktarı"); Hdr("SUT Fiyat"); Hdr("Toplam SUT Puanı"); Hdr("Toplam SUT Fiyat");
 
                         foreach (var k in m.Ihale.IhaleKalemler.OrderBy(x => x.SiraNo))
                         {
-                            void Cell(string v) => t.Cell().BorderBottom(1).BorderColor("#e3e8f0")
-                                .PaddingVertical(3).PaddingHorizontal(4).Text(v).FontSize(7.5f);
+                            void Cell(string v, bool saga = false)
+                            {
+                                var cell = t.Cell().BorderBottom(1).BorderColor("#e3e8f0")
+                                    .PaddingVertical(3).PaddingHorizontal(4);
+                                if (saga) cell = cell.AlignRight();
+                                cell.Text(v).FontSize(7.5f);
+                            }
                             Cell(k.SiraNo.ToString());
+                            Cell(k.KisimEtiket);
                             Cell(k.Birim?.BirimKodu ?? "-");
                             Cell(k.SutKodu ?? "-");
                             Cell(k.TetkikAdi);
-                            Cell($"{k.TestMiktari:N0}");
-                            Cell($"{k.SutFiyat:N4}");
-                            Cell($"{k.ToplamSutFiyat:N2} ₺");
+                            Cell($"{k.TestMiktari:N0}", true);
+                            Cell($"{k.SutFiyat:N4}", true);
+                            Cell($"{k.ToplamSUT:N2}", true);
+                            Cell($"{k.ToplamSutFiyat:N2} ₺", true);
                         }
 
-                        t.Cell().ColumnSpan(6).PaddingVertical(3).PaddingHorizontal(4)
+                        // Dip toplam: miktar ve SUT puanı kendi kolonlarının altında
+                        void KTot(string v, bool saga = true)
+                        {
+                            var cell = t.Cell().Background("#eff6ff").PaddingVertical(3).PaddingHorizontal(4);
+                            if (saga) cell = cell.AlignRight();
+                            cell.Text(v).Bold().FontSize(8);
+                        }
+
+                        t.Cell().ColumnSpan(5).Background("#eff6ff").PaddingVertical(3).PaddingHorizontal(4)
                             .Text("TOPLAM").Bold().FontSize(8);
-                        t.Cell().PaddingVertical(3).PaddingHorizontal(4).AlignRight()
-                            .Text($"{m.ToplamSutFiyat:N2} ₺").Bold().FontSize(8);
+                        KTot($"{m.Ihale.IhaleKalemler.Sum(x => x.TestMiktari):N0}");
+                        KTot("");
+                        KTot($"{m.ToplamSutPuani:N2}");
+                        KTot($"{m.ToplamSutFiyat:N2} ₺");
                     });
                 }
             });

@@ -18,6 +18,10 @@ namespace CRMOzem.Core.Models
         public int? BirimId { get; set; }
         public Birim? Birim { get; set; }
 
+ 
+        [Display(Name = "Kısım")]
+        public int? KisimNo { get; set; }
+
         public int SiraNo { get; set; }
 
         [MaxLength(50)]
@@ -43,5 +47,9 @@ namespace CRMOzem.Core.Models
 
         [NotMapped]
         public decimal ToplamSutFiyat => ToplamSUT * SutCarpan;
+
+        /// <summary>Ekranlarda gösterilecek kısım etiketi.</summary>
+        [NotMapped]
+        public string KisimEtiket => KisimNo.HasValue ? $"{KisimNo}. Kısım" : "Ortak";
     }
 }

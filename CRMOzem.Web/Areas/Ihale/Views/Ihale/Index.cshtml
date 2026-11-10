@@ -1,4 +1,4 @@
-﻿@model List<Ihale>
+﻿@model List<IhaleListeSatir>
 @{
     ViewData["Title"] = "İhaleler";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -6,8 +6,12 @@
     var now = DateTime.Now;
     var bugun = now.Date;
 
+    // Kart gövdesi Ihale nesnesiyle çalışıyor; özet rakamlar Id ile eşleştirilir.
+    var ihaleler = Model.Select(x => x.Ihale).ToList();
+    var ozetMap = Model.ToDictionary(x => x.Ihale.Id);
+
     // Yaklaşan ihaleler (gelecek 30 gün)
-    var yaklasanList = Model
+    var yaklasanList = ihaleler
         .Where(x => x.IhaleTarihi.HasValue && x.IhaleTarihi.Value.Date >= bugun
                                            && x.IhaleTarihi.Value.Date <= bugun.AddDays(30))
         .OrderBy(x => x.IhaleTarihi)
@@ -17,7 +21,7 @@
     // 1) Gelecek ihaleler: en yakın tarih başta
     // 2) Geçmiş ihaleler: en yeni tamamlanan başta
     // 3) Tarihi belirlenmemiş olanlar en sonda
-    var tumIhaleler = Model
+    var tumIhaleler = ihaleler
         .Select(x => new
         {
             Ihale = x,
@@ -66,6 +70,110 @@
 }
 
 <link rel="stylesheet" href="~/css/tendercss.css" />
+
+<style>
+    /* ══ KART İÇİ KISIM BİLGİSİ ════════════════════════════════ */
+    .meta-kisim { color: #4338ca; }
+
+    .card-kisim {
+        margin: 10px 0 12px;
+        padding: 10px 12px;
+        background: #f8f9fc;
+        border: 1px solid #e3e8f0;
+        border-left: 3px solid #4338ca;
+        border-radius: 8px;
+    }
+
+    .card-kisim-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 7px;
+    }
+
+    .ck-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #a0aec0;
+    }
+
+    .ck-oran {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 1px 8px;
+        border-radius: 999px;
+        font-family: 'Courier New', monospace;
+    }
+
+        .ck-oran.tam { background: #d1fae5; color: #065f46; }
+        .ck-oran.eksik { background: #fef3c7; color: #92400e; }
+
+    .ck-noktalar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .ck-nokta {
+        min-width: 22px;
+        height: 22px;
+        padding: 0 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        background: #fff;
+        border: 1px solid #e3e8f0;
+        color: #a0aec0;
+        font-size: 10.5px;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+    }
+
+        .ck-nokta.dolu {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #4338ca;
+        }
+
+        .ck-nokta.ortak {
+            border-style: dashed;
+            color: #6b7280;
+            font-family: inherit;
+            font-size: 10px;
+        }
+
+        .ck-nokta.fazla {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+    .ck-uyari {
+        margin-top: 7px;
+        font-size: 10.5px;
+        color: #b91c1c;
+    }
+
+    .ck-rakamlar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed #e3e8f0;
+        font-size: 11px;
+        color: #718096;
+    }
+
+        .ck-rakamlar strong {
+            color: #1a202c;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ck-rakamlar .ck-tutar strong { color: #047857; }
+</style>
 <link rel="stylesheet" href="~/css/tender-upcoming.css" asp-append-version="true" />
 
 <style>
@@ -341,6 +449,7 @@ else
                 {
                     var statusClass = GetStatusClass(ihale.IhaleTarihi);
                     var statusText = GetStatusText(ihale.IhaleTarihi, ihale.IhaleSaati);
+                    ozetMap.TryGetValue(ihale.Id, out var ozet);
 
                     <div class="carousel-slide">
                         <div class="ihale-card @statusClass">
@@ -377,7 +486,54 @@ else
                                     }
                                 }
                                 <span class="meta-item">⏱ @ihale.IhaleSuresiGun gün</span>
+                                <span class="meta-item meta-kisim">📑 @ihale.KisimSayisi kısım</span>
                             </div>
+
+                            @if (ozet != null)
+                            {
+                                <div class="card-kisim">
+                                    <div class="card-kisim-head">
+                                        <span class="ck-label">Kısım durumu</span>
+                                        <span class="ck-oran @(ozet.EksikKisimVar ? "eksik" : "tam")">
+                                            @ozet.DoluKisimAdedi / @ozet.KisimSayisi
+                                        </span>
+                                    </div>
+
+                                    <div class="ck-noktalar">
+                                        @for (var n = 1; n <= ozet.KisimSayisi && n <= 24; n++)
+                                        {
+                                            var dolu = ozet.DoluKisimlar.Contains(n);
+                                            <span class="ck-nokta @(dolu ? "dolu" : "")"
+                                                  title="@n. Kısım — @(dolu ? "veri girilmiş" : "boş")">@n</span>
+                                        }
+                                        @if (ozet.KisimSayisi > 24)
+                                        {
+                                            <span class="ck-nokta fazla">+@(ozet.KisimSayisi - 24)</span>
+                                        }
+                                        @if (ozet.OrtakKayitAdedi > 0)
+                                        {
+                                            <span class="ck-nokta ortak" title="@ozet.OrtakKayitAdedi kayıt hiçbir kısma atanmamış">Ortak</span>
+                                        }
+                                    </div>
+
+                                    @if (ozet.TanimDisiKisimlar.Any())
+                                    {
+                                        <div class="ck-uyari">
+                                            ⚠ Tanım dışı kısım: @string.Join(", ", ozet.TanimDisiKisimlar)
+                                        </div>
+                                    }
+
+                                    <div class="ck-rakamlar">
+                                        <span><strong>@ozet.KalemAdedi.ToString("N0")</strong> kalem</span>
+                                        <span><strong>@ozet.TestMiktari.ToString("N0")</strong> test</span>
+                                        <span><strong>@ozet.ToplamSutPuani.ToString("N0")</strong> SUT</span>
+                                        @if (ozet.GenelToplam > 0)
+                                        {
+                                            <span class="ck-tutar"><strong>@ozet.GenelToplam.ToString("N0")</strong> ₺</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
 
                             <div class="card-params">
                                 <div class="param">

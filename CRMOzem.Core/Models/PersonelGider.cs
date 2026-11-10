@@ -19,6 +19,14 @@ namespace CRMOzem.Core.Models
         public int BirimId { get; set; }
         public Birim? Birim { get; set; }
 
+        /// <summary>
+        /// Şartnamedeki kısım numarası (1..Ihale.KisimSayisi).
+        /// null = tüm kısımlara ortak personel; kısım toplamlarına
+        /// dağıtılmaz, "Ortak Giderler" bloğunda raporlanır.
+        /// </summary>
+        [Display(Name = "Kısım")]
+        public int? KisimNo { get; set; }
+
         [Required, MaxLength(200)]
         public string GorevUnvan { get; set; } = string.Empty;
 
@@ -41,5 +49,9 @@ namespace CRMOzem.Core.Models
 
         [NotMapped]
         public decimal ToplamTRY => Sayi * BirimFiyatAylik * (Ihale?.IhaleSuresiGun ?? 720) / 30m;
+
+        /// <summary>Ekranlarda gösterilecek kısım etiketi.</summary>
+        [NotMapped]
+        public string KisimEtiket => KisimNo.HasValue ? $"{KisimNo}. Kısım" : "Ortak";
     }
 }

@@ -2,6 +2,15 @@
 @{
     ViewData["Title"] = "İhaleyi Düzenle";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Veride kullanılan en büyük kısım numarası — kısım sayısı bunun altına
+    // düşürülürse o satırlar özette "tanım dışı" olarak işaretlenir.
+    var kullanilanEnBuyukKisim = 0;
+    var tumKisimlar = Model.IhaleKalemler.Where(k => k.KisimNo.HasValue).Select(k => k.KisimNo!.Value)
+        .Concat(Model.PersonelGiderler.Where(p => p.KisimNo.HasValue).Select(p => p.KisimNo!.Value))
+        .Concat(Model.EkGiderler.Where(e => e.KisimNo.HasValue).Select(e => e.KisimNo!.Value))
+        .ToList();
+    if (tumKisimlar.Any()) kullanilanEnBuyukKisim = tumKisimlar.Max();
 }
 <link rel="stylesheet" href="~/css/tendercss.css" />
 
@@ -59,6 +68,43 @@
         </div>
 
         <div class="form-section">
+            <h3 class="section-title">📑 Şartname Yapısı</h3>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="KisimSayisi">Şartname Kısım Sayısı *</label>
+                    <input asp-for="KisimSayisi" type="number" class="form-control"
+                           min="1" max="99" required
+                           data-kullanilan="@kullanilanEnBuyukKisim"
+                           id="kisimSayisiInput" />
+                    <span asp-validation-for="KisimSayisi" class="field-error"></span>
+                    <small class="form-hint">
+                        Şu an <strong>@Model.KisimSayisi</strong> kısım tanımlı.
+                        @if (kullanilanEnBuyukKisim > 0)
+                        {
+                            <text>Veride en yüksek kullanılan kısım: <strong>@kullanilanEnBuyukKisim</strong>.</text>
+                        }
+                        else
+                        {
+                            <text>Henüz hiçbir satıra kısım atanmamış.</text>
+                        }
+                    </small>
+                    <div id="kisimUyari" class="kisim-uyari" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <div class="kisim-bilgi-kutu">
+                        <strong>Kısım sayısını düşürürseniz</strong>
+                        <p>
+                            Aralık dışında kalan satırlar <em>silinmez</em>; özet ve çıktılarda
+                            "tanım dışı kısım" uyarısıyla görünmeye devam eder, maliyetleri dip
+                            toplama dahil olur. Satırları düzeltmek için detay ekranından
+                            kısımlarını değiştirin.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h3 class="section-title">📊 Finansal Parametreler</h3>
             <div class="form-grid-3">
                 <div class="form-group">
@@ -99,3 +145,74 @@
         </div>
     </form>
 </div>
+
+<style>
+    .form-hint {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #718096;
+    }
+
+    .kisim-bilgi-kutu {
+        background: #f8f9fc;
+        border: 1px solid #e3e8f0;
+        border-left: 3px solid #f59e0b;
+        border-radius: 8px;
+        padding: 12px 14px;
+        height: 100%;
+    }
+
+        .kisim-bilgi-kutu strong {
+            display: block;
+            font-size: 12.5px;
+            color: #1a202c;
+            margin-bottom: 5px;
+        }
+
+        .kisim-bilgi-kutu p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.55;
+            color: #4a5568;
+        }
+
+    .kisim-uyari {
+        margin-top: 8px;
+        padding: 9px 12px;
+        border-radius: 6px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            var inp = document.getElementById('kisimSayisiInput');
+            if (!inp) return;
+
+            var kullanilan = parseInt(inp.dataset.kullanilan, 10) || 0;
+            var uyari = document.getElementById('kisimUyari');
+
+            function kontrol() {
+                var yeni = parseInt(inp.value, 10) || 0;
+                if (kullanilan > 0 && yeni > 0 && yeni < kullanilan) {
+                    uyari.innerHTML = '<strong>Dikkat:</strong> Veride ' + kullanilan +
+                        '. kısma kadar kayıt var. ' + yeni +
+                        ' yazarsanız aralık dışında kalan satırlar özette "tanım dışı" olarak işaretlenir.';
+                    uyari.style.display = 'block';
+                } else {
+                    uyari.style.display = 'none';
+                }
+            }
+
+            inp.addEventListener('input', kontrol);
+            kontrol();
+        })();
+    </script>
+}

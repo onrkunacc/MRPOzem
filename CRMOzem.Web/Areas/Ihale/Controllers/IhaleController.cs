@@ -19,7 +19,8 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var list = await _svc.GetAllAsync();
+            // Kısım ve maliyet özetleriyle birlikte
+            var list = await _svc.GetListeAsync();
             return View(list);
         }
 
@@ -76,7 +77,7 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
         public async Task<IActionResult> PersonelEkle([FromBody] PersonelGiderModel model)
         {
             var saved = await _svc.SavePersonelAsync(model);
-            return Json(new { success = true, id = saved.Id, toplamTRY = saved.ToplamTRY });
+            return Json(new { success = true, id = saved.Id, toplamTRY = saved.ToplamTRY, kisimNo = saved.KisimNo });
         }
 
         [HttpPost]
@@ -90,14 +91,14 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
         public async Task<IActionResult> EkGiderEkle([FromBody] EkGiderModel model)
         {
             var saved = await _svc.SaveEkGiderAsync(model);
-            return Json(new { success = true, id = saved.Id, tutarTRY = saved.TutarTRY });
+            return Json(new { success = true, id = saved.Id, tutarTRY = saved.TutarTRY, kisimNo = saved.KisimNo });
         }
-        
+
         [HttpPost]
         public async Task<IActionResult> EkGiderGuncelle([FromBody] EkGider model)
         {
             var saved = await _svc.SaveEkGiderAsync(model);
-            return Json(new { success = true, tutarTRY = saved.TutarTRY });
+            return Json(new { success = true, tutarTRY = saved.TutarTRY, kisimNo = saved.KisimNo });
         }
 
         [HttpPost]
@@ -111,7 +112,7 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
         public async Task<IActionResult> KalemEkle([FromBody] IhaleKalemModel model)
         {
             var saved = await _svc.SaveKalemAsync(model);
-            return Json(new { success = true, id = saved.Id, toplamSUT = saved.ToplamSUT, toplamSutFiyat = saved.ToplamSutFiyat });
+            return Json(new { success = true, id = saved.Id, toplamSUT = saved.ToplamSUT, toplamSutFiyat = saved.ToplamSutFiyat, kisimNo = saved.KisimNo });
         }
 
         [HttpPost]
@@ -120,19 +121,21 @@ namespace CRMOzem.Web.Areas.Ihale.Controllers
             await _svc.DeleteKalemAsync(id);
             return Json(new { success = true });
         }
+
         [HttpPost]
         public async Task<IActionResult> PersonelGuncelle([FromBody] PersonelGider model)
         {
             var saved = await _svc.SavePersonelAsync(model);
-            return Json(new { success = true, toplamTRY = saved.ToplamTRY });
+            return Json(new { success = true, toplamTRY = saved.ToplamTRY, kisimNo = saved.KisimNo });
         }
 
         [HttpPost]
         public async Task<IActionResult> KalemGuncelle([FromBody] IhaleKalem model)
         {
             var saved = await _svc.SaveKalemAsync(model);
-            return Json(new { success = true, toplamSUT = saved.ToplamSUT, toplamSutFiyat = saved.ToplamSutFiyat });
+            return Json(new { success = true, toplamSUT = saved.ToplamSUT, toplamSutFiyat = saved.ToplamSutFiyat, kisimNo = saved.KisimNo });
         }
+
         [HttpGet]
         public async Task<IActionResult> ExcelIndir(int id)
         {

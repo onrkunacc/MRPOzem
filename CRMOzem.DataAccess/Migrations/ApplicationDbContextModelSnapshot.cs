@@ -863,6 +863,9 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("KisimNo")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Kur")
                         .HasColumnType("decimal(18,4)");
 
@@ -1398,6 +1401,9 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<decimal>("KarOran")
                         .HasColumnType("decimal(5,4)");
 
+                    b.Property<int>("KisimSayisi")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("KurEUR")
                         .HasColumnType("decimal(10,4)");
 
@@ -1424,6 +1430,9 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("IhaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KisimNo")
                         .HasColumnType("int");
 
                     b.Property<int>("SiraNo")
@@ -1944,6 +1953,9 @@ namespace CRMOzem.DataAccess.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("IhaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KisimNo")
                         .HasColumnType("int");
 
                     b.Property<int>("Sayi")

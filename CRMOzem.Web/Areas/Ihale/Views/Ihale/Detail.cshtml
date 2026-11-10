@@ -11,7 +11,39 @@
     {
         ihaleId = Model.Id,
         kurUSD = Model.KurUSD,
-        kurEUR = Model.KurEUR
+        kurEUR = Model.KurEUR,
+        kisimSayisi = Model.KisimSayisi
+    };
+
+    // Şartnamedeki kısımlar + veride geçen tanım dışı numaralar
+    var veridekiKisimlar = Model.IhaleKalemler.Where(x => x.KisimNo.HasValue).Select(x => x.KisimNo!.Value)
+        .Concat(Model.PersonelGiderler.Where(x => x.KisimNo.HasValue).Select(x => x.KisimNo!.Value))
+        .Concat(Model.EkGiderler.Where(x => x.KisimNo.HasValue).Select(x => x.KisimNo!.Value));
+
+    var kisimNumaralari = Enumerable.Range(1, Math.Max(1, Model.KisimSayisi))
+        .Concat(veridekiKisimlar)
+        .Distinct()
+        .OrderBy(n => n)
+        .ToList();
+
+    var ortakKayitVar = Model.IhaleKalemler.Any(x => x.KisimNo == null)
+                     || Model.PersonelGiderler.Any(x => x.KisimNo == null)
+                     || Model.EkGiderler.Any(x => x.KisimNo == null);
+
+    // Kısım <option> listesi — üç modalda ve satır içi düzenlemede kullanılır
+    Func<int?, string> kisimOptions = secili =>
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<option value=\"\"").Append(secili.HasValue ? "" : " selected").Append(">Ortak (kısımsız)</option>");
+        foreach (var n in kisimNumaralari)
+        {
+            sb.Append("<option value=\"").Append(n).Append("\"")
+              .Append(secili == n ? " selected" : "")
+              .Append(">").Append(n).Append(". Kısım")
+              .Append(n > Model.KisimSayisi ? " (tanım dışı)" : "")
+              .Append("</option>");
+        }
+        return sb.ToString();
     };
 
     var birimlerJsonStr = JsonSerializer.Serialize(
@@ -49,6 +81,35 @@
     <div class="pbar-item"><span>USD</span><strong>@Model.KurUSD.ToString("N2") ₺</strong></div>
     <div class="pbar-item"><span>EUR</span><strong>@Model.KurEUR.ToString("N2") ₺</strong></div>
     <div class="pbar-item"><span>Süre</span><strong>@Model.IhaleSuresiGun gün</strong></div>
+    <div class="pbar-item"><span>Kısım</span><strong>@Model.KisimSayisi</strong></div>
+</div>
+
+@* ══ KISIM FİLTRESİ ══ *@
+<div class="kisim-filtre-bar" id="kisimFiltreBar">
+    <span class="kisim-filtre-label">Kısım:</span>
+    <button type="button" class="kisim-chip active" data-kisim="" onclick="kisimFiltrele(this)">Tümü</button>
+    @foreach (var n in kisimNumaralari)
+    {
+        var kalemAdet = Model.IhaleKalemler.Count(x => x.KisimNo == n);
+        var personelAdet = Model.PersonelGiderler.Count(x => x.KisimNo == n);
+        var ekAdet = Model.EkGiderler.Count(x => x.KisimNo == n);
+        var toplamAdet = kalemAdet + personelAdet + ekAdet;
+        <button type="button"
+                class="kisim-chip @(n > Model.KisimSayisi ? "tanim-disi" : "")"
+                data-kisim="@n" onclick="kisimFiltrele(this)"
+                title="@kalemAdet kalem · @personelAdet personel · @ekAdet ek gider">
+            @n. Kısım
+            <span class="kisim-chip-adet">@toplamAdet</span>
+        </button>
+    }
+    @if (ortakKayitVar)
+    {
+        <button type="button" class="kisim-chip ortak" data-kisim="0" onclick="kisimFiltrele(this)"
+                title="Hiçbir kısma atanmamış satırlar">
+            Ortak
+            <span class="kisim-chip-adet">@(Model.IhaleKalemler.Count(x => x.KisimNo == null) + Model.PersonelGiderler.Count(x => x.KisimNo == null) + Model.EkGiderler.Count(x => x.KisimNo == null))</span>
+        </button>
+    }
 </div>
 
 <div class="tab-wrapper">
@@ -68,6 +129,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th style="width:96px">Kısım</th>
                         <th>Birim</th>
                         <th>Görev/Unvan</th>
                         <th>Sayı</th>
@@ -82,7 +144,8 @@
                     @foreach (var p in Model.PersonelGiderler)
                     {
                         <!-- Görünüm -->
-                        <tr data-id="@p.Id" class="pr-row-view">
+                        <tr data-id="@p.Id" class="pr-row-view" data-kisim="@(p.KisimNo?.ToString() ?? "0")">
+                            <td><span class="badge-kisim @(p.KisimNo.HasValue ? "" : "ortak")">@p.KisimEtiket</span></td>
                             <td><span class="badge-birim">@(p.Birim?.BirimKodu ?? "-")</span></td>
                             <td class="pr-gorev">@p.GorevUnvan</td>
                             <td class="pr-sayi">@p.Sayi</td>
@@ -98,7 +161,12 @@
                             </td>
                         </tr>
                         <!-- Düzenleme -->
-                        <tr data-id="@p.Id" class="pr-row-edit" style="display:none;">
+                        <tr data-id="@p.Id" class="pr-row-edit" style="display:none;" data-kisim="@(p.KisimNo?.ToString() ?? "0")">
+                            <td>
+                                <select class="kcell-select pr-edit-kisimNo">
+                                    @Html.Raw(kisimOptions(p.KisimNo))
+                                </select>
+                            </td>
                             <td>
                                 <select class="kcell-select pr-edit-birimId">
                                     <option value="">-</option>
@@ -151,8 +219,30 @@
                     }
                 </tbody>
                 <tfoot>
-                    <tr>
-                        <td colspan="6"><strong>TOPLAM</strong></td>
+                    @foreach (var n in kisimNumaralari.Where(x => Model.PersonelGiderler.Any(p => p.KisimNo == x)))
+                    {
+                        <tr class="tfoot-kisim-row">
+                            <td colspan="7" style="text-align:right;">
+                                <span class="badge-kisim">@n. Kısım</span> ara toplamı
+                                <span class="tfoot-adet">@Model.PersonelGiderler.Count(p => p.KisimNo == n) kayıt</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.PersonelGiderler.Where(p => p.KisimNo == n).Sum(p => p.ToplamTRY).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
+                    @if (Model.PersonelGiderler.Any(p => p.KisimNo == null))
+                    {
+                        <tr class="tfoot-kisim-row ortak">
+                            <td colspan="7" style="text-align:right;">
+                                <span class="badge-kisim ortak">Ortak</span> ara toplamı
+                                <span class="tfoot-adet">@Model.PersonelGiderler.Count(p => p.KisimNo == null) kayıt</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.PersonelGiderler.Where(p => p.KisimNo == null).Sum(p => p.ToplamTRY).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
+                    <tr class="tfoot-total-row">
+                        <td colspan="7"><strong>TOPLAM</strong></td>
                         <td class="text-right font-mono"><strong>@Model.PersonelGiderler.Sum(p => p.ToplamTRY).ToString("N2") ₺</strong></td>
                         <td></td>
                     </tr>
@@ -171,6 +261,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th style="width:96px">Kısım</th>
                         <th>Birim</th>
                         <th>Gider Adı</th>
                         <th>Kategori</th>
@@ -186,7 +277,8 @@
                     @foreach (var e in Model.EkGiderler)
                     {
                         <!-- Görünüm -->
-                        <tr data-id="@e.Id" class="eg-row-view">
+                        <tr data-id="@e.Id" class="eg-row-view" data-kisim="@(e.KisimNo?.ToString() ?? "0")">
+                            <td><span class="badge-kisim @(e.KisimNo.HasValue ? "" : "ortak")">@e.KisimEtiket</span></td>
                             <td><span class="badge-birim">@(e.Birim?.BirimKodu ?? "-")</span></td>
                             <td>@e.GiderAdi</td>
                             <td>@(e.Kategori ?? "-")</td>
@@ -203,7 +295,12 @@
                             </td>
                         </tr>
                         <!-- Düzenleme -->
-                        <tr data-id="@e.Id" class="eg-row-edit" style="display:none;">
+                        <tr data-id="@e.Id" class="eg-row-edit" style="display:none;" data-kisim="@(e.KisimNo?.ToString() ?? "0")">
+                            <td>
+                                <select class="kcell-select eg-edit-kisimNo">
+                                    @Html.Raw(kisimOptions(e.KisimNo))
+                                </select>
+                            </td>
                             <td>
                                 <select class="kcell-select eg-edit-birimId">
                                     <option value="">-</option>
@@ -269,8 +366,30 @@
                     }
                 </tbody>
                 <tfoot>
-                    <tr>
-                        <td colspan="7"><strong>TOPLAM</strong></td>
+                    @foreach (var n in kisimNumaralari.Where(x => Model.EkGiderler.Any(e => e.KisimNo == x)))
+                    {
+                        <tr class="tfoot-kisim-row">
+                            <td colspan="8" style="text-align:right;">
+                                <span class="badge-kisim">@n. Kısım</span> ara toplamı
+                                <span class="tfoot-adet">@Model.EkGiderler.Count(e => e.KisimNo == n) kayıt</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.EkGiderler.Where(e => e.KisimNo == n).Sum(e => e.TutarTRY).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
+                    @if (Model.EkGiderler.Any(e => e.KisimNo == null))
+                    {
+                        <tr class="tfoot-kisim-row ortak">
+                            <td colspan="8" style="text-align:right;">
+                                <span class="badge-kisim ortak">Ortak</span> ara toplamı
+                                <span class="tfoot-adet">@Model.EkGiderler.Count(e => e.KisimNo == null) kayıt</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.EkGiderler.Where(e => e.KisimNo == null).Sum(e => e.TutarTRY).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
+                    <tr class="tfoot-total-row">
+                        <td colspan="8"><strong>TOPLAM</strong></td>
                         <td class="text-right font-mono"><strong>@Model.EkGiderler.Sum(e => e.TutarTRY).ToString("N2") ₺</strong></td>
                         <td></td>
                     </tr>
@@ -296,6 +415,10 @@
                     <span class="kozet-chip-label">Toplam SUT Fiyat</span>
                     <span class="kozet-chip-val">@Model.IhaleKalemler.Sum(k => k.ToplamSutFiyat).ToString("N2") ₺</span>
                 </span>
+                <span class="kozet-chip kozet-chip--kisim">
+                    <span class="kozet-chip-label">Kısım</span>
+                    <span class="kozet-chip-val">@Model.IhaleKalemler.Where(k => k.KisimNo.HasValue).Select(k => k.KisimNo).Distinct().Count() / @Model.KisimSayisi</span>
+                </span>
             </div>
             <button type="button" class="btn btn-sm btn-primary" onclick="showModal('kalemTopluModal')">+ Kalem Ekle</button>
         </div>
@@ -304,6 +427,7 @@
                 <thead>
                     <tr>
                         <th>#</th>
+                        <th style="width:96px">Kısım</th>
                         <th>Birim</th>
                         <th>SUT Kodu</th>
                         <th>Tetkik Adı</th>
@@ -319,8 +443,9 @@
                     @foreach (var k in Model.IhaleKalemler.OrderBy(x => x.SiraNo))
                     {
                         <!-- Görünüm -->
-                        <tr data-id="@k.Id" class="kl-row-view">
+                        <tr data-id="@k.Id" class="kl-row-view" data-kisim="@(k.KisimNo?.ToString() ?? "0")">
                             <td>@k.SiraNo</td>
+                            <td><span class="badge-kisim @(k.KisimNo.HasValue ? "" : "ortak")">@k.KisimEtiket</span></td>
                             <td><span class="badge-birim">@(k.Birim?.BirimKodu ?? "-")</span></td>
                             <td class="kl-sutkodu">@k.SutKodu</td>
                             <td class="kl-tetkik">@k.TetkikAdi</td>
@@ -337,10 +462,15 @@
                             </td>
                         </tr>
                         <!-- Düzenleme -->
-                        <tr data-id="@k.Id" class="kl-row-edit" style="display:none;">
+                        <tr data-id="@k.Id" class="kl-row-edit" style="display:none;" data-kisim="@(k.KisimNo?.ToString() ?? "0")">
                             <td>
                                 <input class="kcell kl-edit-siraNo" type="number"
                                        value="@k.SiraNo" min="1" style="width:45px;text-align:center;" />
+                            </td>
+                            <td>
+                                <select class="kcell-select kl-edit-kisimNo">
+                                    @Html.Raw(kisimOptions(k.KisimNo))
+                                </select>
                             </td>
                             <td>
                                 <select class="kcell-select kl-edit-birimId">
@@ -400,7 +530,7 @@
                                         .OrderBy(g => g.Key.BirimKodu))
                     {
                         <tr class="tfoot-birim-row">
-                            <td colspan="4" style="text-align:right; color:#4a5568; font-size:.8rem; padding-right:8px;">
+                            <td colspan="5" style="text-align:right; color:#4a5568; font-size:.8rem; padding-right:8px;">
                                 <span class="badge-birim">@birimGrup.Key.BirimKodu</span>
                                 @birimGrup.Key.BirimAdi ara toplamı
                             </td>
@@ -422,7 +552,7 @@
                     @if (Model.IhaleKalemler.Any(k => k.BirimId == null))
                     {
                         <tr class="tfoot-birim-row">
-                            <td colspan="4" style="text-align:right; color:#a0aec0; font-size:.8rem;">
+                            <td colspan="5" style="text-align:right; color:#a0aec0; font-size:.8rem;">
                                 <span class="badge-birim" style="background:#f3f4f6;color:#6b7280;">-</span>
                                 Birimsiz ara toplamı
                             </td>
@@ -440,9 +570,40 @@
                             <td></td>
                         </tr>
                     }
+                    <!-- Kısım bazlı ara toplamlar -->
+                    @foreach (var n in kisimNumaralari.Where(x => Model.IhaleKalemler.Any(k => k.KisimNo == x)))
+                    {
+                        <tr class="tfoot-kisim-row">
+                            <td colspan="5" style="text-align:right; padding-right:8px;">
+                                <span class="badge-kisim">@n. Kısım</span> ara toplamı
+                                <span class="tfoot-adet">@Model.IhaleKalemler.Count(k => k.KisimNo == n) kalem</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == n).Sum(k => k.TestMiktari).ToString("N0")</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == n).Sum(k => k.ToplamSUT).ToString("N2")</td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == n).Sum(k => k.ToplamSutFiyat).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
+                    @if (Model.IhaleKalemler.Any(k => k.KisimNo == null))
+                    {
+                        <tr class="tfoot-kisim-row ortak">
+                            <td colspan="5" style="text-align:right; padding-right:8px;">
+                                <span class="badge-kisim ortak">Ortak</span> ara toplamı
+                                <span class="tfoot-adet">@Model.IhaleKalemler.Count(k => k.KisimNo == null) kalem</span>
+                            </td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == null).Sum(k => k.TestMiktari).ToString("N0")</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == null).Sum(k => k.ToplamSUT).ToString("N2")</td>
+                            <td class="text-right font-mono">@Model.IhaleKalemler.Where(k => k.KisimNo == null).Sum(k => k.ToplamSutFiyat).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    }
                     <!-- Genel toplam -->
                     <tr class="tfoot-total-row">
-                        <td colspan="4"><strong>GENEL TOPLAM</strong></td>
+                        <td colspan="5"><strong>GENEL TOPLAM</strong></td>
                         <td class="text-right font-mono"><strong>@Model.IhaleKalemler.Sum(k => k.TestMiktari).ToString("N0")</strong></td>
                         <td></td>
                         <td></td>
@@ -466,6 +627,13 @@
         <div class="th-modal-body">
             <div id="personelFeedback" class="modal-feedback" style="display:none;"></div>
             <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Kısım</label>
+                    <select id="p_kisimNo" class="form-control">
+                        @Html.Raw(kisimOptions(null))
+                    </select>
+                    <small class="kisim-hint">Birden fazla kısma ortak personel ise "Ortak" bırakın.</small>
+                </div>
                 <div class="form-group">
                     <label>Birim</label>
                     <select id="p_birimId" class="form-control">
@@ -525,6 +693,13 @@
         <div class="th-modal-body">
             <div id="ekGiderFeedback" class="modal-feedback" style="display:none;"></div>
             <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Kısım</label>
+                    <select id="e_kisimNo" class="form-control">
+                        @Html.Raw(kisimOptions(null))
+                    </select>
+                    <small class="kisim-hint">Birden fazla kısma ortak gider ise "Ortak" bırakın.</small>
+                </div>
                 <div class="form-group">
                     <label>Birim</label>
                     <select id="e_birimId" class="form-control">
@@ -593,6 +768,14 @@
                 <button type="button" class="ktab-btn" data-ktab="paste">📋 Yapıştır</button>
                 <button type="button" class="ktab-btn" data-ktab="import">📂 Excel / CSV</button>
             </div>
+            <div class="toplu-kisim-bar">
+                <label for="toplu_kisimNo">Tüm satırlara uygulanacak kısım:</label>
+                <select id="toplu_kisimNo" class="form-control" style="width:auto;min-width:170px;"
+                        onchange="topluKisimUygula()">
+                    @Html.Raw(kisimOptions(null))
+                </select>
+                <span class="toplu-kisim-not">Satır bazında ayrıca değiştirebilirsiniz.</span>
+            </div>
             <div class="ktab-panel active" id="ktab-inline">
                 <div style="padding:14px 20px 8px;">
                     <p class="ktab-hint">Satırları doldurun. <kbd>Enter</kbd> ile yeni satır ekleyin.</p>
@@ -602,6 +785,7 @@
                         <thead>
                             <tr>
                                 <th style="width:36px">#</th>
+                                <th style="width:120px">Kısım</th>
                                 <th style="width:80px">Birim</th>
                                 <th style="width:90px">SUT Kodu</th>
                                 <th>Tetkik Adı *</th>
@@ -622,7 +806,8 @@
                 <div style="padding:14px 20px 10px;">
                     <p class="ktab-hint">
                         Excel'den satırları kopyalayıp aşağıya yapıştırın.<br>
-                        <strong>Sütun sırası:</strong> SıraNo · SUT Kodu · Tetkik Adı · Test Miktarı · SUT Fiyat · SUT Çarpan
+                        <strong>Sütun sırası:</strong> SıraNo · SUT Kodu · Tetkik Adı · Test Miktarı · SUT Fiyat · SUT Çarpan<br>
+                        <strong>7. sütun (opsiyonel):</strong> Kısım numarası. Boşsa yukarıdaki toplu kısım seçimi uygulanır.
                     </p>
                     <textarea id="pasteArea" class="form-control"
                               style="height:180px;font-family:monospace;font-size:13px;resize:vertical;"
@@ -632,7 +817,7 @@
                 <div id="pastePreview" style="display:none;overflow-x:auto;padding:0 20px 14px;">
                     <p class="ktab-hint" id="pastePreviewInfo"></p>
                     <table class="kinline-table">
-                        <thead><tr><th>#</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
+                        <thead><tr><th>#</th><th style="width:120px">Kısım</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
                         <tbody id="pastePreviewBody"></tbody>
                     </table>
                 </div>
@@ -642,6 +827,7 @@
                     <p class="ktab-hint">
                         <strong>Desteklenen format:</strong> .xlsx veya .csv<br>
                         <strong>Sütun sırası:</strong> SıraNo · SUT Kodu · Tetkik Adı · Test Miktarı · SUT Fiyat · SUT Çarpan<br>
+                        <strong>7. sütun (opsiyonel):</strong> Kısım numarası. Boşsa yukarıdaki toplu kısım seçimi uygulanır.<br>
                         İlk satır başlık ise otomatik atlanır.
                     </p>
                     <div class="import-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -654,7 +840,7 @@
                 <div id="importPreview" style="display:none;overflow-x:auto;padding:0 20px 14px;">
                     <p class="ktab-hint" id="importPreviewInfo"></p>
                     <table class="kinline-table">
-                        <thead><tr><th>#</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
+                        <thead><tr><th>#</th><th style="width:120px">Kısım</th><th style="width:90px">Birim</th><th>SUT Kodu</th><th>Tetkik Adı</th><th>Miktar</th><th>SUT Fiyat</th><th>Çarpan</th></tr></thead>
                         <tbody id="importPreviewBody"></tbody>
                     </table>
                 </div>
@@ -952,6 +1138,161 @@
     .krow-error td {
         background: #fff5f5 !important;
     }
+
+    /* ══ KISIM ══════════════════════════════════════════════════ */
+    .kisim-filtre-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        background: #fff;
+        border: 1px solid #e3e8f0;
+        border-radius: 10px;
+    }
+
+    .kisim-filtre-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #a0aec0;
+        margin-right: 2px;
+    }
+
+    .kisim-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border: 1px solid #d0d7e3;
+        border-radius: 999px;
+        background: #fff;
+        color: #4a5568;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .13s, border-color .13s, color .13s;
+    }
+
+        .kisim-chip:hover {
+            border-color: #3b82f6;
+            color: #2563eb;
+        }
+
+        .kisim-chip.active {
+            background: #1a202c;
+            border-color: #1a202c;
+            color: #fff;
+        }
+
+        .kisim-chip.ortak {
+            border-style: dashed;
+        }
+
+        .kisim-chip.tanim-disi {
+            border-color: #fca5a5;
+            color: #b91c1c;
+        }
+
+    .kisim-chip-adet {
+        font-size: 10.5px;
+        font-weight: 700;
+        background: rgba(26,32,44,.08);
+        border-radius: 999px;
+        padding: 1px 6px;
+    }
+
+    .kisim-chip.active .kisim-chip-adet {
+        background: rgba(255,255,255,.22);
+    }
+
+    .badge-kisim {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 6px;
+        background: #eef2ff;
+        color: #4338ca;
+        border: 1px solid #c7d2fe;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+        .badge-kisim.ortak {
+            background: #f3f4f6;
+            color: #6b7280;
+            border-color: #e5e7eb;
+            border-style: dashed;
+        }
+
+    .kozet-chip--kisim {
+        border-left-color: #4338ca;
+    }
+
+        .kozet-chip--kisim .kozet-chip-val {
+            color: #4338ca;
+        }
+
+    .tfoot-kisim-row td {
+        background: #f8f9fc;
+        color: #4a5568;
+        font-size: .85rem;
+        border-top: 1px solid #e3e8f0;
+    }
+
+    .tfoot-kisim-row.ortak td {
+        background: #fcfcfd;
+        color: #718096;
+    }
+
+    .tfoot-adet {
+        font-size: 11px;
+        color: #a0aec0;
+        margin-left: 8px;
+    }
+
+    .kisim-hint {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        color: #a0aec0;
+        line-height: 1.45;
+    }
+
+    .toplu-kisim-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 12px 20px;
+        background: #eef2ff;
+        border-bottom: 1px solid #c7d2fe;
+    }
+
+        .toplu-kisim-bar label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #4338ca;
+            margin: 0;
+        }
+
+    .toplu-kisim-not {
+        font-size: 11.5px;
+        color: #6366f1;
+    }
+
+    .kisim-bos-uyari {
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        color: #92400e;
+        font-size: 12.5px;
+        line-height: 1.5;
+    }
 </style>
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -963,6 +1304,49 @@
     const BASE     = '/Ihale/Ihale';
     const BIRIMLER = @Html.Raw(birimlerJsonStr);
     const SURE_GUN = @Model.IhaleSuresiGun;
+    const KISIM_SAYISI  = @Model.KisimSayisi;
+    const KISIM_NOLARI  = @Html.Raw(JsonSerializer.Serialize(kisimNumaralari));
+
+    // Kısım <select> HTML'i — toplu kalem ekranında satır üretirken kullanılır
+    function kisimSelectHTML(inputId, currentVal) {
+        const secili = (currentVal === null || currentVal === undefined || currentVal === '') ? null : parseInt(currentVal, 10);
+        let opts = `<option value=""${secili === null ? ' selected' : ''}>Ortak</option>`;
+        KISIM_NOLARI.forEach(n => {
+            const disi = n > KISIM_SAYISI ? ' (tanım dışı)' : '';
+            opts += `<option value="${n}"${secili === n ? ' selected' : ''}>${n}. Kısım${disi}</option>`;
+        });
+        return `<select class="kcell-select" id="${inputId}">${opts}</select>`;
+    }
+
+    // Select değerini kısım numarasına çevir: boş => null
+    function kisimDegeri(el) {
+        if (!el) return null;
+        const v = (el.value || '').trim();
+        if (v === '') return null;
+        const n = parseInt(v, 10);
+        return (isNaN(n) || n < 1) ? null : n;
+    }
+
+    // ── Kısım filtresi ───────────────────────────────────────────────────
+    function kisimFiltrele(btn) {
+        document.querySelectorAll('.kisim-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const hedef = btn.dataset.kisim;   // '' = tümü, '0' = ortak, 'n' = kısım
+
+        document.querySelectorAll('tr[data-kisim]').forEach(tr => {
+            // Düzenleme satırları her zaman kendi görünüm satırıyla birlikte yönetilir
+            const duzenleme = tr.classList.contains('pr-row-edit')
+                           || tr.classList.contains('eg-row-edit')
+                           || tr.classList.contains('kl-row-edit');
+            const uyuyor = !hedef || tr.dataset.kisim === hedef;
+
+            if (duzenleme) {
+                if (!uyuyor) tr.style.display = 'none';
+                return;
+            }
+            tr.style.display = uyuyor ? '' : 'none';
+        });
+    }
 
     // ── Format yardımcıları ──────────────────────────────────────────────
     function getRaw(hiddenId) {
@@ -1137,6 +1521,7 @@
         if (isNaN(birimFiyat) || birimFiyat <= 0) { alert('Aylık Brüt Ücret geçerli giriniz.'); return; }
         const data = {
             id, ihaleId: IHALE_ID,
+            kisimNo:         kisimDegeri(er.querySelector('.pr-edit-kisimNo')),
             birimId:         parseInt(er.querySelector('.pr-edit-birimId')?.value) || null,
             gorevUnvan, sayi,
             ucretTipi:       er.querySelector('.pr-edit-ucretTipi')?.value,
@@ -1150,6 +1535,7 @@
             if (r.success) {
                 const vr = document.querySelector(`.pr-row-view[data-id="${id}"]`);
                 const toplam = sayi * birimFiyat * SURE_GUN / 30;
+                kisimHucresiYenile(vr, er, data.kisimNo);
                 vr.querySelector('.pr-gorev').textContent  = gorevUnvan;
                 vr.querySelector('.pr-sayi').textContent   = sayi;
                 vr.querySelector('.pr-ucret').textContent  = data.ucretTipi;
@@ -1219,6 +1605,7 @@
         if (isNaN(kur)        || kur <= 0)        { alert('Kur geçerli giriniz.'); return; }
         const data = {
             id, ihaleId: IHALE_ID,
+            kisimNo:    kisimDegeri(er.querySelector('.eg-edit-kisimNo')),
             birimId:    parseInt(er.querySelector('.eg-edit-birimId')?.value) || null,
             giderAdi,
             kategori:   er.querySelector('.eg-edit-kategori')?.value.trim() || '',
@@ -1233,6 +1620,7 @@
             const r = await res.json();
             if (r.success) {
                 const vr = document.querySelector(`.eg-row-view[data-id="${id}"]`);
+                kisimHucresiYenile(vr, er, data.kisimNo);
                 vr.querySelector('.eg-miktar').textContent     = formatTR(miktar, 4);
                 vr.querySelector('.eg-birimfiyat').textContent = formatTR(birimFiyat, 4);
                 vr.querySelector('.eg-kur').textContent        = formatTR(kur, 4);
@@ -1291,6 +1679,7 @@
         if (!tetkikAdi) { alert('Tetkik Adı zorunludur.'); return; }
         const data = {
             id, ihaleId: IHALE_ID,
+            kisimNo:  kisimDegeri(er.querySelector('.kl-edit-kisimNo')),
             birimId:  parseInt(er.querySelector('.kl-edit-birimId')?.value) || null,
             siraNo:   parseInt(er.querySelector('.kl-edit-siraNo')?.value)  || 1,
             sutKodu:  er.querySelector('.kl-edit-sutKodu')?.value.trim()    || '',
@@ -1307,6 +1696,7 @@
                 const vr = document.querySelector(`.kl-row-view[data-id="${id}"]`);
                 const topSut   = data.testMiktari * data.sutFiyat;
                 const topFiyat = topSut * data.sutCarpan;
+                kisimHucresiYenile(vr, er, data.kisimNo);
                 vr.querySelector('.kl-sutkodu').textContent      = data.sutKodu || '-';
                 vr.querySelector('.kl-tetkik').textContent       = tetkikAdi;
                 vr.querySelector('.kl-miktar').textContent       = formatTR(data.testMiktari, 0);
@@ -1320,10 +1710,23 @@
         finally { btn.disabled = false; btn.textContent = orig; }
     }
 
+    // Satır içi düzenleme kaydedildikten sonra görünüm satırındaki kısım rozetini tazele
+    function kisimHucresiYenile(viewRow, editRow, kisimNo) {
+        const rozet = viewRow?.querySelector('.badge-kisim');
+        if (rozet) {
+            rozet.textContent = kisimNo ? `${kisimNo}. Kısım` : 'Ortak';
+            rozet.classList.toggle('ortak', !kisimNo);
+        }
+        const deger = kisimNo ? String(kisimNo) : '0';
+        if (viewRow) viewRow.dataset.kisim = deger;
+        if (editRow) editRow.dataset.kisim = deger;
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // TEKLİ SİL / EKLE
     // ══════════════════════════════════════════════════════════════════════
     function personelFormSifirla() {
+        // Kısım seçimi bilerek korunuyor: aynı kısma arka arkaya giriş yapmak kolay olsun
         ['p_birimId','p_gorevUnvan','p_egitim','p_aciklama'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('p_sayi').value = '1';
         document.getElementById('p_ucretTipi').value = 'Brut (Aylik)';
@@ -1332,6 +1735,7 @@
         document.getElementById('p_gorevUnvan').focus();
     }
     function ekGiderFormSifirla() {
+        // Kısım seçimi bilerek korunuyor
         ['e_birimId','e_giderAdi','e_kategori','e_aciklama'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('e_miktar').value = formatTR(1, 0);
         document.getElementById('e_miktar_raw').value = '1';
@@ -1349,7 +1753,9 @@
         if (!gorevUnvan)                          { showFeedback('personelFeedback','Görev / Unvan zorunludur.','error'); return; }
         if (isNaN(birimFiyat) || birimFiyat <= 0) { showFeedback('personelFeedback','Aylık Brüt Ücret geçerli giriniz.','error'); return; }
         const data = {
-            ihaleId: IHALE_ID, birimId: parseInt(document.getElementById('p_birimId').value) || null,
+            ihaleId: IHALE_ID,
+            kisimNo: kisimDegeri(document.getElementById('p_kisimNo')),
+            birimId: parseInt(document.getElementById('p_birimId').value) || null,
             gorevUnvan, sayi: parseInt(document.getElementById('p_sayi').value) || 1,
             egitimDurumu: document.getElementById('p_egitim').value.trim(),
             ucretTipi:    document.getElementById('p_ucretTipi').value,
@@ -1387,7 +1793,9 @@
         if (isNaN(miktar)     || miktar <= 0)     { showFeedback('ekGiderFeedback','Miktar geçerli giriniz.','error'); return; }
         if (isNaN(kur)        || kur <= 0)        { showFeedback('ekGiderFeedback','Kur geçerli giriniz.','error'); return; }
         const data = {
-            ihaleId: IHALE_ID, birimId: parseInt(document.getElementById('e_birimId').value) || null,
+            ihaleId: IHALE_ID,
+            kisimNo: kisimDegeri(document.getElementById('e_kisimNo')),
+            birimId: parseInt(document.getElementById('e_birimId').value) || null,
             giderAdi, kategori: document.getElementById('e_kategori').value.trim(),
             miktar, birimFiyat, paraBirimi: document.getElementById('e_paraBirimi').value,
             kur, aciklama: document.getElementById('e_aciklama').value.trim()
@@ -1446,8 +1854,10 @@
         const n = inlineRowCount;
         const tr = document.createElement('tr');
         tr.id = `irow_${n}`;
+        const topluKisim = document.getElementById('toplu_kisimNo')?.value || '';
         tr.innerHTML = `
             <td style="text-align:center;color:#a0aec0;font-size:12px;padding:4px 6px;">${n}</td>
+            <td>${kisimSelectHTML(`kk_${n}`, topluKisim)}</td>
             <td>${birimSelectHTML(`kb_${n}`, '')}</td>
             <td><input class="kcell" id="ks_${n}" placeholder="P1234" /></td>
             <td><input class="kcell" id="kt_${n}" placeholder="Tetkik adı..." /></td>
@@ -1469,6 +1879,7 @@
             if (!tetkik) return;
             rows.push({
                 siraNo: sira++,
+                kisimNo: kisimDegeri(document.getElementById(`kk_${n}`)),
                 birimId: parseInt(document.getElementById(`kb_${n}`)?.value) || null,
                 sutKodu: document.getElementById(`ks_${n}`)?.value.trim() || '',
                 tetkikAdi: tetkik,
@@ -1479,6 +1890,23 @@
         });
         return rows;
     }
+    // Üstteki kısım seçimini tüm satırlara ve önizlemelere uygula
+    function topluKisimUygula() {
+        const deger = document.getElementById('toplu_kisimNo')?.value || '';
+        document.querySelectorAll('#inlineBody select[id^="kk_"]').forEach(sel => { sel.value = deger; });
+
+        const no = deger === '' ? null : (parseInt(deger, 10) || null);
+        pasteRows.forEach(r => { r.kisimNo = no; });
+        importRows.forEach(r => { r.kisimNo = no; });
+
+        if (document.getElementById('pastePreview')?.style.display === 'block') {
+            renderPreview('pastePreviewBody', 'pastePreviewInfo', pasteRows);
+        }
+        if (document.getElementById('importPreview')?.style.display === 'block') {
+            renderPreview('importPreviewBody', 'importPreviewInfo', importRows);
+        }
+    }
+
     let pasteRows = [];
     function pasteReset() { document.getElementById('pasteArea').value = ''; document.getElementById('pastePreview').style.display = 'none'; pasteRows = []; }
     function parsePaste() {
@@ -1515,6 +1943,11 @@
             const cols = line.split('\t');
             if (idx === 0 && isNaN(parseFloat(cols[0]))) return;
             if (cols.length < 3) return;
+            // 7. sütun varsa kısım numarası olarak okunur; yoksa üstteki toplu seçim uygulanır
+            const topluDeger = document.getElementById('toplu_kisimNo')?.value || '';
+            const topluNo = topluDeger === '' ? null : (parseInt(topluDeger, 10) || null);
+            const satirKisim = cols.length > 6 ? (parseInt((cols[6] || '').trim(), 10) || null) : null;
+
             rows.push({
                 siraNo: parseInt(cols[0]) || (rows.length + 1),
                 sutKodu: (cols[1] || '').trim(),
@@ -1523,6 +1956,7 @@
                 sutFiyat:    parseFloat((cols[4] || '0').replace(',','.')) || 0,
                 sutCarpan:   parseFloat((cols[5] || '0.593').replace(',','.')) || 0.593,
                 birimId: null,
+                kisimNo: satirKisim !== null ? satirKisim : topluNo,
             });
         });
         return rows;
@@ -1534,8 +1968,10 @@
             const tr = document.createElement('tr');
             if (!r.tetkikAdi) tr.classList.add('krow-error');
             const selId = `prev_birim_${tbodyId}_${idx}`;
+            const kselId = `prev_kisim_${tbodyId}_${idx}`;
             tr.innerHTML = `
                 <td>${r.siraNo}</td>
+                <td>${kisimSelectHTML(kselId, r.kisimNo)}</td>
                 <td>${birimSelectHTML(selId, r.birimId)}</td>
                 <td>${r.sutKodu || '-'}</td>
                 <td>${r.tetkikAdi || '<span style="color:#ef4444">Boş!</span>'}</td>
@@ -1547,6 +1983,8 @@
             setTimeout(() => {
                 const sel = document.getElementById(selId);
                 if (sel) sel.addEventListener('change', () => { rows[idx].birimId = parseInt(sel.value) || null; });
+                const ksel = document.getElementById(kselId);
+                if (ksel) ksel.addEventListener('change', () => { rows[idx].kisimNo = kisimDegeri(ksel); });
             }, 0);
         });
         const valid = rows.filter(r => r.tetkikAdi).length;

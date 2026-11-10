@@ -26,6 +26,15 @@ namespace CRMOzem.Core.Models
 
         public int IhaleSuresiGun { get; set; } = 720;
 
+        /// <summary>
+        /// Şartnamenin kaç kısımdan oluştuğu. Kalem ve gider satırları
+        /// 1..KisimSayisi aralığında bir kısma atanır; atanmayanlar
+        /// "ortak gider" olarak raporlanır.
+        /// </summary>
+        [Range(1, 99, ErrorMessage = "Kısım sayısı 1 ile 99 arasında olmalıdır.")]
+        [Display(Name = "Şartname Kısım Sayısı")]
+        public int KisimSayisi { get; set; } = 1;
+
         [Column(TypeName = "decimal(5,4)")]
         public decimal GenelGiderOran { get; set; } = 0.10m;
 
@@ -50,6 +59,15 @@ namespace CRMOzem.Core.Models
         public ICollection<PersonelGider> PersonelGiderler { get; set; } = new List<PersonelGider>();
         public ICollection<EkGider> EkGiderler { get; set; } = new List<EkGider>();
         public ICollection<IhaleKalem> IhaleKalemler { get; set; } = new List<IhaleKalem>();
-    }
 
+        // ── Hesaplananlar (DB'ye yazılmaz) ──────────────────────────────
+
+        /// <summary>1..KisimSayisi — form ve tablolardaki kısım seçimlerini doldurur.</summary>
+        [NotMapped]
+        public IEnumerable<int> Kisimlar => Enumerable.Range(1, Math.Max(1, KisimSayisi));
+
+        /// <summary>Birden fazla kısım varsa ekranlarda kısım kırılımı gösterilir.</summary>
+        [NotMapped]
+        public bool CokKisimli => KisimSayisi > 1;
+    }
 }

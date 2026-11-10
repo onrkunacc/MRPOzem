@@ -6,22 +6,26 @@
     ViewData["Title"] = "Kota Hareketleri";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
-    var tr  = new CultureInfo("tr-TR");
+    var tr = new CultureInfo("tr-TR");
     var inv = CultureInfo.InvariantCulture;
 
     var k = Model.Kota;
     var toplamGider = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gider).Sum(h => h.TutarUsd);
     var toplamGelir = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gelir).Sum(h => h.TutarUsd);
-    var brutFark    = toplamGelir - toplamGider;
-    var pos         = brutFark >= 0;
-    var kullanim    = k.ProformaTutarUsd > 0 ? (toplamGider / k.ProformaTutarUsd) * 100 : 0;
+    var brutFark = toplamGelir - toplamGider;
+    var pos = brutFark >= 0;
+    var kullanim = k.ProformaTutarUsd > 0 ? (toplamGider / k.ProformaTutarUsd) * 100 : 0;
     var kullanimCls = kullanim > 100 ? "neg" : kullanim > 80 ? "warn" : "pos";
 
     var toplamGiderTl = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gider).Sum(h => h.TutarTl ?? 0);
     var toplamGelirTl = Model.Hareketler.Where(h => h.Tur == KotaHareketTuru.Gelir).Sum(h => h.TutarTl ?? 0);
-    var brutFarkTl    = toplamGelirTl - toplamGiderTl;
+    var brutFarkTl = toplamGelirTl - toplamGiderTl;
 
     var hastaneKolonVar = Model.Hareketler.Any(h => h.HospitalID.HasValue);
+
+    // Dip toplam satırlarının colspan'i: tutar kolonlarına kadar olan kısım.
+    // Kolonlar: # · Tarih · Tür · Tedarikçi · Grup · [Hastane] · Açıklama · USD · TL · İşlem
+    var footColspan = hastaneKolonVar ? 7 : 6;
 
     // ── Para biçimleyiciler ──
     string Usd(decimal v, bool isaretli = false)
@@ -74,7 +78,9 @@
 
 <style>
     /* ═════════ AYLIK GELİR / GİDER TABLOSU ═════════ */
-    .kt-monthly-wrap { overflow-x: auto; }
+    .kt-monthly-wrap {
+        overflow-x: auto;
+    }
 
     .kt-monthly {
         width: 100%;
@@ -82,29 +88,43 @@
         font-variant-numeric: tabular-nums;
     }
 
-    .kt-monthly thead th {
-        padding: 10px 16px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        color: var(--kt-ink-500);
-        background: var(--kt-bg-soft);
-        border-bottom: 1px solid var(--kt-border);
-        white-space: nowrap;
-        text-align: left;
-    }
-    .kt-monthly thead th.num { text-align: right; }
+        .kt-monthly thead th {
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--kt-ink-500);
+            background: var(--kt-bg-soft);
+            border-bottom: 1px solid var(--kt-border);
+            white-space: nowrap;
+            text-align: left;
+        }
 
-    .kt-monthly tbody td {
-        padding: 11px 16px;
-        border-bottom: 1px solid var(--kt-border);
-        font-size: 13px;
-        vertical-align: middle;
-    }
-    .kt-monthly tbody td.num { text-align: right; white-space: nowrap; }
-    .kt-monthly tbody tr:hover { background: var(--kt-bg-soft); }
-    .kt-monthly tbody tr.ay-bos td { color: var(--kt-ink-400); background: #fcfcfd; }
+            .kt-monthly thead th.num {
+                text-align: right;
+            }
+
+        .kt-monthly tbody td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--kt-border);
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+            .kt-monthly tbody td.num {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+        .kt-monthly tbody tr:hover {
+            background: var(--kt-bg-soft);
+        }
+
+        .kt-monthly tbody tr.ay-bos td {
+            color: var(--kt-ink-400);
+            background: #fcfcfd;
+        }
 
     .ay-adi {
         font-weight: 700;
@@ -113,15 +133,43 @@
         text-transform: capitalize;
         white-space: nowrap;
     }
-    .ay-bos .ay-adi { color: var(--kt-ink-400); font-weight: 600; }
-    .ay-adet { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; }
 
-    .tutar-usd { font-weight: 700; font-size: 13.5px; display: block; }
-    .tutar-tl  { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; display: block; }
+    .ay-bos .ay-adi {
+        color: var(--kt-ink-400);
+        font-weight: 600;
+    }
 
-    .m-gelir { color: var(--kt-pos); }
-    .m-gider { color: var(--kt-neg); }
-    .m-sifir { color: var(--kt-ink-400); font-weight: 500; }
+    .ay-adet {
+        font-size: 11px;
+        color: var(--kt-ink-400);
+        margin-top: 1px;
+    }
+
+    .tutar-usd {
+        font-weight: 700;
+        font-size: 13.5px;
+        display: block;
+    }
+
+    .tutar-tl {
+        font-size: 11px;
+        color: var(--kt-ink-400);
+        margin-top: 1px;
+        display: block;
+    }
+
+    .m-gelir {
+        color: var(--kt-pos);
+    }
+
+    .m-gider {
+        color: var(--kt-neg);
+    }
+
+    .m-sifir {
+        color: var(--kt-ink-400);
+        font-weight: 500;
+    }
 
     .m-bar {
         height: 3px;
@@ -131,9 +179,20 @@
         overflow: hidden;
         min-width: 54px;
     }
-    .m-bar > i { display: block; height: 100%; border-radius: 999px; }
-    .m-bar.gelir > i { background: var(--kt-pos); }
-    .m-bar.gider > i { background: var(--kt-neg); }
+
+        .m-bar > i {
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        .m-bar.gelir > i {
+            background: var(--kt-pos);
+        }
+
+        .m-bar.gider > i {
+            background: var(--kt-neg);
+        }
 
     .fark-chip {
         display: inline-block;
@@ -142,14 +201,40 @@
         font-weight: 700;
         font-size: 13px;
     }
-    .fark-chip.pos { background: var(--kt-pos-50); color: var(--kt-pos-700); }
-    .fark-chip.neg { background: var(--kt-neg-50); color: var(--kt-neg-700); }
-    .fark-chip.nul { background: var(--kt-bg-soft); color: var(--kt-ink-400); font-weight: 500; }
 
-    .marj-val { font-size: 12.5px; font-weight: 600; }
-    .kumul-val { font-weight: 700; font-size: 13px; }
-    .kumul-val.pos { color: var(--kt-pos); }
-    .kumul-val.neg { color: var(--kt-neg); }
+        .fark-chip.pos {
+            background: var(--kt-pos-50);
+            color: var(--kt-pos-700);
+        }
+
+        .fark-chip.neg {
+            background: var(--kt-neg-50);
+            color: var(--kt-neg-700);
+        }
+
+        .fark-chip.nul {
+            background: var(--kt-bg-soft);
+            color: var(--kt-ink-400);
+            font-weight: 500;
+        }
+
+    .marj-val {
+        font-size: 12.5px;
+        font-weight: 600;
+    }
+
+    .kumul-val {
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+        .kumul-val.pos {
+            color: var(--kt-pos);
+        }
+
+        .kumul-val.neg {
+            color: var(--kt-neg);
+        }
 
     /* ── Dip toplam ── */
     .kt-monthly tfoot td {
@@ -160,7 +245,12 @@
         font-weight: 700;
         border: none;
     }
-    .kt-monthly tfoot td.num { text-align: right; white-space: nowrap; }
+
+        .kt-monthly tfoot td.num {
+            text-align: right;
+            white-space: nowrap;
+        }
+
     .kt-monthly tfoot .dip-label {
         font-size: 11px;
         font-weight: 700;
@@ -170,11 +260,30 @@
         display: block;
         margin-bottom: 2px;
     }
-    .kt-monthly tfoot .dip-tl { font-size: 11px; font-weight: 500; color: var(--kt-ink-400); display: block; margin-top: 2px; }
-    .kt-monthly tfoot .dip-gelir   { color: #6ee7b7; }
-    .kt-monthly tfoot .dip-gider   { color: #fca5a5; }
-    .kt-monthly tfoot .dip-net-pos { color: #6ee7b7; }
-    .kt-monthly tfoot .dip-net-neg { color: #fca5a5; }
+
+    .kt-monthly tfoot .dip-tl {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--kt-ink-400);
+        display: block;
+        margin-top: 2px;
+    }
+
+    .kt-monthly tfoot .dip-gelir {
+        color: #6ee7b7;
+    }
+
+    .kt-monthly tfoot .dip-gider {
+        color: #fca5a5;
+    }
+
+    .kt-monthly tfoot .dip-net-pos {
+        color: #6ee7b7;
+    }
+
+    .kt-monthly tfoot .dip-net-neg {
+        color: #fca5a5;
+    }
 
     /* ── Hareketler tablosu dip toplamı ── */
     .kt-table tfoot .foot-label {
@@ -184,6 +293,7 @@
         color: var(--kt-ink-500);
         font-weight: 700;
     }
+
     .kt-table tfoot tr.net-row td {
         background: var(--kt-ink-900);
         color: #fff;
@@ -191,11 +301,169 @@
         font-size: 14px;
         border-top: none;
     }
-    .kt-table tfoot tr.net-row .foot-label { color: var(--kt-ink-400); }
+
+    .kt-table tfoot tr.net-row .foot-label {
+        color: var(--kt-ink-400);
+    }
+
+    /* ═════════ SIRA NUMARASI ═════════ */
+    .kt-table th.col-sira,
+    .kt-table td.col-sira {
+        width: 1%;
+        text-align: right;
+        white-space: nowrap;
+        padding-right: 4px;
+    }
+
+    .kt-table td.col-sira {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--kt-ink-400);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ═════════ SAYFALAMA ═════════ */
+    .kt-pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 12px 20px;
+        border-top: 1px solid var(--kt-border);
+        background: var(--kt-bg-soft);
+    }
+
+    .kt-pager-info {
+        font-size: 12.5px;
+        color: var(--kt-ink-500);
+        font-variant-numeric: tabular-nums;
+    }
+
+        .kt-pager-info strong {
+            color: var(--kt-ink-900);
+            font-weight: 700;
+        }
+
+    .kt-pager-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .kt-pager-pages {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .kt-pager-btn {
+        min-width: 32px;
+        height: 32px;
+        padding: 0 9px;
+        border: 1px solid var(--kt-border);
+        background: #fff;
+        border-radius: var(--kt-r-sm);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--kt-ink-700, #334155);
+        cursor: pointer;
+        font-variant-numeric: tabular-nums;
+        transition: background .13s, border-color .13s, color .13s;
+    }
+
+        .kt-pager-btn:hover:not(:disabled):not(.aktif) {
+            background: var(--kt-bg-soft);
+            border-color: var(--kt-ink-400);
+        }
+
+        .kt-pager-btn.aktif {
+            background: var(--kt-primary, #4f46e5);
+            border-color: var(--kt-primary, #4f46e5);
+            color: #fff;
+            cursor: default;
+        }
+
+        .kt-pager-btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+    .kt-pager-ara {
+        min-width: 18px;
+        text-align: center;
+        color: var(--kt-ink-400);
+        font-size: 12.5px;
+        user-select: none;
+    }
+
+    .kt-pager-size {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+        color: var(--kt-ink-500);
+    }
+
+        .kt-pager-size select {
+            width: auto;
+            min-width: 86px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+    .kt-filtre-uyari {
+        display: none;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 20px;
+        background: #fffbeb;
+        border-top: 1px solid #fde68a;
+        font-size: 12.5px;
+        color: #92400e;
+    }
+
+        .kt-filtre-uyari.gorunur {
+            display: flex;
+        }
+
+    .kt-sonuc-yok {
+        display: none;
+        padding: 36px 20px;
+        text-align: center;
+        color: var(--kt-ink-500);
+        font-size: 13px;
+    }
+
+        .kt-sonuc-yok.gorunur {
+            display: block;
+        }
+
+        .kt-sonuc-yok i {
+            font-size: 22px;
+            color: var(--kt-ink-400);
+            display: block;
+            margin-bottom: 9px;
+        }
 
     @@media (max-width: 768px) {
-        .kt-monthly thead th, .kt-monthly tbody td, .kt-monthly tfoot td { padding: 9px 10px; font-size: 12px; }
-        .col-marj { display: none; }
+        .kt-monthly thead th, .kt-monthly tbody td, .kt-monthly tfoot td {
+            padding: 9px 10px;
+            font-size: 12px;
+        }
+
+        .col-marj {
+            display: none;
+        }
+
+        .kt-pager {
+            justify-content: center;
+        }
+
+        .kt-pager-info {
+            width: 100%;
+            text-align: center;
+        }
     }
 </style>
 
@@ -371,7 +639,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @{ decimal kumulatif = 0m; }
+                        @{
+                            decimal kumulatif = 0m;
+                        }
                         @foreach (var s in aylikSatirlar)
                         {
                             var fark = s.Gelir - s.Gider;
@@ -515,17 +785,24 @@
                 <div class="kt-section-icon"><i class="fas fa-list-check"></i></div>
                 <div>
                     <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Hareketler</div>
-                    <div style="font-size:12px; color:var(--kt-ink-500);">Gider ve gelir kayıtları — kronolojik</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">Gider ve gelir kayıtları — en yeniden eskiye</div>
                 </div>
             </div>
         </div>
 
         @if (Model.Hareketler.Any())
         {
+            @* Filtre aktifken dip toplamın neyi kapsadığını açıkça söyle *@
+            <div class="kt-filtre-uyari" id="hareketFiltreUyari">
+                <i class="fas fa-filter"></i>
+                <span>Filtre aktif — aşağıdaki dip toplam yalnızca <strong>filtreye uyan</strong> hareketleri kapsıyor.</span>
+            </div>
+
             <div class="kt-table-wrap">
                 <table class="kt-table" id="hareketTable">
                     <thead>
                         <tr>
+                            <th class="col-sira">#</th>
                             <th>Tarih</th>
                             <th>Tür</th>
                             <th>Tedarikçi / Müşteri</th>
@@ -541,11 +818,18 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @{
+                            var sira = 0;
+                        }
                         @foreach (var h in Model.Hareketler.OrderByDescending(x => x.Tarih))
                         {
+                            sira++;
                             var gider = h.Tur == KotaHareketTuru.Gider;
                             <tr data-search="@($"{h.Tarih:dd.MM.yyyy} {h.TedarikciAdi} {h.Aciklama} {h.HospitalName}".ToLower())"
-                                data-tur="@((int)h.Tur)">
+                                data-tur="@((int)h.Tur)"
+                                data-usd="@h.TutarUsd.ToString(inv)"
+                                data-tl="@((h.TutarTl ?? 0m).ToString(inv))">
+                                <td class="col-sira">@sira</td>
                                 <td style="white-space:nowrap;">
                                     <strong>@h.Tarih.ToString("dd.MM.yyyy")</strong>
                                 </td>
@@ -565,7 +849,11 @@
                                     {
                                         <span class="kt-tag">@h.TedarikciGrup.Value</span>
                                     }
-                                    else { <span class="text-muted">—</span> }
+                                    else
+                                    {
+
+                                        <span class="text-muted">—</span>
+                                    }
                                 </td>
                                 @if (hastaneKolonVar)
                                 {
@@ -574,7 +862,11 @@
                                         {
                                             <span style="font-size:12px; color:var(--kt-ink-700);">@h.HospitalName</span>
                                         }
-                                        else { <span class="text-muted">—</span> }
+                                        else
+                                        {
+
+                                            <span class="text-muted">—</span>
+                                        }
                                     </td>
                                 }
                                 <td style="max-width:300px; color:var(--kt-ink-500); font-size:12.5px;">
@@ -608,35 +900,79 @@
                     </tbody>
 
                     @* ─── DİP TOPLAM ─── *@
+                    @* Değerler JS ile filtreye göre yeniden hesaplanır; aşağıdakiler
+                       sunucudan gelen tam toplamlardır (JS kapalıysa da doğru görünür). *@
                     <tfoot>
                         <tr>
-                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
-                                <span class="foot-label">Toplam Gelir</span>
+                            <td colspan="@footColspan" class="text-right">
+                                <span class="foot-label" id="footKapsamGelir">Toplam Gelir</span>
                             </td>
-                            <td class="text-right kt-money-pos">@Usd(toplamGelir, true)</td>
-                            <td class="text-right kt-money-muted">@(toplamGelirTl > 0 ? Tl(toplamGelirTl) : "—")</td>
+                            <td class="text-right kt-money-pos" id="footGelirUsd">@Usd(toplamGelir, true)</td>
+                            <td class="text-right kt-money-muted" id="footGelirTl">@(toplamGelirTl > 0 ? Tl(toplamGelirTl) : "—")</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
-                                <span class="foot-label">Toplam Gider</span>
+                            <td colspan="@footColspan" class="text-right">
+                                <span class="foot-label" id="footKapsamGider">Toplam Gider</span>
                             </td>
-                            <td class="text-right kt-money-neg">-@Usd(toplamGider)</td>
-                            <td class="text-right kt-money-muted">@(toplamGiderTl > 0 ? Tl(toplamGiderTl) : "—")</td>
+                            <td class="text-right kt-money-neg" id="footGiderUsd">-@Usd(toplamGider)</td>
+                            <td class="text-right kt-money-muted" id="footGiderTl">@(toplamGiderTl > 0 ? Tl(toplamGiderTl) : "—")</td>
                             <td></td>
                         </tr>
                         <tr class="net-row">
-                            <td colspan="@(hastaneKolonVar ? 6 : 5)" class="text-right">
+                            <td colspan="@footColspan" class="text-right">
                                 <span class="foot-label">Net Brüt Fark</span>
                             </td>
-                            <td class="text-right" style="color:@(pos ? "#6ee7b7" : "#fca5a5");">@Usd(brutFark, true)</td>
-                            <td class="text-right" style="color:var(--kt-ink-400); font-weight:600;">
+                            <td class="text-right" id="footNetUsd" style="color:@(pos ? "#6ee7b7" : "#fca5a5");">@Usd(brutFark, true)</td>
+                            <td class="text-right" id="footNetTl" style="color:var(--kt-ink-400); font-weight:600;">
                                 @(brutFarkTl != 0 ? Tl(brutFarkTl, true) : "—")
                             </td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            @* Filtre hiçbir şeye uymadığında *@
+            <div class="kt-sonuc-yok" id="hareketSonucYok">
+                <i class="fas fa-magnifying-glass"></i>
+                Aramanıza uyan hareket bulunamadı.
+                <div style="margin-top:12px;">
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost" id="hareketFiltreTemizle">
+                        <i class="fas fa-xmark"></i> Filtreyi temizle
+                    </button>
+                </div>
+            </div>
+
+            @* ─── SAYFALAMA ─── *@
+            <div class="kt-pager" id="hareketPager">
+                <div class="kt-pager-info" id="hareketPagerInfo"></div>
+
+                <div class="kt-pager-nav">
+                    <button type="button" class="kt-pager-btn" id="hareketIlk" title="İlk sayfa">
+                        <i class="fas fa-angles-left"></i>
+                    </button>
+                    <button type="button" class="kt-pager-btn" id="hareketPrev" title="Önceki sayfa">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="kt-pager-pages" id="hareketPagerPages"></div>
+                    <button type="button" class="kt-pager-btn" id="hareketNext" title="Sonraki sayfa">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button type="button" class="kt-pager-btn" id="hareketSon" title="Son sayfa">
+                        <i class="fas fa-angles-right"></i>
+                    </button>
+                </div>
+
+                <div class="kt-pager-size">
+                    <label for="sayfaBoyut">Sayfa başına</label>
+                    <select id="sayfaBoyut" class="kt-select">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">Tümü</option>
+                    </select>
+                </div>
             </div>
         }
         else
@@ -654,21 +990,234 @@
 </div>
 
 @section Scripts {
-<script>
-(function () {
-    function applyFilters() {
-        const q = (document.getElementById('hareketSearch').value || '').trim().toLowerCase();
-        const t = document.getElementById('turFilter').value;
-        document.querySelectorAll('#hareketTable tbody tr').forEach(tr => {
-            const okQ = !q || tr.dataset.search.includes(q);
-            const okT = !t || tr.dataset.tur === t;
-            tr.style.display = (okQ && okT) ? '' : 'none';
-        });
-    }
-    const s  = document.getElementById('hareketSearch');
-    const tf = document.getElementById('turFilter');
-    if (s)  s.addEventListener('input', applyFilters);
-    if (tf) tf.addEventListener('change', applyFilters);
-})();
-</script>
+    <script>
+        (function () {
+            'use strict';
+
+            var tablo = document.getElementById('hareketTable');
+            if (!tablo) return;
+
+            var satirlar  = Array.prototype.slice.call(tablo.querySelectorAll('tbody tr'));
+            var aramaEl   = document.getElementById('hareketSearch');
+            var turEl     = document.getElementById('turFilter');
+            var boyutEl   = document.getElementById('sayfaBoyut');
+
+            var pagerEl   = document.getElementById('hareketPager');
+            var bilgiEl   = document.getElementById('hareketPagerInfo');
+            var sayfalarEl= document.getElementById('hareketPagerPages');
+            var ilkBtn    = document.getElementById('hareketIlk');
+            var oncekiBtn = document.getElementById('hareketPrev');
+            var sonrakiBtn= document.getElementById('hareketNext');
+            var sonBtn    = document.getElementById('hareketSon');
+
+            var sonucYokEl= document.getElementById('hareketSonucYok');
+            var temizleBtn= document.getElementById('hareketFiltreTemizle');
+            var uyariEl   = document.getElementById('hareketFiltreUyari');
+            var tfootEl   = tablo.querySelector('tfoot');
+
+            var footGelirUsd = document.getElementById('footGelirUsd');
+            var footGelirTl  = document.getElementById('footGelirTl');
+            var footGiderUsd = document.getElementById('footGiderUsd');
+            var footGiderTl  = document.getElementById('footGiderTl');
+            var footNetUsd   = document.getElementById('footNetUsd');
+            var footNetTl    = document.getElementById('footNetTl');
+            var kapsamGelir  = document.getElementById('footKapsamGelir');
+            var kapsamGider  = document.getElementById('footKapsamGider');
+
+            var DEPO_ANAHTARI = 'kotaHareketSayfaBoyutu';
+            var sayfa = 1;
+
+            // ── Kaydedilmiş sayfa boyutunu geri yükle ──
+            try {
+                var kayitli = localStorage.getItem(DEPO_ANAHTARI);
+                if (kayitli && boyutEl.querySelector('option[value="' + kayitli + '"]')) {
+                    boyutEl.value = kayitli;
+                }
+            } catch (e) { /* gizli sekme vb. — varsayılanla devam */ }
+
+            function boyutAl() {
+                return boyutEl.value === 'all' ? Number.MAX_SAFE_INTEGER : parseInt(boyutEl.value, 10) || 25;
+            }
+
+            function paraTr(deger) {
+                return deger.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // ── Filtreye uyan satırlar ──
+            function eslesenler() {
+                var q = (aramaEl && aramaEl.value ? aramaEl.value : '').trim().toLowerCase();
+                var t = turEl ? turEl.value : '';
+
+                return satirlar.filter(function (tr) {
+                    var okQ = !q || (tr.dataset.search || '').indexOf(q) !== -1;
+                    var okT = !t || tr.dataset.tur === t;
+                    return okQ && okT;
+                });
+            }
+
+            function filtreAktifMi() {
+                var q = (aramaEl && aramaEl.value ? aramaEl.value : '').trim();
+                var t = turEl ? turEl.value : '';
+                return q.length > 0 || t.length > 0;
+            }
+
+            // ── Dip toplamı görünen kümeye göre yeniden hesapla ──
+            function toplamlariYaz(kume, filtreli) {
+                var gelirUsd = 0, gelirTl = 0, giderUsd = 0, giderTl = 0;
+
+                kume.forEach(function (tr) {
+                    var usd = parseFloat(tr.dataset.usd) || 0;
+                    var tl  = parseFloat(tr.dataset.tl) || 0;
+                    if (tr.dataset.tur === '1') { gelirUsd += usd; gelirTl += tl; }
+                    else                        { giderUsd += usd; giderTl += tl; }
+                });
+
+                var netUsd = gelirUsd - giderUsd;
+                var netTl  = gelirTl - giderTl;
+                var artiMi = netUsd >= 0;
+
+                footGelirUsd.textContent = '+$' + paraTr(gelirUsd);
+                footGelirTl.textContent  = gelirTl > 0 ? '₺' + paraTr(gelirTl) : '—';
+                footGiderUsd.textContent = '-$' + paraTr(giderUsd);
+                footGiderTl.textContent  = giderTl > 0 ? '₺' + paraTr(giderTl) : '—';
+
+                footNetUsd.textContent = (artiMi ? '+$' : '-$') + paraTr(Math.abs(netUsd));
+                footNetUsd.style.color = artiMi ? '#6ee7b7' : '#fca5a5';
+                footNetTl.textContent  = netTl !== 0 ? (netTl >= 0 ? '+₺' : '-₺') + paraTr(Math.abs(netTl)) : '—';
+
+                kapsamGelir.textContent = filtreli ? 'Filtrelenmiş Gelir' : 'Toplam Gelir';
+                kapsamGider.textContent = filtreli ? 'Filtrelenmiş Gider' : 'Toplam Gider';
+            }
+
+            // ── Sayfa düğmelerini kur ──
+            function sayfaDugmeleri(toplamSayfa) {
+                sayfalarEl.innerHTML = '';
+
+                if (toplamSayfa <= 1) return;
+
+                var gosterilecek = [];
+
+                if (toplamSayfa <= 7) {
+                    for (var i = 1; i <= toplamSayfa; i++) gosterilecek.push(i);
+                } else {
+                    gosterilecek.push(1);
+                    if (sayfa > 3) gosterilecek.push('...');
+
+                    var bas = Math.max(2, sayfa - 1);
+                    var bit = Math.min(toplamSayfa - 1, sayfa + 1);
+                    for (var j = bas; j <= bit; j++) gosterilecek.push(j);
+
+                    if (sayfa < toplamSayfa - 2) gosterilecek.push('...');
+                    gosterilecek.push(toplamSayfa);
+                }
+
+                gosterilecek.forEach(function (p) {
+                    if (p === '...') {
+                        var ara = document.createElement('span');
+                        ara.className = 'kt-pager-ara';
+                        ara.textContent = '…';
+                        sayfalarEl.appendChild(ara);
+                        return;
+                    }
+
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'kt-pager-btn' + (p === sayfa ? ' aktif' : '');
+                    btn.textContent = p;
+                    if (p !== sayfa) {
+                        btn.addEventListener('click', function () { sayfa = p; ciz(); kaydir(); });
+                    }
+                    sayfalarEl.appendChild(btn);
+                });
+            }
+
+            function kaydir() {
+                var kart = tablo.closest('.kt-card');
+                if (kart) kart.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // ── Ana çizim ──
+            function ciz() {
+                var kume   = eslesenler();
+                var toplam = kume.length;
+                var boyut  = boyutAl();
+                var filtreli = filtreAktifMi();
+
+                var toplamSayfa = Math.max(1, Math.ceil(toplam / boyut));
+                if (sayfa > toplamSayfa) sayfa = toplamSayfa;
+                if (sayfa < 1) sayfa = 1;
+
+                var bas = (sayfa - 1) * boyut;
+                var bit = Math.min(bas + boyut, toplam);
+
+                // Önce hepsini gizle, sonra sayfadakileri aç ve numaralandır
+                satirlar.forEach(function (tr) { tr.style.display = 'none'; });
+
+                for (var i = bas; i < bit; i++) {
+                    kume[i].style.display = '';
+                    var hucre = kume[i].querySelector('.col-sira');
+                    if (hucre) hucre.textContent = (i + 1);
+                }
+
+                // Sonuç yok durumu
+                var bos = toplam === 0;
+                sonucYokEl.classList.toggle('gorunur', bos);
+                tablo.style.display = bos ? 'none' : '';
+                pagerEl.style.display = bos ? 'none' : '';
+                if (tfootEl) tfootEl.style.display = bos ? 'none' : '';
+
+                uyariEl.classList.toggle('gorunur', filtreli && !bos);
+
+                if (bos) {
+                    bilgiEl.textContent = '';
+                    return;
+                }
+
+                toplamlariYaz(kume, filtreli);
+
+                // Bilgi satırı
+                var kapsamNotu = filtreli ? ' (' + satirlar.length + ' kayıt içinden)' : '';
+                bilgiEl.innerHTML = '<strong>' + (bas + 1) + '–' + bit + '</strong> / ' +
+                                    '<strong>' + toplam + '</strong> kayıt' + kapsamNotu;
+
+                // Düğmeler
+                ilkBtn.disabled    = sayfa === 1;
+                oncekiBtn.disabled = sayfa === 1;
+                sonrakiBtn.disabled= sayfa === toplamSayfa;
+                sonBtn.disabled    = sayfa === toplamSayfa;
+
+                sayfaDugmeleri(toplamSayfa);
+            }
+
+            // ── Olaylar ──
+            function filtreDegisti() { sayfa = 1; ciz(); }
+
+            if (aramaEl) aramaEl.addEventListener('input', filtreDegisti);
+            if (turEl)   turEl.addEventListener('change', filtreDegisti);
+
+            boyutEl.addEventListener('change', function () {
+                try { localStorage.setItem(DEPO_ANAHTARI, boyutEl.value); } catch (e) { }
+                sayfa = 1;
+                ciz();
+            });
+
+            ilkBtn.addEventListener('click', function ()    { sayfa = 1; ciz(); kaydir(); });
+            oncekiBtn.addEventListener('click', function () { sayfa--; ciz(); kaydir(); });
+            sonrakiBtn.addEventListener('click', function (){ sayfa++; ciz(); kaydir(); });
+            sonBtn.addEventListener('click', function ()    {
+                sayfa = Math.max(1, Math.ceil(eslesenler().length / boyutAl()));
+                ciz(); kaydir();
+            });
+
+            if (temizleBtn) {
+                temizleBtn.addEventListener('click', function () {
+                    if (aramaEl) aramaEl.value = '';
+                    if (turEl) turEl.value = '';
+                    filtreDegisti();
+                });
+            }
+
+            ciz();
+        })();
+    </script>
 }
