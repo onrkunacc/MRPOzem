@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CRMOzem.Core.ViewModels
 {
-
     public class LeaveBalanceVm
     {
         public string UserId { get; set; } = "";
@@ -28,7 +27,10 @@ namespace CRMOzem.Core.ViewModels
         /// <summary>Onaylanmış izinlerin toplam günü.</summary>
         public int UsedDays { get; set; }
 
-        /// <summary>Onay bekleyen taleplerin toplam günü.</summary>
+        /// <summary>
+        /// Henüz karara bağlanmamış taleplerin toplam günü —
+        /// hem yönetici onayında hem İK onayında olanlar.
+        /// </summary>
         public int PendingDays { get; set; }
 
         /// <summary>İK elle mi girdi, sistem mi hesapladı?</summary>
@@ -72,6 +74,15 @@ namespace CRMOzem.Core.ViewModels
         public int Year { get; set; } = DateTime.Now.Year;
         public List<int> AvailableYears { get; set; } = new();
 
+        /// <summary>Çalışanın yöneticisinin adı — "talebiniz kime gidiyor" bilgisi.</summary>
+        public string? YoneticiAdi { get; set; }
+
+        /// <summary>Bu kullanıcı birilerinin yöneticisi mi? (ekip onay kutusu için)</summary>
+        public bool YoneticiMi { get; set; }
+
+        /// <summary>Ekibinde kendi kararını bekleyen talep sayısı.</summary>
+        public int EkipBekleyenSayisi { get; set; }
+
         /// <summary>Geriye dönük uyumluluk.</summary>
         public int RemainingDays => Balance.RemainingDays;
     }
@@ -111,6 +122,9 @@ namespace CRMOzem.Core.ViewModels
 
         /// <summary>Takvimde işaretlenecek resmi tatiller (yyyy-MM-dd → ad).</summary>
         public Dictionary<string, string> Tatiller { get; set; } = new();
+
+        /// <summary>Talep önce kime gidecek — yöneticisi yoksa null.</summary>
+        public string? YoneticiAdi { get; set; }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -123,20 +137,153 @@ namespace CRMOzem.Core.ViewModels
         public int Year { get; set; } = DateTime.Now.Year;
         public List<int> AvailableYears { get; set; } = new();
 
-        /// <summary>Pending / Approved / Rejected / Cancelled / null (tümü)</summary>
-        public string? StatusCode { get; set; } = "Pending";
+        /// <summary>
+        /// Pending (yönetici onayında) / SupervisorApproved (İK onayında) /
+        /// Approved / Rejected / Cancelled / "acik" (ikisi birlikte) / null (tümü)
+        /// </summary>
+        public string? StatusCode { get; set; } = "SupervisorApproved";
 
-        public int PendingCount { get; set; }
+        /// <summary>1. aşamada — yöneticisinin kararını bekleyenler.</summary>
+        public int YoneticiOnayindaCount { get; set; }
+
+        /// <summary>2. aşamada — İK'nın kararını bekleyenler. İK'nın iş kuyruğu bu.</summary>
+        public int IkOnayindaCount { get; set; }
+
         public int ApprovedCount { get; set; }
         public int RejectedCount { get; set; }
         public int CancelledCount { get; set; }
-        public int TotalCount => PendingCount + ApprovedCount + RejectedCount + CancelledCount;
+
+        public int AcikCount => YoneticiOnayindaCount + IkOnayindaCount;
+        public int TotalCount => AcikCount + ApprovedCount + RejectedCount + CancelledCount;
 
         public int ApprovedDays { get; set; }
         public int TodayOnLeaveCount { get; set; }
 
+        /// <summary>Yöneticisi atanmamış olduğu için 1. aşaması atlanan açık talep sayısı.</summary>
+        public int YoneticisizCount { get; set; }
+
         /// <summary>Her talep için çalışanın onay sonrası kalacak günü.</summary>
         public Dictionary<int, int> KalanSonrasi { get; set; } = new();
+
+        /// <summary>Geriye dönük uyumluluk — eski görünümler PendingCount okuyordu.</summary>
+        public int PendingCount => AcikCount;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ONAY BAĞLAMI — İK/yönetici karar verirken gördüğü bilgiler
+    // ═══════════════════════════════════════════════════════════
+
+    public class OnayBaglamVm
+    {
+        public LeaveRequest? Talep { get; set; }
+
+        public LeaveBalanceVm Bakiye { get; set; } = new();
+
+        /// <summary>Çalışanın yöneticisi (şu anki tanım).</summary>
+        public string? YoneticiAdi { get; set; }
+
+        /// <summary>
+        /// Aynı tarihlerde izinli ya da izin bekleyen diğer çalışanlar.
+        /// Aynı departman veya aynı yöneticiye bağlı olanlar dikkate alınır —
+        /// "aynı gün ekipte kimse kalmıyor mu" sorusunun cevabı.
+        /// </summary>
+        public List<CakismaSatirVm> Cakismalar { get; set; } = new();
+
+        /// <summary>Çalışanın bu yıldaki diğer talepleri — kullanım alışkanlığı.</summary>
+        public List<GecmisTalepVm> GecmisTalepler { get; set; } = new();
+
+        /// <summary>Onaylanırsa kalacak gün. Haktan düşmeyen türlerde null.</summary>
+        public int? OnaySonrasiKalan { get; set; }
+
+        public bool BakiyeYetersiz => OnaySonrasiKalan.HasValue && OnaySonrasiKalan.Value < 0;
+
+        public int CakismaSayisi => Cakismalar.Count;
+    }
+
+    public class CakismaSatirVm
+    {
+        public int RequestId { get; set; }
+        public string FullName { get; set; } = "";
+        public string? Title { get; set; }
+        public string? Departman { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string LeaveTypeName { get; set; } = "";
+        public string? StatusCode { get; set; }
+        public string? StatusName { get; set; }
+
+        /// <summary>Aynı yöneticiye bağlı mı (ekip arkadaşı) yoksa sadece aynı departman mı?</summary>
+        public bool AyniEkip { get; set; }
+
+        /// <summary>Kesişen gün sayısı.</summary>
+        public int KesisenGun { get; set; }
+    }
+
+    public class GecmisTalepVm
+    {
+        public int RequestId { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int TotalDays { get; set; }
+        public string LeaveTypeName { get; set; } = "";
+        public string? StatusCode { get; set; }
+        public string? StatusName { get; set; }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  EKİP ONAY EKRANI — yöneticinin kendi astları
+    // ═══════════════════════════════════════════════════════════
+
+    public class EkipIzinIndexVm
+    {
+        public int Year { get; set; } = DateTime.Now.Year;
+        public List<int> AvailableYears { get; set; } = new();
+
+        /// <summary>Kararımı bekleyenler — ekranın asıl işi.</summary>
+        public List<EkipTalepSatirVm> Bekleyenler { get; set; } = new();
+
+        /// <summary>Kararımı verdiğim ya da üst aşamada olan talepler.</summary>
+        public List<EkipTalepSatirVm> Gecmis { get; set; } = new();
+
+        /// <summary>Ekip üyeleri ve bakiyeleri.</summary>
+        public List<LeaveBalanceVm> Ekip { get; set; } = new();
+
+        public int BugunIzinliSayisi { get; set; }
+
+        public bool EkibimVar => Ekip.Count > 0;
+    }
+
+    public class EkipTalepSatirVm
+    {
+        public int RequestId { get; set; }
+        public string UserId { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string? Title { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int TotalDays { get; set; }
+        public string LeaveTypeName { get; set; } = "";
+        public bool HaktanDuser { get; set; }
+        public string? Reason { get; set; }
+        public DateTime CreatedAt { get; set; }
+
+        public string? StatusCode { get; set; }
+        public string? StatusName { get; set; }
+
+        public bool? SupervisorOnayladi { get; set; }
+        public string? SupervisorNote { get; set; }
+        public DateTime? SupervisorDecisionAt { get; set; }
+
+        /// <summary>İK nihai kararını verdi mi, ne dedi?</summary>
+        public string? IkKarari { get; set; }
+
+        /// <summary>Onaylanırsa çalışanın kalacak günü. Haktan düşmeyende null.</summary>
+        public int? OnaySonrasiKalan { get; set; }
+
+        /// <summary>Aynı tarihlerde izinli olan diğer ekip üyesi sayısı.</summary>
+        public int EkipCakismasi { get; set; }
+
+        public bool BenimKararimiBekliyor => StatusCode == "Pending";
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -155,6 +302,40 @@ namespace CRMOzem.Core.ViewModels
         public int ToplamKalan => Balances.Sum(x => x.RemainingDays);
         public int HakedisGirilmemisSayisi => Balances.Count(x => !x.HasRecord);
         public int IseGirisEksikSayisi => Balances.Count(x => x.IseGirisEksik);
+
+        /// <summary>Hakedişi kanuni asgarinin altında kalanlar.</summary>
+        public int AsgariAltindaSayisi => Balances.Count(x => x.AsgariAltinda);
+
+        /// <summary>Bakiyesi eksiye düşmüş olanlar — hemen müdahale gerekir.</summary>
+        public int EksiBakiyeSayisi => Balances.Count(x => x.RemainingDays < 0);
+
+        /// <summary>Yıl hiç hazırlanmamış mı (kimsede kayıt yok)?</summary>
+        public bool YilHazirlanmamis => Balances.Count > 0 && HakedisGirilmemisSayisi == Balances.Count;
+
+        /// <summary>Ekranın en üstünde gösterilecek tek cümlelik durum.</summary>
+        public string DurumCumlesi
+        {
+            get
+            {
+                if (Balances.Count == 0) return "İzin takibine dahil çalışan bulunamadı.";
+                if (YilHazirlanmamis) return $"{Year} yılı henüz hazırlanmamış — hiçbir çalışanın hakedişi girilmemiş.";
+                if (HakedisGirilmemisSayisi > 0) return $"{HakedisGirilmemisSayisi} çalışanın {Year} hakedişi eksik.";
+                if (EksiBakiyeSayisi > 0) return $"{EksiBakiyeSayisi} çalışanın bakiyesi eksiye düşmüş.";
+                if (AsgariAltindaSayisi > 0) return $"{AsgariAltindaSayisi} çalışanın hakedişi kanuni asgarinin altında.";
+                return $"{Year} yılı hazır — {Balances.Count} çalışanın hakedişi tanımlı.";
+            }
+        }
+
+        public string DurumSinifi
+        {
+            get
+            {
+                if (Balances.Count == 0 || YilHazirlanmamis) return "uyari";
+                if (HakedisGirilmemisSayisi > 0 || EksiBakiyeSayisi > 0) return "uyari";
+                if (AsgariAltindaSayisi > 0) return "dikkat";
+                return "iyi";
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -166,6 +347,7 @@ namespace CRMOzem.Core.ViewModels
         public List<PersonelSatirVm> Personeller { get; set; } = new();
         public int EksikBilgiSayisi => Personeller.Count(p => p.IseGirisTarihi == null);
         public int AktifSayisi => Personeller.Count(p => p.Aktif);
+        public int YoneticisizSayisi => Personeller.Count(p => p.Aktif && string.IsNullOrEmpty(p.YoneticiUserId));
     }
 
     public class PersonelSatirVm
@@ -187,6 +369,11 @@ namespace CRMOzem.Core.ViewModels
 
         /// <summary>İçinde bulunduğumuz yıl için kıdeme göre hakediş.</summary>
         public int BuYilHakedis { get; set; }
+
+        // ── Organizasyon ──
+        public string? YoneticiUserId { get; set; }
+        public string? YoneticiAdi { get; set; }
+        public int AstSayisi { get; set; }
     }
 
     public class PersonelEditVm
@@ -230,6 +417,80 @@ namespace CRMOzem.Core.ViewModels
         public int BuYilHakedis { get; set; }
         public string? HakedisAciklamasi { get; set; }
         public List<LeaveBalanceVm> Bakiyeler { get; set; } = new();
+
+        /// <summary>Mevcut yönetici — bilgi amaçlı; atama Organizasyon ekranından yapılır.</summary>
+        public string? YoneticiAdi { get; set; }
+        public int AstSayisi { get; set; }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ORGANİZASYON ŞEMASI
+    // ═══════════════════════════════════════════════════════════
+
+    public class OrganizasyonVm
+    {
+        /// <summary>Kök düğümler — yöneticisi olmayan (en üstteki) çalışanlar.</summary>
+        public List<OrgDugumVm> Kokler { get; set; } = new();
+
+        /// <summary>Atama açılırı için tüm aktif çalışanlar.</summary>
+        public List<OrgKisiVm> TumCalisanlar { get; set; } = new();
+
+        /// <summary>Yöneticisi atanmamış aktif çalışanlar — İK'nın yapacak işi.</summary>
+        public List<OrgKisiVm> Yoneticisizler { get; set; } = new();
+
+        public int AktifCalisanSayisi { get; set; }
+        public int YoneticiSayisi { get; set; }
+        public int EnDerinSeviye { get; set; }
+
+        /// <summary>Şemada görünen kişi sayısı — kökten erişilemeyen kalırsa fark eder.</summary>
+        public int SemadakiKisiSayisi => Kokler.Sum(k => k.AltAgacSayisi);
+    }
+
+    public class OrgDugumVm
+    {
+        public string UserId { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string? Title { get; set; }
+        public string? Departman { get; set; }
+        public bool Aktif { get; set; }
+        public int Seviye { get; set; }
+
+        public List<OrgDugumVm> Astlar { get; set; } = new();
+
+        public int DogrudanAstSayisi => Astlar.Count;
+
+        /// <summary>Kendisi dahil alt ağaçtaki toplam kişi.</summary>
+        public int AltAgacSayisi => 1 + Astlar.Sum(a => a.AltAgacSayisi);
+
+        /// <summary>Açık izin talebi olan ast sayısı — şemada rozet olarak gösterilir.</summary>
+        public int BekleyenTalepSayisi { get; set; }
+
+        public string BasHarfler
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(FullName)) return "?";
+                var p = FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (p.Length == 1) return p[0].Substring(0, 1).ToUpperInvariant();
+                return (p[0].Substring(0, 1) + p[^1].Substring(0, 1)).ToUpperInvariant();
+            }
+        }
+    }
+
+    public class OrgKisiVm
+    {
+        public string UserId { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string? Title { get; set; }
+        public string? Departman { get; set; }
+        public bool Aktif { get; set; }
+        public string? YoneticiUserId { get; set; }
+        public string? YoneticiAdi { get; set; }
+        public int AstSayisi { get; set; }
+
+        public string Etiket => string.IsNullOrWhiteSpace(Title)
+            ? FullName
+            : $"{FullName} — {Title}";
     }
 
     // ═══════════════════════════════════════════════════════════

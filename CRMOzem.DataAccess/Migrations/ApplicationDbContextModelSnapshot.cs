@@ -1792,6 +1792,24 @@ namespace CRMOzem.DataAccess.Migrations
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("SupervisorDecisionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SupervisorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SupervisorNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool?>("SupervisorOnayladi")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SupervisorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("TotalDays")
                         .HasColumnType("int");
 
@@ -1799,13 +1817,18 @@ namespace CRMOzem.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<bool>("YoneticisizGecildi")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LeaveTypeId");
 
-                    b.HasIndex("StatusId");
+                    b.HasIndex("SupervisorUserId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("StatusId", "StartDate");
+
+                    b.HasIndex("UserId", "StartDate");
 
                     b.ToTable("LeaveRequests", "ozem");
                 });
@@ -2572,6 +2595,17 @@ namespace CRMOzem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("AtandiTarih")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AtayanAd")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AtayanUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("SupervisorId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -2584,7 +2618,8 @@ namespace CRMOzem.DataAccess.Migrations
 
                     b.HasIndex("SupervisorId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("UserSupervisors", "ozem");
                 });

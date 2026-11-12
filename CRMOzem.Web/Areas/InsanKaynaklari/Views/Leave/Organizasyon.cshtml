@@ -1,0 +1,513 @@
+﻿@model CRMOzem.Core.ViewModels.OrganizasyonVm
+@{
+    ViewData["Title"] = "Organizasyon Şeması";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+@await Html.PartialAsync("_IzinNav", "Organizasyon")
+
+<style>
+    /* ══════════════════════════════════════════════════════════
+       ŞEMA AĞACI
+       Dikey liste + bağlantı çizgileri. Yatay kutu şemasından
+       kaçındım: 50+ kişide yatay şema ekrana sığmıyor, bu yapı
+       hem taşmıyor hem katlanabiliyor.
+       ══════════════════════════════════════════════════════════ */
+    .og-agac, .og-agac ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .og-agac ul {
+        margin-left: 24px;
+        padding-left: 18px;
+        border-left: 1px solid var(--kt-border);
+    }
+
+    .og-dal { position: relative; padding: 3px 0; }
+
+    .og-dal > ul > .og-dal::before {
+        content: "";
+        position: absolute;
+        left: -18px;
+        top: 21px;
+        width: 14px;
+        height: 1px;
+        background: var(--kt-border);
+    }
+
+    .og-kisi {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 8px 12px;
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md);
+        background: var(--kt-paper);
+        transition: all .12s;
+    }
+
+        .og-kisi:hover {
+            border-color: var(--kt-border-strong);
+            box-shadow: var(--kt-shadow-sm);
+        }
+
+    .og-kisi.pasif { opacity: .55; background: var(--kt-bg); }
+    .og-kisi.yonetici { border-left: 3px solid var(--kt-primary); }
+
+    .og-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--kt-ink-900); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11.5px; font-weight: 700; flex-shrink: 0;
+    }
+
+    .og-kisi.yonetici .og-avatar { background: var(--kt-primary); }
+
+    .og-bilgi { min-width: 0; flex: 1; }
+    .og-ad { font-size: 13.5px; font-weight: 600; color: var(--kt-ink-900); }
+    .og-alt { font-size: 11.5px; color: var(--kt-ink-500); }
+
+    .og-sag { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .og-rozet {
+        font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+        background: var(--kt-bg-soft); color: var(--kt-ink-500); white-space: nowrap;
+    }
+    .og-rozet.ast { background: var(--kt-primary-50); color: var(--kt-primary-700); }
+    .og-rozet.bekleyen { background: var(--kt-warn-50); color: var(--kt-warn-700); }
+
+    .og-kat {
+        background: none; border: none; cursor: pointer;
+        width: 22px; height: 22px; border-radius: 4px;
+        color: var(--kt-ink-400); font-size: 11px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+    }
+        .og-kat:hover { background: var(--kt-bg-soft); color: var(--kt-ink-900); }
+
+    .og-dal.kapali > ul { display: none; }
+    .og-dal.kapali > .og-kisi .og-kat i { transform: rotate(-90deg); }
+    .og-kat i { transition: transform .12s; }
+
+    .og-bosluk { width: 22px; flex-shrink: 0; }
+
+    /* ── Yöneticisizler ───────────────────────────────────────── */
+    .og-yoneticisiz {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--kt-border);
+    }
+        .og-yoneticisiz:last-child { border-bottom: none; }
+
+    .og-ara-kutu { position: relative; }
+
+    .og-uyari {
+        display: flex; gap: 9px; align-items: flex-start;
+        background: var(--kt-warn-50); border: 1px solid #fde68a;
+        border-radius: var(--kt-r-sm); padding: 11px 14px;
+        font-size: 12.5px; color: var(--kt-warn-700); line-height: 1.5;
+    }
+
+    .bos-durum { padding: 40px 20px; text-align: center; color: var(--kt-ink-400); }
+    .bos-durum i { font-size: 30px; opacity: .45; display: block; margin-bottom: 10px; }
+
+    @@media (max-width: 768px) {
+        .og-agac ul { margin-left: 10px; padding-left: 12px; }
+        .og-dal > ul > .og-dal::before { left: -12px; width: 9px; }
+        .og-sag .og-rozet { display: none; }
+    }
+</style>
+
+<div class="kt-page" style="padding-top:0;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═══ ÖZET ═══ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Aktif Çalışan</div>
+                <div class="kt-kpi-icon"><i class="fas fa-users"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.AktifCalisanSayisi</div>
+            <div class="kt-kpi-foot">kişi</div>
+        </div>
+        <div class="kt-kpi accent-dark">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Yönetici</div>
+                <div class="kt-kpi-icon"><i class="fas fa-user-tie"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.YoneticiSayisi</div>
+            <div class="kt-kpi-foot">astı olan kişi</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Şema Derinliği</div>
+                <div class="kt-kpi-icon"><i class="fas fa-sitemap"></i></div>
+            </div>
+            <div class="kt-kpi-value">@(Model.EnDerinSeviye + 1)</div>
+            <div class="kt-kpi-foot">kademe</div>
+        </div>
+        <div class="kt-kpi @(Model.Yoneticisizler.Count > 0 ? "accent-warn" : "accent-pos")">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Yöneticisi Yok</div>
+                <div class="kt-kpi-icon"><i class="fas fa-user-slash"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Model.Yoneticisizler.Count</div>
+            <div class="kt-kpi-foot">
+                @if (Model.Yoneticisizler.Count > 0)
+                {
+                    <text>talepleri doğrudan İK'ya düşüyor</text>
+                }
+                else
+                {
+                    <text>şema tamam</text>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Yoneticisizler.Count > 0)
+    {
+        <div class="kt-card" style="padding:14px 18px;">
+            <div class="og-uyari">
+                <i class="fas fa-triangle-exclamation" style="margin-top:2px;"></i>
+                <span>
+                    <strong>@Model.Yoneticisizler.Count çalışanın yöneticisi atanmamış.</strong>
+                    Bu kişilerin izin talepleri 1. aşamayı atlayarak doğrudan İnsan Kaynakları onayına
+                    düşüyor. Aşağıdaki "Yöneticisi Olmayanlar" listesinden atama yapabilirsiniz.
+                </span>
+            </div>
+        </div>
+    }
+
+    @* ═══ YÖNETİCİ ATAMA ═══ *@
+    <div class="kt-card">
+        <div class="kt-section section-primary">
+            <div class="kt-section-icon"><i class="fas fa-user-plus"></i></div>
+            <div>
+                <span class="kt-section-title">Yönetici Ata</span>
+                <span class="kt-section-desc">
+                    Çalışanı seçin, yöneticisini belirleyin. Atama sonrası çalışanın
+                    <strong>yeni</strong> talepleri önce bu yöneticiye gider
+                </span>
+            </div>
+        </div>
+
+        <form asp-action="YoneticiAta" method="post" id="ataForm">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-12 col-md-5">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Çalışan <span class="req">*</span></label>
+                        <select name="userId" id="ataCalisan" class="kt-select" required>
+                            <option value="">— Çalışan seçiniz —</option>
+                            @foreach (var k in Model.TumCalisanlar)
+                            {
+                                <option value="@k.UserId"
+                                        data-yonetici="@(k.YoneticiAdi ?? "")"
+                                        data-ast="@k.AstSayisi">
+                                    @k.Etiket
+                                    @if (!string.IsNullOrWhiteSpace(k.YoneticiAdi))
+                                    {
+                                        <text> → @k.YoneticiAdi</text>
+                                    }
+                                </option>
+                            }
+                        </select>
+                        <div id="ataMevcut" style="display:none; font-size:12px; color:var(--kt-ink-500); margin-top:5px;"></div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-5">
+                    <div class="kt-form-group">
+                        <label class="kt-label">Yöneticisi</label>
+                        <select name="supervisorUserId" id="ataYonetici" class="kt-select">
+                            <option value="">— Yöneticisi olmasın —</option>
+                            @foreach (var k in Model.TumCalisanlar)
+                            {
+                                <option value="@k.UserId">@k.Etiket</option>
+                            }
+                        </select>
+                        <div style="font-size:11.5px; color:var(--kt-ink-400); margin-top:5px;">
+                            Boş bırakırsanız mevcut yönetici bağı kaldırılır
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-2">
+                    <div class="kt-form-group">
+                        <label class="kt-label" style="visibility:hidden;">Kaydet</label>
+                        <button type="submit" class="kt-btn kt-btn-primary" style="width:100%; justify-content:center;">
+                            <i class="fas fa-floppy-disk"></i> Kaydet
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-hint">
+                <i class="fas fa-circle-info"></i>
+                Bir çalışanın tek yöneticisi olur. Döngü oluşturacak atamalar
+                (birinin kendi astının astı olması) sistem tarafından reddedilir.
+                Daha önce açılmış talepler eski yöneticide kalır — yalnızca yeni talepler etkilenir.
+            </div>
+        </form>
+    </div>
+
+    @* ═══ YÖNETİCİSİ OLMAYANLAR ═══ *@
+    @if (Model.Yoneticisizler.Count > 0)
+    {
+        <div class="kt-card">
+            <div class="kt-section section-money">
+                <div class="kt-section-icon"><i class="fas fa-user-slash"></i></div>
+                <div>
+                    <span class="kt-section-title">Yöneticisi Olmayanlar</span>
+                    <span class="kt-section-desc">@Model.Yoneticisizler.Count çalışan — şemanın dışında kalıyor</span>
+                </div>
+            </div>
+
+            @foreach (var k in Model.Yoneticisizler)
+            {
+                <div class="og-yoneticisiz">
+                    <div style="min-width:0;">
+                        <div style="font-weight:600; color:var(--kt-ink-900); font-size:13.5px;">@k.FullName</div>
+                        <div style="font-size:11.5px; color:var(--kt-ink-500);">
+                            @(k.Title ?? "—")
+                            @if (!string.IsNullOrWhiteSpace(k.Departman))
+                            {
+                                <text> · @k.Departman</text>
+                            }
+                        </div>
+                    </div>
+                    <button type="button" class="kt-btn kt-btn-sm kt-btn-primary"
+                            onclick="ataSec('@k.UserId')">
+                        <i class="fas fa-user-plus"></i> Yönetici Ata
+                    </button>
+                </div>
+            }
+        </div>
+    }
+
+    @* ═══ ŞEMA ═══ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border);
+                    display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="kt-section-icon"><i class="fas fa-sitemap"></i></div>
+            <div style="flex:1; min-width:180px;">
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Organizasyon Şeması</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">
+                    @Model.SemadakiKisiSayisi kişi şemada · @Model.Kokler.Count üst kademe
+                </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="semaAra" class="kt-input" placeholder="Şemada ara..." style="width:190px;" />
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="hepsiniAc()">
+                    <i class="fas fa-angles-down"></i> Tümünü Aç
+                </button>
+                <button type="button" class="kt-btn kt-btn-ghost" onclick="hepsiniKapat()">
+                    <i class="fas fa-angles-up"></i> Tümünü Kapat
+                </button>
+            </div>
+        </div>
+
+        <div style="padding:18px 24px;">
+            @if (Model.Kokler.Any())
+            {
+                <ul class="og-agac" id="semaAgac">
+                    @foreach (var kok in Model.Kokler)
+                    {
+                        @await Html.PartialAsync("_OrgDugum", kok)
+                    }
+                </ul>
+
+                <div id="semaSonucYok" style="display:none; padding:24px; text-align:center;
+                                              color:var(--kt-ink-400); font-size:13px;">
+                    <i class="fas fa-magnifying-glass" style="margin-right:6px;"></i>
+                    Aramanıza uyan kişi bulunamadı
+                </div>
+            }
+            else
+            {
+                <div class="bos-durum">
+                    <i class="fas fa-sitemap"></i>
+                    <p style="margin:0; font-size:13.5px;">Henüz hiç yönetici ataması yapılmamış</p>
+                    <p style="margin:8px 0 0; font-size:12.5px;">
+                        Yukarıdaki formdan ilk atamayı yaparak şemayı oluşturmaya başlayın.
+                    </p>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ═══ ASTLARI DEVRET ═══ *@
+    @if (Model.YoneticiSayisi > 0)
+    {
+        <div class="kt-card">
+            <div class="kt-section">
+                <div class="kt-section-icon"><i class="fas fa-right-left"></i></div>
+                <div>
+                    <span class="kt-section-title">Astları Devret</span>
+                    <span class="kt-section-desc">
+                        Bir yönetici ayrıldığında ya da görevi değiştiğinde tüm astlarını
+                        tek işlemle başka yöneticiye aktarın
+                    </span>
+                </div>
+            </div>
+
+            <form asp-action="AstlariDevret" method="post"
+                  onsubmit="return confirm('Seçilen yöneticinin TÜM astları yeni yöneticiye devredilecek. Devam?');">
+                @Html.AntiForgeryToken()
+                <div class="row g-3">
+                    <div class="col-12 col-md-5">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Eski Yönetici <span class="req">*</span></label>
+                            <select name="eskiSupervisorUserId" class="kt-select" required>
+                                <option value="">— Yönetici seçiniz —</option>
+                                @foreach (var k in Model.TumCalisanlar.Where(x => x.AstSayisi > 0))
+                                {
+                                    <option value="@k.UserId">@k.Etiket (@k.AstSayisi ast)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <div class="kt-form-group">
+                            <label class="kt-label">Yeni Yönetici</label>
+                            <select name="yeniSupervisorUserId" class="kt-select">
+                                <option value="">— Yöneticisiz bırak —</option>
+                                @foreach (var k in Model.TumCalisanlar)
+                                {
+                                    <option value="@k.UserId">@k.Etiket</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="kt-form-group">
+                            <label class="kt-label" style="visibility:hidden;">Devret</label>
+                            <button type="submit" class="kt-btn kt-btn-dark" style="width:100%; justify-content:center;">
+                                <i class="fas fa-right-left"></i> Devret
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    // ── Atama formuna kişi seç ──
+    function ataSec(userId) {
+        var sec = document.getElementById('ataCalisan');
+        if (!sec) return;
+        sec.value = userId;
+        sec.dispatchEvent(new Event('change'));
+        document.getElementById('ataForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var yon = document.getElementById('ataYonetici');
+        if (yon) setTimeout(function () { yon.focus(); }, 300);
+    }
+
+    // ── Seçilen çalışanın mevcut durumunu göster ──
+    (function () {
+        var sec = document.getElementById('ataCalisan');
+        var bilgi = document.getElementById('ataMevcut');
+        if (!sec || !bilgi) return;
+
+        sec.addEventListener('change', function () {
+            var o = sec.options[sec.selectedIndex];
+            if (!o || !o.value) { bilgi.style.display = 'none'; return; }
+
+            var mevcut = o.dataset.yonetici || '';
+            var ast = parseInt(o.dataset.ast || '0', 10);
+            var parcalar = [];
+
+            parcalar.push(mevcut
+                ? 'Şu anki yöneticisi: <strong>' + mevcut + '</strong>'
+                : 'Şu anda yöneticisi yok');
+
+            if (ast > 0) parcalar.push(ast + ' kişinin yöneticisi');
+
+            bilgi.innerHTML = parcalar.join(' · ');
+            bilgi.style.display = '';
+        });
+    })();
+
+    // ── Ağaç katla / aç ──
+    function dalKat(btn) {
+        var dal = btn.closest('.og-dal');
+        if (dal) dal.classList.toggle('kapali');
+    }
+
+    function hepsiniAc() {
+        document.querySelectorAll('#semaAgac .og-dal.kapali')
+            .forEach(function (d) { d.classList.remove('kapali'); });
+    }
+
+    function hepsiniKapat() {
+        // Kökleri açık bırak, altını kapat — tamamen kapanınca şema kaybolur
+        document.querySelectorAll('#semaAgac > .og-dal .og-dal')
+            .forEach(function (d) { if (d.querySelector('ul')) d.classList.add('kapali'); });
+    }
+
+    // ── Şemada ara ──
+    (function () {
+        var ara = document.getElementById('semaAra');
+        var agac = document.getElementById('semaAgac');
+        var yok = document.getElementById('semaSonucYok');
+        if (!ara || !agac) return;
+
+        ara.addEventListener('input', function () {
+            var q = ara.value.trim().toLowerCase();
+
+            var dallar = agac.querySelectorAll('.og-dal');
+
+            if (!q) {
+                dallar.forEach(function (d) { d.style.display = ''; });
+                agac.style.display = '';
+                if (yok) yok.style.display = 'none';
+                return;
+            }
+
+            var bulunan = 0;
+
+            dallar.forEach(function (d) {
+                var metin = (d.dataset.ara || '');
+                // Kendisi ya da altındaki biri uyuyorsa görünür kalsın
+                var uyan = metin.indexOf(q) !== -1;
+                d.style.display = uyan ? '' : 'none';
+                if (uyan) bulunan++;
+                if (uyan) d.classList.remove('kapali');
+            });
+
+            // Uyan bir düğümün tüm üst zincirini de aç
+            dallar.forEach(function (d) {
+                if (d.style.display === '') {
+                    var ust = d.parentElement ? d.parentElement.closest('.og-dal') : null;
+                    while (ust) {
+                        ust.style.display = '';
+                        ust.classList.remove('kapali');
+                        ust = ust.parentElement ? ust.parentElement.closest('.og-dal') : null;
+                    }
+                }
+            });
+
+            agac.style.display = bulunan > 0 ? '' : 'none';
+            if (yok) yok.style.display = bulunan > 0 ? 'none' : 'block';
+        });
+    })();
+</script>
+}

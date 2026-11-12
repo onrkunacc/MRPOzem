@@ -1,36 +1,30 @@
-﻿@model CRMOzem.Core.Models.LeaveRequest
+﻿@model CRMOzem.Core.ViewModels.OnayBaglamVm
 @{
     ViewData["Title"] = "İzin Talebi Detayı";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var tr = new System.Globalization.CultureInfo("tr-TR");
-    var b = ViewBag.Balance as CRMOzem.Core.ViewModels.LeaveBalanceVm;
-    var kod = Model.Status?.Code;
-    var bekliyor = kod == "Pending";
 
-    string DurumBadge(string? k) => k switch
-    {
-        "Pending" => "kt-badge-warning",
-        "Approved" => "kt-badge-success",
-        "Rejected" => "kt-badge-danger",
-        "Cancelled" => "kt-badge-secondary",
-        _ => "kt-badge-secondary"
-    };
+    var t = Model.Talep!;
+    var kod = t.Status?.Code;
+    var acik = kod == "Pending" || kod == "SupervisorApproved";
+    var yoneticiAtlanacak = kod == "Pending";
 }
 
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
 @await Html.PartialAsync("_IzinNav", "Index")
 
 <style>
-    .dt-grid { display: grid; grid-template-columns: 1fr 340px; gap: 18px; align-items: start; }
-    @@media (max-width: 1100px) { .dt-grid { grid-template-columns: 1fr; } }
     .dt-satir {
-        display: grid; grid-template-columns: 150px 1fr; gap: 14px;
+        display: grid; grid-template-columns: 170px 1fr; gap: 14px;
         padding: 11px 0; border-bottom: 1px solid var(--kt-border); font-size: 13.5px;
     }
-    .dt-satir:last-child { border-bottom: none; }
-    .dt-satir .et { color: var(--kt-ink-500); font-size: 12px; }
-    .dt-satir .dg { color: var(--kt-ink-900); font-weight: 600; }
-    @@media (max-width: 560px) { .dt-satir { grid-template-columns: 1fr; gap: 2px; } }
+        .dt-satir:last-child { border-bottom: none; }
+        .dt-satir .et { color: var(--kt-ink-500); font-size: 12px; }
+        .dt-satir .dg { color: var(--kt-ink-900); font-weight: 600; }
+
+    @@media (max-width: 560px) {
+        .dt-satir { grid-template-columns: 1fr; gap: 2px; }
+    }
 </style>
 
 <div class="kt-page" style="padding-top:0;">
@@ -48,275 +42,243 @@
         </div>
     }
 
-    <div class="dt-grid">
-
-        @* ═══ SOL: DETAY ═══ *@
-        <div>
-            <div class="kt-card">
-                <div class="kt-flex-between" style="margin-bottom:16px;">
-                    <div>
-                        <div style="font-size:18px; font-weight:700; color:var(--kt-ink-900);">
-                            @(Model.User?.FullName ?? "—")
-                        </div>
-                        <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:2px;">
-                            @(Model.User?.Title ?? "—")
-                            @if (!string.IsNullOrWhiteSpace(Model.User?.Departman))
-                            {
-                                <text> · @Model.User.Departman</text>
-                            }
-                        </div>
-                    </div>
-                    <span class="kt-badge @DurumBadge(kod)" style="padding:6px 14px; font-size:12.5px;">
-                        @Model.Status?.Name
-                    </span>
+    @* ═══ BAŞLIK ═══ *@
+    <div class="kt-card" style="margin-bottom:16px;">
+        <div class="kt-flex-between" style="margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="font-size:18px; font-weight:700; color:var(--kt-ink-900);">
+                    @(t.User?.FullName ?? "—")
                 </div>
-
-                <div class="kt-section section-primary">
-                    <div class="kt-section-icon"><i class="fas fa-calendar-days"></i></div>
-                    <div>
-                        <span class="kt-section-title">İzin Bilgileri</span>
-                        <span class="kt-section-desc">Talep no İZN-@Model.Id.ToString("D5")</span>
-                    </div>
-                </div>
-
-                <div class="dt-satir">
-                    <span class="et">İzin Türü</span>
-                    <span class="dg">
-                        @Model.LeaveType?.Name
-                        @if (Model.LeaveType != null && !Model.LeaveType.IsDeductedFromQuota)
-                        {
-                            <span class="kt-tag" style="margin-left:6px;">yıllık haktan düşmez</span>
-                        }
-                    </span>
-                </div>
-                <div class="dt-satir">
-                    <span class="et">Başlangıç</span>
-                    <span class="dg">@Model.StartDate.ToString("dd MMMM yyyy", tr), @Model.StartDate.ToString("dddd", tr)</span>
-                </div>
-                <div class="dt-satir">
-                    <span class="et">Bitiş</span>
-                    <span class="dg">@Model.EndDate.ToString("dd MMMM yyyy", tr), @Model.EndDate.ToString("dddd", tr)</span>
-                </div>
-                <div class="dt-satir">
-                    <span class="et">Süre</span>
-                    <span class="dg">
-                        @Model.TotalDays iş günü
-                        <span style="font-weight:400; color:var(--kt-ink-500);">
-                            (@((Model.EndDate.Date - Model.StartDate.Date).Days + 1) takvim günü)
-                        </span>
-                        @if (Model.SaturdayExcluded)
-                        {
-                            <div style="font-size:11.5px; color:var(--kt-ink-500); font-weight:400; margin-top:2px;">
-                                Cumartesi günleri sayılmadı
-                            </div>
-                        }
-                    </span>
-                </div>
-                <div class="dt-satir">
-                    <span class="et">Talep Tarihi</span>
-                    <span class="dg">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                </div>
-                @if (!string.IsNullOrWhiteSpace(Model.Reason))
-                {
-                    <div class="dt-satir">
-                        <span class="et">Çalışan Açıklaması</span>
-                        <span class="dg" style="font-weight:400;">@Model.Reason</span>
-                    </div>
-                }
-
-                @if (!bekliyor)
-                {
-                    <div class="kt-section @(kod == "Approved" ? "section-hospital" : "section-money")" style="margin-top:20px;">
-                        <div class="kt-section-icon">
-                            <i class="fas @(kod == "Approved" ? "fa-circle-check" : kod == "Rejected" ? "fa-circle-xmark" : "fa-ban")"></i>
-                        </div>
-                        <div>
-                            <span class="kt-section-title">Karar</span>
-                            <span class="kt-section-desc">@Model.Status?.Name</span>
-                        </div>
-                    </div>
-
-                    <div class="dt-satir">
-                        <span class="et">Karar Veren</span>
-                        <span class="dg">@(Model.DecisionByName ?? "—")</span>
-                    </div>
-                    <div class="dt-satir">
-                        <span class="et">Karar Tarihi</span>
-                        <span class="dg">@(Model.DecisionAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(Model.DecisionNote))
+                <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:2px;">
+                    @(t.User?.Title ?? "—")
+                    @if (!string.IsNullOrWhiteSpace(t.User?.Departman))
                     {
-                        <div class="dt-satir">
-                            <span class="et">@(kod == "Rejected" ? "Red Gerekçesi" : "Not")</span>
-                            <span class="dg" style="font-weight:400; color:@(kod == "Rejected" ? "var(--kt-neg)" : "var(--kt-ink-900)");">
-                                @Model.DecisionNote
-                            </span>
-                        </div>
+                        <text> · @t.User.Departman</text>
                     }
-                }
-
-                <div class="kt-actions">
-                    <a asp-action="Index" class="kt-btn kt-btn-ghost">
-                        <i class="fas fa-arrow-left"></i> Listeye Dön
-                    </a>
-
-                    @if (kod == "Approved")
+                    · İZN-@t.Id.ToString("D5")
+                    @if (!string.IsNullOrWhiteSpace(Model.YoneticiAdi))
                     {
-                        <a class="kt-btn kt-btn-secondary" asp-action="Belge" asp-route-id="@Model.Id" target="_blank">
-                            <i class="fas fa-file-pdf"></i> İzin Belgesi
-                        </a>
-                    }
-
-                    @if (bekliyor)
-                    {
-                        <button type="button" class="kt-btn kt-btn-danger" onclick="redAc()">
-                            <i class="fas fa-ban"></i> Reddet
-                        </button>
-                        <button type="button" class="kt-btn kt-btn-success" onclick="onayAc()">
-                            <i class="fas fa-check"></i> Onayla
-                        </button>
+                        <text> · yöneticisi: @Model.YoneticiAdi</text>
                     }
                 </div>
             </div>
+            <span class="kt-badge @(kod switch {
+                      "Pending" => "kt-badge-warning",
+                      "SupervisorApproved" => "kt-badge-info",
+                      "Approved" => "kt-badge-success",
+                      "Rejected" => "kt-badge-danger",
+                      _ => "kt-badge-secondary" })"
+                  style="padding:6px 14px; font-size:12.5px;">
+                @t.Status?.Name
+            </span>
         </div>
 
-        @* ═══ SAĞ: BAKİYE ═══ *@
-        <div>
-            @if (b != null)
+        <div class="kt-section section-primary">
+            <div class="kt-section-icon"><i class="fas fa-calendar-days"></i></div>
+            <div>
+                <span class="kt-section-title">İzin Bilgileri</span>
+                <span class="kt-section-desc">@t.CreatedAt.ToString("dd MMMM yyyy HH:mm", tr) tarihinde talep edildi</span>
+            </div>
+        </div>
+
+        <div class="dt-satir">
+            <span class="et">İzin Türü</span>
+            <span class="dg">
+                @t.LeaveType?.Name
+                @if (t.LeaveType != null && !t.LeaveType.IsDeductedFromQuota)
+                {
+                    <span class="kt-tag" style="margin-left:6px;">yıllık haktan düşmez</span>
+                }
+            </span>
+        </div>
+        <div class="dt-satir">
+            <span class="et">Başlangıç</span>
+            <span class="dg">@t.StartDate.ToString("dd MMMM yyyy", tr), @t.StartDate.ToString("dddd", tr)</span>
+        </div>
+        <div class="dt-satir">
+            <span class="et">Bitiş</span>
+            <span class="dg">@t.EndDate.ToString("dd MMMM yyyy", tr), @t.EndDate.ToString("dddd", tr)</span>
+        </div>
+        <div class="dt-satir">
+            <span class="et">Süre</span>
+            <span class="dg">
+                @t.TotalDays iş günü
+                <span style="font-weight:400; color:var(--kt-ink-500);">
+                    (@((t.EndDate.Date - t.StartDate.Date).Days + 1) takvim günü)
+                </span>
+                @if (t.SaturdayExcluded)
+                {
+                    <div style="font-size:11.5px; color:var(--kt-ink-500); font-weight:400; margin-top:2px;">
+                        Cumartesi günleri sayılmadı
+                    </div>
+                }
+            </span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(t.Reason))
+        {
+            <div class="dt-satir">
+                <span class="et">Çalışan Açıklaması</span>
+                <span class="dg" style="font-weight:400;">@t.Reason</span>
+            </div>
+        }
+    </div>
+
+    @* ═══ ONAY BAĞLAMI (ortak partial) ═══ *@
+    @await Html.PartialAsync("~/Views/Shared/_OnayBaglami.cshtml", Model)
+
+    @* ═══ EYLEM ═══ *@
+    <div class="kt-card" style="margin-top:16px;">
+        @if (acik)
+        {
+            <div style="font-size:13px; color:var(--kt-ink-500); margin-bottom:12px;">
+                @if (yoneticiAtlanacak)
+                {
+                    <text>
+                        Bu talep henüz yöneticisinin onayından geçmedi. Onaylarsanız 1. aşama
+                        atlanır ve bu durum karar notuna işlenir.
+                    </text>
+                }
+                else
+                {
+                    <text>
+                        Yönetici onayından geçti, nihai karar sizde. Onayladığınızda gün sayısı
+                        çalışanın bakiyesinden düşer ve izin belgesi oluşturulabilir hale gelir.
+                    </text>
+                }
+            </div>
+        }
+
+        <div class="kt-actions">
+            <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                <i class="fas fa-arrow-left"></i> Onay Kuyruğuna Dön
+            </a>
+
+            <a asp-action="Bakiyeler" asp-route-yil="@Model.Bakiye.Year" class="kt-btn kt-btn-ghost">
+                <i class="fas fa-scale-balanced"></i> Bakiye Ekranı
+            </a>
+
+            @if (kod == "Approved")
             {
-                <div class="kt-card">
-                    <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.06em; margin-bottom:12px;">
-                        @b.Year Bakiyesi
-                    </div>
+                <a class="kt-btn kt-btn-secondary" asp-action="Belge" asp-route-id="@t.Id" target="_blank">
+                    <i class="fas fa-file-pdf"></i> İzin Belgesi
+                </a>
+            }
 
-                    <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                        <span class="et">Hakediş</span><span class="dg">@b.TotalDays gün</span>
-                    </div>
-                    @if (b.CarriedOverDays > 0)
-                    {
-                        <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                            <span class="et">Devreden</span><span class="dg">@b.CarriedOverDays gün</span>
-                        </div>
-                    }
-                    <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                        <span class="et">Toplam hak</span><span class="dg">@b.Entitlement gün</span>
-                    </div>
-                    <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                        <span class="et">Kullanılan</span><span class="dg">@b.UsedDays gün</span>
-                    </div>
-                    <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                        <span class="et">Bekleyen</span><span class="dg" style="color:var(--kt-warn);">@b.PendingDays gün</span>
-                    </div>
-                    <div class="dt-satir" style="grid-template-columns:1fr auto;">
-                        <span class="et">Kalan</span>
-                        <span class="dg" style="font-size:17px; color:@(b.RemainingDays > 0 ? "var(--kt-pos)" : "var(--kt-neg)");">
-                            @b.RemainingDays gün
-                        </span>
-                    </div>
-
-                    @if (bekliyor && Model.LeaveType?.IsDeductedFromQuota == true)
-                    {
-                        var sonra = b.RemainingDays - Model.TotalDays;
-                        <div style="margin-top:14px; padding:12px 14px; border-radius:var(--kt-r-md);
-                                    background:@(sonra < 0 ? "var(--kt-neg-50)" : "var(--kt-pos-50)");
-                                    border:1px solid @(sonra < 0 ? "#fecaca" : "#a7f3d0");">
-                            <div style="font-size:11.5px; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.05em; font-weight:700;">
-                                Onaylanırsa
-                            </div>
-                            <div style="font-size:22px; font-weight:700; margin-top:3px;
-                                        color:@(sonra < 0 ? "var(--kt-neg-700)" : "var(--kt-pos-700)");">
-                                @sonra gün kalır
-                            </div>
-                            @if (sonra < 0)
-                            {
-                                <div style="font-size:12px; color:var(--kt-neg-700); margin-top:4px;">
-                                    Bakiye yetersiz — onay reddedilecek.
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    <div class="kt-hint" style="margin-top:12px;">
-                        <i class="fas fa-user"></i>
-                        Kıdem @b.KidemYili yıl · kanuni hakediş @b.OnerilenHakedis gün
-                    </div>
-
-                    <a class="kt-btn kt-btn-ghost" style="width:100%; justify-content:center; margin-top:12px;"
-                       asp-action="Bakiyeler" asp-route-yil="@b.Year">
-                        <i class="fas fa-scale-balanced"></i> Bakiye Ekranı
-                    </a>
-                </div>
+            @if (acik)
+            {
+                <button type="button" class="kt-btn kt-btn-danger" onclick="redAc()">
+                    <i class="fas fa-xmark"></i> Reddet
+                </button>
+                <button type="button" class="kt-btn kt-btn-success" onclick="onayAc()">
+                    <i class="fas fa-check"></i> Onayla
+                </button>
             }
         </div>
     </div>
 </div>
 
-@* ═══ ONAY MODAL ═══ *@
-<div class="kt-modal-backdrop" id="onayModal">
-    <div class="kt-modal kt-modal-sm">
-        <div class="kt-modal-head">
-            <h5 class="kt-modal-title"><i class="fas fa-check" style="color:var(--kt-pos);"></i> Talebi Onayla</h5>
-            <button type="button" class="kt-modal-close" onclick="onayKapat()">&times;</button>
-        </div>
-        <form asp-action="Approve" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="donus" value="detay" />
-            <div class="kt-modal-body">
-                <p style="font-size:13px; color:var(--kt-ink-700); margin:0 0 12px;">
-                    <strong>@Model.User?.FullName</strong> için
-                    <strong>@Model.StartDate.ToString("dd.MM.yyyy") – @Model.EndDate.ToString("dd.MM.yyyy")</strong>
-                    arası <strong>@Model.TotalDays iş günü</strong> izin onaylanacak.
-                </p>
-                <div class="kt-form-group">
-                    <label class="kt-label">Onay Notu</label>
-                    <textarea name="not" class="kt-textarea" rows="2" placeholder="Opsiyonel"></textarea>
-                </div>
+@if (acik)
+{
+    // ── Onay modalı ──
+    <div class="kt-modal-backdrop" id="onayModal">
+        <div class="kt-modal kt-modal-sm">
+            <div class="kt-modal-head">
+                <h5 class="kt-modal-title"><i class="fas fa-check" style="color:var(--kt-pos);"></i> Talebi Onayla</h5>
+                <button type="button" class="kt-modal-close" onclick="onayKapat()">&times;</button>
             </div>
-            <div class="kt-modal-foot">
-                <button type="button" class="kt-btn kt-btn-ghost" onclick="onayKapat()">Vazgeç</button>
-                <button type="submit" class="kt-btn kt-btn-success"><i class="fas fa-check"></i> Onayla</button>
-            </div>
-        </form>
-    </div>
-</div>
+            <form asp-action="Approve" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@t.Id" />
+                <input type="hidden" name="donus" value="detay" />
+                <div class="kt-modal-body">
+                    <p style="font-size:13px; color:var(--kt-ink-700); margin:0 0 12px;">
+                        <strong>@t.User?.FullName</strong> için
+                        <strong>@t.StartDate.ToString("dd.MM.yyyy") – @t.EndDate.ToString("dd.MM.yyyy")</strong>
+                        arası <strong>@t.TotalDays iş günü</strong> izin onaylanacak.
+                    </p>
 
-@* ═══ RED MODAL ═══ *@
-<div class="kt-modal-backdrop" id="redModal">
-    <div class="kt-modal kt-modal-sm">
-        <div class="kt-modal-head">
-            <h5 class="kt-modal-title"><i class="fas fa-ban" style="color:var(--kt-neg);"></i> Talebi Reddet</h5>
-            <button type="button" class="kt-modal-close" onclick="redKapat()">&times;</button>
-        </div>
-        <form asp-action="Reject" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="donus" value="detay" />
-            <div class="kt-modal-body">
-                <div class="kt-form-group">
-                    <label class="kt-label">Red Gerekçesi <span class="req">*</span></label>
-                    <textarea name="gerekce" class="kt-textarea" rows="3" required
-                              placeholder="Çalışan bu açıklamayı görecek"></textarea>
+                    @if (yoneticiAtlanacak)
+                    {
+                        <div style="background:var(--kt-warn-50); border:1px solid #fde68a;
+                                    color:var(--kt-warn-700); padding:10px 13px;
+                                    border-radius:var(--kt-r-sm); margin-bottom:12px; font-size:12.5px;">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            Bu talep henüz <strong>@(t.SupervisorName ?? "yöneticisinin")</strong> onayından
+                            geçmedi. Onaylarsanız 1. aşama atlanır ve bu durum kayda geçer.
+                        </div>
+                    }
+
+                    @if (Model.BakiyeYetersiz)
+                    {
+                        <div style="background:var(--kt-neg-50); border:1px solid #fecaca;
+                                    color:var(--kt-neg-700); padding:10px 13px;
+                                    border-radius:var(--kt-r-sm); margin-bottom:12px; font-size:12.5px;">
+                            <i class="fas fa-circle-exclamation"></i>
+                            <strong>Bakiye yetersiz</strong> — onay işlemi reddedilecek.
+                            Önce bakiye ekranından hakedişi düzeltin.
+                        </div>
+                    }
+
+                    <div class="kt-form-group">
+                        <label class="kt-label">Onay Notu</label>
+                        <textarea name="not" class="kt-textarea" rows="2"
+                                  placeholder="Çalışan bu notu görecek (opsiyonel)"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="kt-modal-foot">
-                <button type="button" class="kt-btn kt-btn-ghost" onclick="redKapat()">Vazgeç</button>
-                <button type="submit" class="kt-btn kt-btn-danger"><i class="fas fa-ban"></i> Reddet</button>
-            </div>
-        </form>
+                <div class="kt-modal-foot">
+                    <button type="button" class="kt-btn kt-btn-ghost" onclick="onayKapat()">Vazgeç</button>
+                    <button type="submit" class="kt-btn kt-btn-success"><i class="fas fa-check"></i> Onayla</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+
+    // ── Red modalı ──
+    <div class="kt-modal-backdrop" id="redModal">
+        <div class="kt-modal kt-modal-sm">
+            <div class="kt-modal-head">
+                <h5 class="kt-modal-title"><i class="fas fa-ban" style="color:var(--kt-neg);"></i> Talebi Reddet</h5>
+                <button type="button" class="kt-modal-close" onclick="redKapat()">&times;</button>
+            </div>
+            <form asp-action="Reject" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@t.Id" />
+                <input type="hidden" name="donus" value="detay" />
+                <div class="kt-modal-body">
+                    <p style="font-size:13px; color:var(--kt-ink-500); margin:0 0 12px;">
+                        <strong style="color:var(--kt-ink-900);">@t.User?.FullName</strong> adlı
+                        çalışanın izin talebi reddedilecek.
+                    </p>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Red Gerekçesi <span class="req">*</span></label>
+                        <textarea name="gerekce" class="kt-textarea" rows="3" required
+                                  placeholder="Çalışan bu açıklamayı görecek"></textarea>
+                    </div>
+                </div>
+                <div class="kt-modal-foot">
+                    <button type="button" class="kt-btn kt-btn-ghost" onclick="redKapat()">Vazgeç</button>
+                    <button type="submit" class="kt-btn kt-btn-danger"><i class="fas fa-ban"></i> Reddet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 @section Scripts {
 <script>
-    function onayAc(){ document.getElementById('onayModal').classList.add('open'); document.body.style.overflow='hidden'; }
-    function onayKapat(){ document.getElementById('onayModal').classList.remove('open'); document.body.style.overflow=''; }
-    function redAc(){ document.getElementById('redModal').classList.add('open'); document.body.style.overflow='hidden'; }
-    function redKapat(){ document.getElementById('redModal').classList.remove('open'); document.body.style.overflow=''; }
-    ['onayModal','redModal'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('click', e => { if (e.target.id === id) { onayKapat(); redKapat(); } });
+    function onayAc() { var m = document.getElementById('onayModal'); if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; } }
+    function onayKapat() { var m = document.getElementById('onayModal'); if (m) { m.classList.remove('open'); document.body.style.overflow = ''; } }
+    function redAc() { var m = document.getElementById('redModal'); if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; } }
+    function redKapat() { var m = document.getElementById('redModal'); if (m) { m.classList.remove('open'); document.body.style.overflow = ''; } }
+
+    ['onayModal', 'redModal'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', function (e) {
+            if (e.target.id === id) { onayKapat(); redKapat(); }
+        });
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { onayKapat(); redKapat(); } });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { onayKapat(); redKapat(); }
+    });
 </script>
 }

@@ -86,6 +86,31 @@
         </div>
     }
 
+    @* ═══ TALEP KİME GİDECEK ═══ *@
+    <div class="kt-card" style="padding:13px 18px; display:flex; gap:11px; align-items:flex-start;
+                                border-left:3px solid var(--kt-primary); margin-bottom:16px;">
+        <i class="fas fa-route" style="color:var(--kt-primary); font-size:15px; margin-top:2px;"></i>
+        <div style="font-size:13px; color:var(--kt-ink-700); line-height:1.55;">
+            @if (!string.IsNullOrWhiteSpace(Model.YoneticiAdi))
+            {
+                <text>
+                    Talebiniz önce <strong>@Model.YoneticiAdi</strong> onayına gidecek,
+                    o onaylarsa <strong>İnsan Kaynakları</strong> nihai kararı verecek.
+                </text>
+            }
+            else
+            {
+                <text>
+                    Organizasyon şemasında yöneticiniz tanımlı olmadığı için talebiniz
+                    doğrudan <strong>İnsan Kaynakları</strong> onayına gidecek.
+                </text>
+            }
+            <div style="font-size:12px; color:var(--kt-ink-500); margin-top:3px;">
+                Onaylanana kadar talebi "İzinlerim" ekranından geri çekebilirsiniz.
+            </div>
+        </div>
+    </div>
+
     @* ═══ BAKİYE ŞERİDİ ═══ *@
     <div class="bakiye-serit">
         <div class="bakiye-hucre"><div class="et">Hakediş</div><div class="dg">@b.Entitlement</div></div>

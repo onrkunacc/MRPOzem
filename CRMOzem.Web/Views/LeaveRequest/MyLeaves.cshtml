@@ -4,10 +4,12 @@
     ViewData["Title"] = "İzinlerim";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var b = Model.Balance;
+    var tr = new System.Globalization.CultureInfo("tr-TR");
 
     string DurumBadge(string? kod) => kod switch
     {
         "Pending" => "kt-badge-warning",
+        "SupervisorApproved" => "kt-badge-info",
         "Approved" => "kt-badge-success",
         "Rejected" => "kt-badge-danger",
         "Cancelled" => "kt-badge-secondary",
@@ -16,6 +18,7 @@
     string DurumIkon(string? kod) => kod switch
     {
         "Pending" => "fa-hourglass-half",
+        "SupervisorApproved" => "fa-arrow-right-arrow-left",
         "Approved" => "fa-circle-check",
         "Rejected" => "fa-circle-xmark",
         "Cancelled" => "fa-ban",
@@ -34,23 +37,57 @@
         background: var(--kt-paper); border: 1px solid var(--kt-border);
         border-radius: var(--kt-r-lg); padding: 16px 18px; box-shadow: var(--kt-shadow-sm);
     }
-    .izin-kutu .etiket {
-        font-size: 11px; font-weight: 600; color: var(--kt-ink-500);
-        text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 6px;
-    }
-    .izin-kutu .deger { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
-    .izin-kutu .alt { font-size: 11.5px; color: var(--kt-ink-500); margin-top: 6px; display: block; }
-    .izin-kutu.vurgulu { border-left: 3px solid var(--kt-primary); }
-    .izin-kutu.pozitif { border-left: 3px solid var(--kt-pos); }
-    .izin-kutu.bekleyen { border-left: 3px solid var(--kt-warn); }
-    .d-pos { color: var(--kt-pos); } .d-neg { color: var(--kt-neg); }
-    .d-warn { color: var(--kt-warn); } .d-ink { color: var(--kt-ink-900); }
+        .izin-kutu .etiket {
+            font-size: 11px; font-weight: 600; color: var(--kt-ink-500);
+            text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 6px;
+        }
+        .izin-kutu .deger { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+        .izin-kutu .alt { font-size: 11.5px; color: var(--kt-ink-500); margin-top: 6px; display: block; }
+        .izin-kutu.vurgulu { border-left: 3px solid var(--kt-primary); }
+        .izin-kutu.pozitif { border-left: 3px solid var(--kt-pos); }
+        .izin-kutu.bekleyen { border-left: 3px solid var(--kt-warn); }
+
+    .d-pos { color: var(--kt-pos); }
+    .d-neg { color: var(--kt-neg); }
+    .d-warn { color: var(--kt-warn); }
+    .d-ink { color: var(--kt-ink-900); }
 
     .kullanim-cubuk { height: 6px; background: var(--kt-bg-soft); border-radius: 999px; overflow: hidden; margin-top: 10px; }
-    .kullanim-cubuk > i { display: block; height: 100%; background: var(--kt-primary); border-radius: 999px; }
+        .kullanim-cubuk > i { display: block; height: 100%; background: var(--kt-primary); border-radius: 999px; }
+
+    /* ── Onay yolculuğu: talep nerede? ──────────────────────────── */
+    .yol { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; }
+
+    .yol-nokta {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--kt-border-strong); flex-shrink: 0;
+    }
+        .yol-nokta.tamam { background: var(--kt-pos); }
+        .yol-nokta.aktif { background: var(--kt-warn); }
+        .yol-nokta.red { background: var(--kt-neg); }
+
+    .yol-cizgi { width: 12px; height: 1px; background: var(--kt-border-strong); }
+    .yol-metin { font-size: 10.5px; color: var(--kt-ink-400); margin-left: 3px; white-space: nowrap; }
+
+    /* ── Ekip kutusu (yöneticiyse) ──────────────────────────────── */
+    .ekip-kutu {
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        background: var(--kt-primary-50); border: 1px solid #c7d2fe;
+        border-radius: var(--kt-r-lg); padding: 15px 20px; margin-bottom: 18px;
+    }
+        .ekip-kutu .ikon {
+            width: 40px; height: 40px; border-radius: var(--kt-r-md);
+            background: var(--kt-primary); color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+            flex-shrink: 0;
+        }
+
+    /* ── Eylem butonları: ikon değil, yazı ──────────────────────── */
+    .iz-eylem { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
+        .iz-eylem .kt-btn { white-space: nowrap; }
 
     .bos-durum { padding: 48px 20px; text-align: center; color: var(--kt-ink-400); }
-    .bos-durum i { font-size: 34px; opacity: .5; display: block; margin-bottom: 10px; }
+        .bos-durum i { font-size: 34px; opacity: .5; display: block; margin-bottom: 10px; }
 </style>
 
 <div class="kt-page">
@@ -61,7 +98,13 @@
                 <div class="kt-header-icon"><i class="fas fa-umbrella-beach"></i></div>
                 <div>
                     <h1>İzinlerim</h1>
-                    <p>İzin bakiyeniz ve geçmiş talepleriniz</p>
+                    <p>
+                        İzin bakiyeniz ve talepleriniz
+                        @if (!string.IsNullOrWhiteSpace(Model.YoneticiAdi))
+                        {
+                            <text> · yöneticiniz: <strong>@Model.YoneticiAdi</strong></text>
+                        }
+                    </p>
                 </div>
             </div>
             <div class="kt-header-actions">
@@ -90,6 +133,34 @@
     {
         <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
             <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═══ YÖNETİCİYSE: EKİP KUTUSU ═══ *@
+    @if (Model.YoneticiMi)
+    {
+        <div class="ekip-kutu">
+            <div class="ikon"><i class="fas fa-users-gear"></i></div>
+            <div style="flex:1; min-width:180px;">
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">
+                    Ekibinizin İzin Talepleri
+                </div>
+                <div style="font-size:12.5px; color:var(--kt-ink-500); margin-top:2px;">
+                    @if (Model.EkipBekleyenSayisi > 0)
+                    {
+                        <strong style="color:var(--kt-warn-700);">@Model.EkipBekleyenSayisi talep</strong>
+                        <text> kararınızı bekliyor</text>
+                    }
+                    else
+                    {
+                        <text>Şu an kararınızı bekleyen talep yok</text>
+                    }
+                </div>
+            </div>
+            <a asp-controller="EkipIzin" asp-action="Index"
+               class="kt-btn @(Model.EkipBekleyenSayisi > 0 ? "kt-btn-primary" : "kt-btn-ghost")">
+                <i class="fas fa-arrow-right"></i> Ekip İzinleri
+            </a>
         </div>
     }
 
@@ -131,7 +202,9 @@
         <div class="izin-kutu bekleyen">
             <span class="etiket">Onay Bekleyen</span>
             <span class="deger @(b.PendingDays > 0 ? "d-warn" : "d-ink")">@b.PendingDays</span>
-            <span class="alt">@Model.Leaves.Count(x => x.Status?.Code == "Pending") talep</span>
+            <span class="alt">
+                @Model.Leaves.Count(x => x.Status?.Code == "Pending" || x.Status?.Code == "SupervisorApproved") talep
+            </span>
         </div>
 
         <div class="izin-kutu pozitif">
@@ -156,7 +229,9 @@
             <div class="kt-section-icon"><i class="fas fa-list"></i></div>
             <div>
                 <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">@Model.Year Yılı Talepleriniz</div>
-                <div style="font-size:12px; color:var(--kt-ink-500);">@Model.Leaves.Count kayıt</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">
+                    @Model.Leaves.Count kayıt · izin önce yöneticinizin, sonra İnsan Kaynakları'nın onayından geçer
+                </div>
             </div>
         </div>
 
@@ -167,8 +242,7 @@
                     <thead>
                         <tr>
                             <th>İzin Türü</th>
-                            <th>Başlangıç</th>
-                            <th>Bitiş</th>
+                            <th>Tarih</th>
                             <th class="text-center">Gün</th>
                             <th>Durum</th>
                             <th>Açıklama / Karar</th>
@@ -179,6 +253,10 @@
                         @foreach (var it in Model.Leaves)
                         {
                             var kod = it.Status?.Code;
+                            var acik = kod == "Pending" || kod == "SupervisorApproved";
+                            var iptalEdilebilir = acik
+                                || (kod == "Approved" && it.StartDate.Date > DateTime.Today);
+
                             <tr>
                                 <td class="kt-cell-primary">
                                     @it.LeaveType?.Name
@@ -187,18 +265,15 @@
                                         <div style="font-size:11px; color:var(--kt-ink-400);">haktan düşmez</div>
                                     }
                                 </td>
+
                                 <td style="white-space:nowrap;">
-                                    <strong>@it.StartDate.ToString("dd.MM.yyyy")</strong>
-                                    <div style="font-size:11px; color:var(--kt-ink-400);">
-                                        @it.StartDate.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))
-                                    </div>
-                                </td>
-                                <td style="white-space:nowrap;">
+                                    <strong>@it.StartDate.ToString("dd.MM.yyyy")</strong> –
                                     <strong>@it.EndDate.ToString("dd.MM.yyyy")</strong>
                                     <div style="font-size:11px; color:var(--kt-ink-400);">
-                                        @it.EndDate.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))
+                                        @it.StartDate.ToString("dddd", tr) → @it.EndDate.ToString("dddd", tr)
                                     </div>
                                 </td>
+
                                 <td class="text-center">
                                     <strong style="font-size:15px;">@it.TotalDays</strong>
                                     @if (it.SaturdayExcluded)
@@ -206,50 +281,115 @@
                                         <div style="font-size:10.5px; color:var(--kt-ink-400);">cmt hariç</div>
                                     }
                                 </td>
+
+                                @* ═══ TALEP NEREDE? ═══ *@
                                 <td>
                                     <span class="kt-badge @DurumBadge(kod)">
                                         <i class="fas @DurumIkon(kod)"></i> @it.Status?.Name
                                     </span>
+
+                                    @{
+                                        var n1 = "yol-nokta";
+                                        if (it.SupervisorOnayladi == true) { n1 += " tamam"; }
+                                        else if (it.SupervisorOnayladi == false) { n1 += " red"; }
+                                        else if (kod == "Pending") { n1 += " aktif"; }
+
+                                        var n2 = "yol-nokta";
+                                        if (kod == "Approved") { n2 += " tamam"; }
+                                        else if (kod == "Rejected" && it.SupervisorOnayladi != false) { n2 += " red"; }
+                                        else if (kod == "SupervisorApproved") { n2 += " aktif"; }
+                                    }
+
+                                    <div class="yol">
+                                        <span class="@n1" title="1. aşama — yönetici"></span>
+                                        <span class="yol-cizgi"></span>
+                                        <span class="@n2" title="2. aşama — İnsan Kaynakları"></span>
+                                        <span class="yol-metin">
+                                            @if (kod == "Pending")
+                                            {
+                                                <text>@(it.SupervisorName ?? "yönetici") onayında</text>
+                                            }
+                                            else if (kod == "SupervisorApproved")
+                                            {
+                                                <text>İK onayında</text>
+                                            }
+                                            else if (it.YoneticisizGecildi && kod == "Approved")
+                                            {
+                                                <text>doğrudan İK onayladı</text>
+                                            }
+                                            else if (kod == "Approved")
+                                            {
+                                                <text>iki aşama tamam</text>
+                                            }
+                                            else if (kod == "Rejected" && it.SupervisorOnayladi == false)
+                                            {
+                                                <text>yönetici reddetti</text>
+                                            }
+                                            else if (kod == "Rejected")
+                                            {
+                                                <text>İK reddetti</text>
+                                            }
+                                        </span>
+                                    </div>
                                 </td>
-                                <td style="max-width:280px; font-size:12.5px; color:var(--kt-ink-500);">
+
+                                <td style="max-width:270px; font-size:12.5px; color:var(--kt-ink-500);">
                                     @if (!string.IsNullOrWhiteSpace(it.Reason))
                                     {
                                         <div>@it.Reason</div>
                                     }
-                                    @if (!string.IsNullOrWhiteSpace(it.DecisionNote))
+
+                                    @if (!string.IsNullOrWhiteSpace(it.SupervisorNote))
+                                    {
+                                        <div style="margin-top:4px; color:@(it.SupervisorOnayladi == false ? "var(--kt-neg)" : "var(--kt-ink-700)");">
+                                            <i class="fas fa-user-tie" style="font-size:10px;"></i>
+                                            <strong>@(it.SupervisorName ?? "Yönetici"):</strong> @it.SupervisorNote
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(it.DecisionNote)
+                                         && it.DecisionNote != it.SupervisorNote)
                                     {
                                         <div style="margin-top:4px; color:@(kod == "Rejected" ? "var(--kt-neg)" : "var(--kt-ink-700)");">
                                             <i class="fas fa-reply" style="font-size:10px;"></i>
-                                            @it.DecisionNote
+                                            <strong>@(it.DecisionByName ?? "İK"):</strong> @it.DecisionNote
                                         </div>
                                     }
-                                    @if (it.DecisionAt.HasValue && !string.IsNullOrWhiteSpace(it.DecisionByName))
+
+                                    @if (it.DecisionAt.HasValue)
                                     {
                                         <div style="margin-top:3px; font-size:11px; color:var(--kt-ink-400);">
-                                            @it.DecisionByName · @it.DecisionAt.Value.ToString("dd.MM.yyyy")
+                                            @it.DecisionAt.Value.ToString("dd.MM.yyyy HH:mm")
                                         </div>
                                     }
                                 </td>
+
+                                @* ═══ ETİKETLİ BUTONLAR ═══ *@
                                 <td class="text-center">
-                                    <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                    <div class="iz-eylem">
                                         @if (kod == "Approved")
                                         {
                                             <a class="kt-btn kt-btn-sm kt-btn-secondary"
-                                               asp-action="Belge" asp-route-id="@it.Id" target="_blank"
-                                               title="İzin belgesini indir">
+                                               asp-action="Belge" asp-route-id="@it.Id" target="_blank">
                                                 <i class="fas fa-file-pdf"></i> Belge
                                             </a>
                                         }
-                                        @if (kod == "Pending" || (kod == "Approved" && it.StartDate.Date > DateTime.Today))
+
+                                        @if (iptalEdilebilir)
                                         {
                                             <form asp-action="Cancel" asp-route-id="@it.Id" method="post" style="display:inline;"
-                                                  onsubmit="return confirm('Bu izin talebini iptal etmek istediğinize emin misiniz?');">
+                                                  onsubmit="return confirm('Bu izin talebini geri çekmek istediğinize emin misiniz?');">
                                                 @Html.AntiForgeryToken()
                                                 <button type="submit" class="kt-btn kt-btn-sm kt-btn-ghost"
-                                                        style="color:var(--kt-neg);" title="İptal et">
-                                                    <i class="fas fa-xmark"></i>
+                                                        style="color:var(--kt-neg);">
+                                                    <i class="fas fa-xmark"></i> Geri Çek
                                                 </button>
                                             </form>
+                                        }
+
+                                        @if (!iptalEdilebilir && kod != "Approved")
+                                        {
+                                            <span class="text-muted" style="font-size:12px;">—</span>
                                         }
                                     </div>
                                 </td>

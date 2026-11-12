@@ -48,6 +48,18 @@
             </a>
         </li>
 
+        @* Role değil, organizasyon şemasına bağlı: astı olan kullanıcıda görünür.
+           SidebarViewComponent bu sanal rolü listeye ekliyor. *@
+        @if (Model.Contains("__Süpervizör"))
+        {
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="EkipIzin" asp-action="Index">
+                    <i class="fe fe-users fe-16"></i>
+                    <span class="ml-3 item-text">Ekip İzinleri</span>
+                </a>
+            </li>
+        }
+
     }
 
     @if (Model.Contains("Yönetici") || Model.Contains("Admin"))
@@ -406,6 +418,12 @@
             <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
                 <i class="fe fe-user-check fe-16"></i>
                 <span class="ml-3 item-text">İzin İşlemleri</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Organizasyon">
+                <i class="fe fe-git-merge fe-16"></i>
+                <span class="ml-3 item-text">Organizasyon Şeması</span>
             </a>
         </li>
         <li class="nav-item">

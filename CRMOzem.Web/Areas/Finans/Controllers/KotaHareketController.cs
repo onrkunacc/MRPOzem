@@ -31,9 +31,14 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
             _userManager = userManager;
         }
 
-        // /Finans/KotaHareket/Detay/5
-
-
+        // ─────────────────────────────────────────────────────────────
+        //  GET /Finans/KotaHareket/Detay?kotaId=5
+        //
+        //  DİKKAT: Bu action parametresi "kotaId" — "id" DEĞİL.
+        //  Buraya yönlendiren her yerde route değeri `new { kotaId = ... }`
+        //  olarak verilmeli. `new { id = ... }` verilirse kotaId 0'a düşer
+        //  ve "Kota bulunamadı" diyerek listeye atar.
+        // ─────────────────────────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> Detay(int kotaId, CancellationToken ct)
         {
@@ -53,7 +58,25 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
                 .Include(h => h.Hospital)
                 .Where(h => h.KotaID == kotaId)
                 .OrderByDescending(h => h.FaturaTarihi)
+                .ThenByDescending(h => h.KotaHareketID)
                 .ToListAsync(ct);
+
+            var kalemler = hareketler.Select(h => new KotaHareketItemVm
+            {
+                ID = h.KotaHareketID,
+                Tarih = h.FaturaTarihi ?? DateTime.MinValue,
+                TarihYok = !h.FaturaTarihi.HasValue,
+                Tur = h.HareketTuru,
+                FaturaNo = h.FaturaNo,
+                TedarikciID = h.TedarikciID,
+                TedarikciAdi = h.Tedarikci?.Ad,
+                TedarikciGrup = h.Tedarikci?.Grup,
+                HospitalID = h.HospitalID,
+                HospitalName = h.Hospital?.HospitalName,
+                Aciklama = h.Aciklama,
+                TutarUsd = h.UsdKarsiligi,
+                TutarTl = h.Tutar
+            }).ToList();
 
             var vm = new KotaHareketDetayVm
             {
@@ -69,19 +92,33 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
                     ProformaTutarUsd = kota.ProformaTutarUsd ?? 0m,
                     Durum = kota.Durum
                 },
-                Hareketler = hareketler.Select(h => new KotaHareketItemVm
-                {
-                    ID = h.KotaHareketID,          // ← PK adını kontrol et
-                    Tarih = h.FaturaTarihi ?? DateTime.MinValue,
-                    Tur = h.HareketTuru,
-                    TedarikciAdi = h.Tedarikci?.Ad,          // ✓ doğru
-                    TedarikciGrup = h.Tedarikci?.Grup,
-                    HospitalID = h.HospitalID,
-                    HospitalName = h.Hospital?.HospitalName, // ✓ doğru
-                    Aciklama = h.Aciklama,
-                    TutarUsd = h.UsdKarsiligi,
-                    TutarTl = h.Tutar                   // ← TL alanının adı neyse
-                }).ToList()
+                Hareketler = kalemler,
+
+                // Filtre açılırları yalnızca bu kotada gerçekten geçen
+                // tedarikçi ve hastaneleri içerir — boş seçenek çıkmasın.
+                Tedarikciler = kalemler
+                    .Where(x => !string.IsNullOrWhiteSpace(x.TedarikciAdi))
+                    .GroupBy(x => new { x.TedarikciID, x.TedarikciAdi })
+                    .Select(g => new FiltreSecenekVm
+                    {
+                        Deger = g.Key.TedarikciID.ToString(),
+                        Etiket = g.Key.TedarikciAdi!,
+                        Adet = g.Count()
+                    })
+                    .OrderBy(x => x.Etiket)
+                    .ToList(),
+
+                Hastaneler = kalemler
+                    .Where(x => x.HospitalID.HasValue && !string.IsNullOrWhiteSpace(x.HospitalName))
+                    .GroupBy(x => new { x.HospitalID, x.HospitalName })
+                    .Select(g => new FiltreSecenekVm
+                    {
+                        Deger = g.Key.HospitalID!.Value.ToString(),
+                        Etiket = g.Key.HospitalName!,
+                        Adet = g.Count()
+                    })
+                    .OrderBy(x => x.Etiket)
+                    .ToList()
             };
 
             return View(vm);
@@ -131,7 +168,8 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
                 var userId = _userManager.GetUserId(User);
                 await _service.CreateAsync(vm, userId, ct);
                 TempData["SuccessMessage"] = "Fatura eklendi.";
-                return RedirectToAction(nameof(Detay), new { id = vm.KotaID });
+                // Detay action'ı "kotaId" bekliyor — "id" gönderilirse kota bulunamaz.
+                return RedirectToAction(nameof(Detay), new { kotaId = vm.KotaID });
             }
             catch (Exception ex)
             {
@@ -178,7 +216,7 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
             {
                 await _service.UpdateAsync(vm, ct);
                 TempData["SuccessMessage"] = "Fatura güncellendi.";
-                return RedirectToAction(nameof(Detay), new { id = vm.KotaID });
+                return RedirectToAction(nameof(Detay), new { kotaId = vm.KotaID });
             }
             catch (Exception ex)
             {
@@ -204,7 +242,7 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
             {
                 TempData["Error"] = "Silme hatası: " + ex.Message;
             }
-            return RedirectToAction(nameof(Detay), new { id = kotaId });
+            return RedirectToAction(nameof(Detay), new { kotaId });
         }
 
         // ─────────────────────────────────────────
@@ -245,7 +283,7 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
 
         private async Task LoadFormDataAsync(int kotaId)
         {
-            // Tedarikçiler (mevcut)
+            // Tedarikçiler
             ViewBag.Tedarikciler = await _db.Tedarikciler.AsNoTracking()
                 .Where(t => t.Aktif)
                 .OrderBy(t => t.Grup).ThenBy(t => t.Sira).ThenBy(t => t.Ad)
@@ -257,7 +295,7 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
                 })
                 .ToListAsync();
 
-            // ═══ YENİ: Bu kotaya bağlı hastaneler ═══
+            // Bu kotaya bağlı hastaneler
             ViewBag.Hospitals = await _db.Set<KotaHospital>().AsNoTracking()
                 .Where(kh => kh.KotaID == kotaId)
                 .Include(kh => kh.Hospital)

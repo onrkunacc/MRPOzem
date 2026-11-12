@@ -1,9 +1,16 @@
 ﻿@model string
 @{
-    // Aktif sekme adı: Index / Bakiyeler / Takvim / Personel / ResmiTatiller
+    // Aktif sekme: Index / Bakiyeler / Takvim / Personel / ResmiTatiller / Organizasyon
     var aktif = Model ?? "Index";
 
+    // Günlük işler üstte; nadiren dokunulan tanımlar tek menüye toplandı —
+    // yedi ayrı sekme İK ekranını kalabalık gösteriyordu.
+    var tanimlar = new[] { "Personel", "ResmiTatiller", "Organizasyon" };
+    var tanimAktif = tanimlar.Contains(aktif);
+
     string Cls(string ad) => aktif == ad ? "izin-nav-link aktif" : "izin-nav-link";
+
+    var bekleyen = ViewBag.IkOnayindaCount as int?;
 }
 
 <style>
@@ -20,20 +27,25 @@
         gap: 18px;
         flex-wrap: wrap;
     }
+
     .izin-nav-baslik { display: flex; align-items: center; gap: 14px; }
+
     .izin-nav-ikon {
         width: 44px; height: 44px; border-radius: var(--kt-r-md);
         background: var(--kt-ink-900); color: #fff;
         display: flex; align-items: center; justify-content: center; font-size: 18px;
         flex-shrink: 0;
     }
+
     .izin-nav-baslik h1 {
         font-size: 19px; font-weight: 700; color: var(--kt-ink-900);
         margin: 0 0 2px; letter-spacing: -.01em;
     }
+
     .izin-nav-baslik p { font-size: 12.5px; color: var(--kt-ink-500); margin: 0; }
 
-    .izin-nav-menu { display: flex; gap: 4px; flex-wrap: wrap; }
+    .izin-nav-menu { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
     .izin-nav-link {
         display: inline-flex; align-items: center; gap: 7px;
         padding: 9px 14px; border-radius: var(--kt-r-sm);
@@ -41,17 +53,71 @@
         color: var(--kt-ink-700); border: 1px solid transparent;
         transition: all .12s; white-space: nowrap;
     }
-    .izin-nav-link:hover { background: var(--kt-bg-soft); color: var(--kt-ink-900); text-decoration: none; }
+
+        .izin-nav-link:hover {
+            background: var(--kt-bg-soft);
+            color: var(--kt-ink-900);
+            text-decoration: none;
+        }
+
     .izin-nav-link.aktif {
         background: var(--kt-ink-900); color: #fff; border-color: var(--kt-ink-900);
     }
-    .izin-nav-link.aktif:hover { background: var(--kt-ink-700); color: #fff; }
+
+        .izin-nav-link.aktif:hover { background: var(--kt-ink-700); color: #fff; }
+
     .izin-nav-link i { font-size: 12px; }
+
+    /* Onay bekleyen talep sayısı — İK'nın iş kuyruğu */
+    .izin-nav-sayi {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 19px; height: 19px; padding: 0 5px;
+        border-radius: 999px; background: var(--kt-warn); color: #fff;
+        font-size: 11px; font-weight: 700; margin-left: 2px;
+    }
+
+    .izin-nav-link.aktif .izin-nav-sayi { background: rgba(255,255,255,.22); }
+
+    /* ── Tanımlar menüsü ──────────────────────────────────────── */
+    .izin-nav-grup { position: relative; }
+
+    .izin-nav-liste {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        min-width: 232px;
+        background: var(--kt-paper);
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md);
+        box-shadow: var(--kt-shadow-lg);
+        padding: 6px;
+        z-index: 60;
+        display: none;
+    }
+
+        .izin-nav-liste.acik { display: block; }
+
+    .izin-nav-oge {
+        display: flex; align-items: flex-start; gap: 10px;
+        padding: 9px 11px; border-radius: var(--kt-r-sm);
+        text-decoration: none; color: var(--kt-ink-700);
+    }
+
+        .izin-nav-oge:hover { background: var(--kt-bg-soft); color: var(--kt-ink-900); text-decoration: none; }
+        .izin-nav-oge.aktif { background: var(--kt-bg-soft); color: var(--kt-ink-900); }
+
+        .izin-nav-oge i { font-size: 13px; width: 16px; margin-top: 2px; color: var(--kt-ink-400); }
+        .izin-nav-oge.aktif i { color: var(--kt-primary); }
+
+    .izin-nav-oge .ad { font-size: 13px; font-weight: 600; display: block; }
+    .izin-nav-oge .not { font-size: 11.5px; color: var(--kt-ink-400); display: block; margin-top: 1px; }
 
     @@media (max-width: 768px) {
         .izin-nav { margin: 12px 12px 12px; padding: 12px 14px; }
         .izin-nav-menu { width: 100%; }
         .izin-nav-link { flex: 1; justify-content: center; }
+        .izin-nav-grup { flex: 1; }
+        .izin-nav-liste { right: auto; left: 0; width: 100%; }
     }
 </style>
 
@@ -60,25 +126,85 @@
         <div class="izin-nav-ikon"><i class="fas fa-umbrella-beach"></i></div>
         <div>
             <h1>İzin Yönetimi</h1>
-            <p>Talepler, bakiyeler, takvim ve özlük bilgileri</p>
+            <p>Onay kuyruğu, bakiyeler ve takvim</p>
         </div>
     </div>
 
     <nav class="izin-nav-menu">
         <a class="@Cls("Index")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Index">
-            <i class="fas fa-inbox"></i> Talepler
+            <i class="fas fa-inbox"></i> Onay Kuyruğu
+            @if (bekleyen.HasValue && bekleyen.Value > 0)
+            {
+                <span class="izin-nav-sayi">@bekleyen.Value</span>
+            }
         </a>
+
         <a class="@Cls("Bakiyeler")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Bakiyeler">
             <i class="fas fa-scale-balanced"></i> Bakiyeler
         </a>
+
         <a class="@Cls("Takvim")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Takvim">
             <i class="fas fa-calendar-days"></i> Takvim
         </a>
-        <a class="@Cls("Personel")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Personel">
-            <i class="fas fa-users"></i> Personel
-        </a>
-        <a class="@Cls("ResmiTatiller")" asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="ResmiTatiller">
-            <i class="fas fa-flag"></i> Resmi Tatiller
-        </a>
+
+        <div class="izin-nav-grup">
+            <button type="button" class="@(tanimAktif ? "izin-nav-link aktif" : "izin-nav-link")"
+                    id="tanimBtn" style="background-color:@(tanimAktif ? "" : "transparent"); cursor:pointer;">
+                <i class="fas fa-sliders"></i> Tanımlar
+                <i class="fas fa-chevron-down" style="font-size:9px; margin-left:3px;"></i>
+            </button>
+
+            <div class="izin-nav-liste" id="tanimListe">
+                <a class="izin-nav-oge @(aktif == "Organizasyon" ? "aktif" : "")"
+                   asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Organizasyon">
+                    <i class="fas fa-sitemap"></i>
+                    <span>
+                        <span class="ad">Organizasyon Şeması</span>
+                        <span class="not">Kim kimin yöneticisi — onay sırasını belirler</span>
+                    </span>
+                </a>
+
+                <a class="izin-nav-oge @(aktif == "Personel" ? "aktif" : "")"
+                   asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Personel">
+                    <i class="fas fa-id-card"></i>
+                    <span>
+                        <span class="ad">Personel Özlük</span>
+                        <span class="not">İşe giriş, doğum tarihi, departman</span>
+                    </span>
+                </a>
+
+                <a class="izin-nav-oge @(aktif == "ResmiTatiller" ? "aktif" : "")"
+                   asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="ResmiTatiller">
+                    <i class="fas fa-flag"></i>
+                    <span>
+                        <span class="ad">Resmi Tatiller</span>
+                        <span class="not">İzin gün hesabından düşülen günler</span>
+                    </span>
+                </a>
+            </div>
+        </div>
     </nav>
 </div>
+
+<script>
+    (function () {
+        var btn = document.getElementById('tanimBtn');
+        var liste = document.getElementById('tanimListe');
+        if (!btn || !liste) return;
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            liste.classList.toggle('acik');
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!liste.contains(e.target) && e.target !== btn) {
+                liste.classList.remove('acik');
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') liste.classList.remove('acik');
+        });
+    })();
+</script>

@@ -110,39 +110,31 @@
 </div>
 
 
+@*
+    DİKKAT — Burada <script> KULLANILMIYOR.
+    Bu partial modale `innerHTML` ile basılıyor; tarayıcı innerHTML ile
+    eklenen <script> bloklarını ÇALIŞTIRMAZ. Bu yüzden grafik hiç çizilmiyordu.
+    Veriyi data-* niteliğinde taşıyoruz, grafiği ana sayfa (Index.cshtml)
+    partial yerleştirildikten sonra çiziyor.
+*@
+@{
+    var trend = Model.AylikTrend ?? new List<CRMOzem.Core.ViewModels.AylikTrendVm>();
+    var trendJson = Newtonsoft.Json.JsonConvert.SerializeObject(new
+    {
+        etiketler = trend.Select(x => x.AyLabel),
+        gider = trend.Select(x => x.GiderUsd),
+        gelir = trend.Select(x => x.GelirUsd)
+    });
+}
+
 <div class="kt-card" style="padding:16px;">
     <div class="kt-section-title compact">
         <div class="kt-section-icon"><i class="fas fa-chart-column"></i></div>
         <h3>Aylık Hareket</h3>
     </div>
-    <div id="modalChartTrend" style="min-height:260px;"></div>
+    <div id="modalChartTrend"
+         class="kt-trend-hedef"
+         style="min-height:260px;"
+         data-trend="@trendJson">
+    </div>
 </div>
-
-<script>
-(function () {
-    @if (Model.AylikTrend != null && Model.AylikTrend.Any())
-    {
-        <text>
-        new ApexCharts(document.querySelector("#modalChartTrend"), {
-            chart: { type: 'bar', height: 260, fontFamily: 'inherit', toolbar: { show: false }, foreColor: '#64748b' },
-            series: [
-                { name: 'Gider', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GiderUsd))) },
-                { name: 'Gelir', data: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.GelirUsd))) }
-            ],
-            colors: ['#dc2626', '#059669'],
-            plotOptions: { bar: { columnWidth: '58%', borderRadius: 4 } },
-            xaxis: { categories: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AylikTrend.Select(x => x.AyLabel))) },
-            yaxis: { labels: { formatter: v => (v / 1000).toFixed(0) + 'K' } },
-            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' },
-            grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
-            tooltip: { theme: 'light', y: { formatter: v => '$' + Number(v).toLocaleString('tr-TR') } },
-            dataLabels: { enabled: false }
-        }).render();
-        </text>
-    }
-    else
-    {
-        <text>document.querySelector("#modalChartTrend").innerHTML = '<div class="kt-empty"><i class="fas fa-chart-column"></i><p>Henüz hareket yok</p></div>';</text>
-    }
-})();
-</script>

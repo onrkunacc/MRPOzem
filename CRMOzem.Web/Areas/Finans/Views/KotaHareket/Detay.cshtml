@@ -24,8 +24,8 @@
     var hastaneKolonVar = Model.Hareketler.Any(h => h.HospitalID.HasValue);
 
     // Dip toplam satırlarının colspan'i: tutar kolonlarına kadar olan kısım.
-    // Kolonlar: # · Tarih · Tür · Tedarikçi · Grup · [Hastane] · Açıklama · USD · TL · İşlem
-    var footColspan = hastaneKolonVar ? 7 : 6;
+    // Kolonlar: # · Tarih · Fatura No · Tür · Tedarikçi · Grup · [Hastane] · Açıklama · USD · TL · İşlem
+    var footColspan = hastaneKolonVar ? 8 : 7;
 
     // ── Para biçimleyiciler ──
     string Usd(decimal v, bool isaretli = false)
@@ -446,6 +446,49 @@
             margin-bottom: 9px;
         }
 
+    /* ── Filtre / sıralama çubuğu ──────────────────────────────── */
+    .kt-filtre-grup {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    /* ── Fatura numarası hücresi ───────────────────────────────── */
+    .fatura-no {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+        font-size: 12px;
+        color: var(--kt-ink-700);
+        background: var(--kt-bg-soft, #f8fafc);
+        border: 1px solid var(--kt-border);
+        border-radius: 5px;
+        padding: 2px 7px;
+        white-space: nowrap;
+    }
+
+    /* ── Sıralanabilir başlık ──────────────────────────────────── */
+    .th-sortable {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+        .th-sortable:hover {
+            color: var(--kt-ink-900);
+        }
+
+    .sort-ikon {
+        font-size: 10px;
+        margin-left: 3px;
+        opacity: .35;
+    }
+
+    .th-sortable.is-sorted .sort-ikon {
+        opacity: 1;
+        color: var(--kt-primary, #4f46e5);
+    }
+
     @@media (max-width: 768px) {
         .kt-monthly thead th, .kt-monthly tbody td, .kt-monthly tfoot td {
             padding: 9px 10px;
@@ -768,13 +811,49 @@
         <a class="kt-btn kt-btn-ghost" href="@Url.Action("Edit", "Kota", new { area = "Finans", id = k.KotaID })">
             <i class="fas fa-pen"></i> Kotayı Düzenle
         </a>
-        <div style="margin-left:auto; display:flex; gap:8px;">
-            <input type="text" id="hareketSearch" class="kt-input" placeholder="Hareket ara..." style="width:220px;" />
-            <select id="turFilter" class="kt-select" style="width:150px;">
-                <option value="">Tümü</option>
+        <div class="kt-filtre-grup">
+            <input type="text" id="hareketSearch" class="kt-input" placeholder="Ara: fatura no, açıklama…" style="width:205px;" />
+
+            <select id="turFilter" class="kt-select" style="width:130px;" title="Hareket türü">
+                <option value="">Tüm türler</option>
                 <option value="0">Giderler</option>
                 <option value="1">Gelirler</option>
             </select>
+
+            @if (Model.Tedarikciler.Any())
+            {
+                <select id="tedarikciFilter" class="kt-select" style="width:175px;" title="Tedarikçi / müşteri">
+                    <option value="">Tüm tedarikçiler</option>
+                    @foreach (var t in Model.Tedarikciler)
+                    {
+                        <option value="@t.Deger">@t.Etiket (@t.Adet)</option>
+                    }
+                </select>
+            }
+
+            @if (Model.Hastaneler.Any())
+            {
+                <select id="hastaneFilter" class="kt-select" style="width:185px;" title="Hastane">
+                    <option value="">Tüm hastaneler</option>
+                    @foreach (var hs in Model.Hastaneler)
+                    {
+                        <option value="@hs.Deger">@hs.Etiket (@hs.Adet)</option>
+                    }
+                    <option value="yok">— Hastanesiz —</option>
+                </select>
+            }
+
+            <select id="siralamaSec" class="kt-select" style="width:170px;" title="Sıralama">
+                <option value="tarih-desc">Tarih: yeni → eski</option>
+                <option value="tarih-asc">Tarih: eski → yeni</option>
+                <option value="tutar-desc">Tutar: büyük → küçük</option>
+                <option value="tutar-asc">Tutar: küçük → büyük</option>
+                <option value="fatura-asc">Fatura No: A → Z</option>
+            </select>
+
+            <button type="button" class="kt-btn kt-btn-ghost" id="filtreSifirla" title="Filtre ve sıralamayı sıfırla">
+                <i class="fas fa-rotate-left"></i>
+            </button>
         </div>
     </div>
 
@@ -785,7 +864,7 @@
                 <div class="kt-section-icon"><i class="fas fa-list-check"></i></div>
                 <div>
                     <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Hareketler</div>
-                    <div style="font-size:12px; color:var(--kt-ink-500);">Gider ve gelir kayıtları — en yeniden eskiye</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">Gider ve gelir kayıtları — sıralama ve filtreler üstteki çubuktan</div>
                 </div>
             </div>
         </div>
@@ -803,7 +882,10 @@
                     <thead>
                         <tr>
                             <th class="col-sira">#</th>
-                            <th>Tarih</th>
+                            <th class="th-sortable" data-sort="tarih" title="Tarihe göre sırala">
+                                Tarih <i class="fas fa-sort sort-ikon"></i>
+                            </th>
+                            <th>Fatura No</th>
                             <th>Tür</th>
                             <th>Tedarikçi / Müşteri</th>
                             <th>Grup</th>
@@ -825,13 +907,43 @@
                         {
                             sira++;
                             var gider = h.Tur == KotaHareketTuru.Gider;
-                            <tr data-search="@($"{h.Tarih:dd.MM.yyyy} {h.TedarikciAdi} {h.Aciklama} {h.HospitalName}".ToLower())"
+
+                            // Razor ifadelerini sadeleştirmek için önce yerel değişkenler
+                            var tarihMetni = h.TarihYok ? "" : h.Tarih.ToString("dd.MM.yyyy");
+                            var tarihIso = h.TarihYok ? "" : h.Tarih.ToString("yyyy-MM-dd");
+                            var hastaneAnahtar = h.HospitalID.HasValue ? h.HospitalID.Value.ToString() : "yok";
+                            var faturaNo = h.FaturaNo ?? "";
+                            var aramaMetni = string.Join(" ",
+                                tarihMetni, faturaNo, h.TedarikciAdi, h.Aciklama, h.HospitalName).ToLowerInvariant();
+
+                            <tr data-search="@aramaMetni"
                                 data-tur="@((int)h.Tur)"
                                 data-usd="@h.TutarUsd.ToString(inv)"
-                                data-tl="@((h.TutarTl ?? 0m).ToString(inv))">
+                                data-tl="@((h.TutarTl ?? 0m).ToString(inv))"
+                                data-tedarikci="@h.TedarikciID"
+                                data-hastane="@hastaneAnahtar"
+                                data-tarih="@tarihIso"
+                                data-fatura="@faturaNo">
                                 <td class="col-sira">@sira</td>
                                 <td style="white-space:nowrap;">
-                                    <strong>@h.Tarih.ToString("dd.MM.yyyy")</strong>
+                                    @if (h.TarihYok)
+                                    {
+                                        <span class="text-muted" title="Fatura tarihi girilmemiş">—</span>
+                                    }
+                                    else
+                                    {
+                                        <strong>@h.Tarih.ToString("dd.MM.yyyy")</strong>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(h.FaturaNo))
+                                    {
+                                        <span class="fatura-no">@h.FaturaNo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
                                 </td>
                                 <td>
                                     @if (gider)
@@ -997,10 +1109,17 @@
             var tablo = document.getElementById('hareketTable');
             if (!tablo) return;
 
+            var govdeEl   = tablo.querySelector('tbody');
             var satirlar  = Array.prototype.slice.call(tablo.querySelectorAll('tbody tr'));
             var aramaEl   = document.getElementById('hareketSearch');
             var turEl     = document.getElementById('turFilter');
             var boyutEl   = document.getElementById('sayfaBoyut');
+
+            var tedarikciEl = document.getElementById('tedarikciFilter');
+            var hastaneEl   = document.getElementById('hastaneFilter');
+            var siralamaEl  = document.getElementById('siralamaSec');
+            var sifirlaEl   = document.getElementById('filtreSifirla');
+            var tarihBasligi = tablo.querySelector('.th-sortable[data-sort="tarih"]');
 
             var pagerEl   = document.getElementById('hareketPager');
             var bilgiEl   = document.getElementById('hareketPagerInfo');
@@ -1045,20 +1164,78 @@
 
             // ── Filtreye uyan satırlar ──
             function eslesenler() {
-                var q = (aramaEl && aramaEl.value ? aramaEl.value : '').trim().toLowerCase();
-                var t = turEl ? turEl.value : '';
+                var q  = (aramaEl && aramaEl.value ? aramaEl.value : '').trim().toLowerCase();
+                var t  = turEl ? turEl.value : '';
+                var td = tedarikciEl ? tedarikciEl.value : '';
+                var hs = hastaneEl ? hastaneEl.value : '';
 
                 return satirlar.filter(function (tr) {
-                    var okQ = !q || (tr.dataset.search || '').indexOf(q) !== -1;
-                    var okT = !t || tr.dataset.tur === t;
-                    return okQ && okT;
+                    if (q && (tr.dataset.search || '').indexOf(q) === -1) return false;
+                    if (t && tr.dataset.tur !== t) return false;
+                    if (td && tr.dataset.tedarikci !== td) return false;
+                    if (hs && tr.dataset.hastane !== hs) return false;
+                    return true;
                 });
             }
 
             function filtreAktifMi() {
-                var q = (aramaEl && aramaEl.value ? aramaEl.value : '').trim();
-                var t = turEl ? turEl.value : '';
-                return q.length > 0 || t.length > 0;
+                return (aramaEl && aramaEl.value.trim().length > 0)
+                    || (turEl && turEl.value.length > 0)
+                    || (tedarikciEl && tedarikciEl.value.length > 0)
+                    || (hastaneEl && hastaneEl.value.length > 0);
+            }
+
+            // ── Sıralama ──────────────────────────────────────────────
+            // Satırlar DOM'da yeniden diziliyor. Sayfalama da `satirlar`
+            // dizisi üzerinden çalıştığı için ikisi aynı sırayı görüyor.
+            function sirala() {
+                var secim = siralamaEl ? siralamaEl.value : 'tarih-desc';
+                var parca = secim.split('-');
+                var alan  = parca[0];
+                var artan = parca[1] === 'asc';
+
+                satirlar.sort(function (a, b) {
+                    var x, y;
+
+                    if (alan === 'tutar') {
+                        x = parseFloat(a.dataset.usd) || 0;
+                        y = parseFloat(b.dataset.usd) || 0;
+                    } else if (alan === 'fatura') {
+                        x = (a.dataset.fatura || '').toLowerCase();
+                        y = (b.dataset.fatura || '').toLowerCase();
+                        // Fatura numarası olmayanlar her zaman sona
+                        if (!x && y) return 1;
+                        if (x && !y) return -1;
+                        var fk = x.localeCompare(y, 'tr', { numeric: true });
+                        return artan ? fk : -fk;
+                    } else {
+                        // Tarihsiz kayıtlar her zaman sona (ISO metin karşılaştırması)
+                        x = a.dataset.tarih || '';
+                        y = b.dataset.tarih || '';
+                        if (!x && y) return 1;
+                        if (x && !y) return -1;
+                    }
+
+                    if (x < y) return artan ? -1 : 1;
+                    if (x > y) return artan ? 1 : -1;
+                    return 0;
+                });
+
+                // Yeni sırayı DOM'a tek seferde yaz
+                var frag = document.createDocumentFragment();
+                satirlar.forEach(function (tr) { frag.appendChild(tr); });
+                govdeEl.appendChild(frag);
+
+                // Tarih başlığındaki ok işaretini tazele
+                if (tarihBasligi) {
+                    var tarihe = alan === 'tarih';
+                    var ikon = tarihBasligi.querySelector('.sort-ikon');
+                    tarihBasligi.classList.toggle('is-sorted', tarihe);
+                    if (ikon) {
+                        ikon.className = 'fas sort-ikon ' +
+                            (tarihe ? (artan ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort');
+                    }
+                }
             }
 
             // ── Dip toplamı görünen kümeye göre yeniden hesapla ──
@@ -1138,6 +1315,7 @@
 
             // ── Ana çizim ──
             function ciz() {
+                sirala();
                 var kume   = eslesenler();
                 var toplam = kume.length;
                 var boyut  = boyutAl();
@@ -1192,8 +1370,34 @@
             // ── Olaylar ──
             function filtreDegisti() { sayfa = 1; ciz(); }
 
-            if (aramaEl) aramaEl.addEventListener('input', filtreDegisti);
-            if (turEl)   turEl.addEventListener('change', filtreDegisti);
+            function filtreleriSifirla() {
+                if (aramaEl) aramaEl.value = '';
+                if (turEl) turEl.value = '';
+                if (tedarikciEl) tedarikciEl.value = '';
+                if (hastaneEl) hastaneEl.value = '';
+                filtreDegisti();
+            }
+
+            if (aramaEl)     aramaEl.addEventListener('input', filtreDegisti);
+            if (turEl)       turEl.addEventListener('change', filtreDegisti);
+            if (tedarikciEl) tedarikciEl.addEventListener('change', filtreDegisti);
+            if (hastaneEl)   hastaneEl.addEventListener('change', filtreDegisti);
+            if (siralamaEl)  siralamaEl.addEventListener('change', filtreDegisti);
+
+            // Tarih başlığına tıklayınca yönü ters çevir
+            if (tarihBasligi && siralamaEl) {
+                tarihBasligi.addEventListener('click', function () {
+                    siralamaEl.value = (siralamaEl.value === 'tarih-desc') ? 'tarih-asc' : 'tarih-desc';
+                    filtreDegisti();
+                });
+            }
+
+            if (sifirlaEl) {
+                sifirlaEl.addEventListener('click', function () {
+                    if (siralamaEl) siralamaEl.value = 'tarih-desc';
+                    filtreleriSifirla();
+                });
+            }
 
             boyutEl.addEventListener('change', function () {
                 try { localStorage.setItem(DEPO_ANAHTARI, boyutEl.value); } catch (e) { }
@@ -1210,11 +1414,7 @@
             });
 
             if (temizleBtn) {
-                temizleBtn.addEventListener('click', function () {
-                    if (aramaEl) aramaEl.value = '';
-                    if (turEl) turEl.value = '';
-                    filtreDegisti();
-                });
+                temizleBtn.addEventListener('click', filtreleriSifirla);
             }
 
             ciz();

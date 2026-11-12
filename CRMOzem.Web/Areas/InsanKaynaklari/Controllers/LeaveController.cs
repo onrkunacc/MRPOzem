@@ -29,38 +29,91 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
             _userManager = userManager;
         }
 
+        
+        public override async Task OnActionExecutionAsync(
+            Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context,
+            Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate next)
+        {
+            try
+            {
+                var acik = await _leaveService.GetAllAsync(null, "SupervisorApproved");
+                ViewBag.IkOnayindaCount = acik.Count;
+            }
+            catch
+            {
+                // Sayaç bilgi amaçlı — alınamazsa sayfa yine açılsın
+                ViewBag.IkOnayindaCount = null;
+            }
+
+            await next();
+        }
+
         // ═══════════════════════════════════════════════════════
         //  TALEPLER
         // ═══════════════════════════════════════════════════════
+        //  İki aşamalı akış:
+        //    Pending            → çalışanın yöneticisinde (İK henüz sırada değil)
+        //    SupervisorApproved → İK'da  ← İK'nın asıl iş kuyruğu
+        //
+        //  Bu yüzden varsayılan süzgeç "SupervisorApproved".
 
-        public async Task<IActionResult> Index(int? yil, string? durum = "Pending")
+        public async Task<IActionResult> Index(int? yil, string? durum = "SupervisorApproved")
         {
             var secilenYil = yil ?? DateTime.Now.Year;
             if (string.IsNullOrWhiteSpace(durum)) durum = null;
 
             var tumu = await _leaveService.GetAllAsync(secilenYil);
 
+            // Süzgeç "acik" ise iki aşamayı birlikte göster
+            List<LeaveRequest> gosterilecek;
+            if (durum == null)
+                gosterilecek = tumu;
+            else if (durum == "acik")
+                gosterilecek = tumu.Where(r => r.Status?.Code == "Pending"
+                                            || r.Status?.Code == "SupervisorApproved").ToList();
+            else
+                gosterilecek = tumu.Where(r => r.Status?.Code == durum).ToList();
+
             var model = new LeaveAdminIndexVm
             {
                 Year = secilenYil,
                 StatusCode = durum,
                 AvailableYears = await _leaveService.GetAvailableYearsAsync(),
-                Requests = durum == null ? tumu : tumu.Where(r => r.Status?.Code == durum).ToList(),
-                PendingCount = tumu.Count(r => r.Status?.Code == "Pending"),
+                Requests = gosterilecek,
+
+                YoneticiOnayindaCount = tumu.Count(r => r.Status?.Code == "Pending"),
+                IkOnayindaCount = tumu.Count(r => r.Status?.Code == "SupervisorApproved"),
                 ApprovedCount = tumu.Count(r => r.Status?.Code == "Approved"),
                 RejectedCount = tumu.Count(r => r.Status?.Code == "Rejected"),
                 CancelledCount = tumu.Count(r => r.Status?.Code == "Cancelled"),
+
+                YoneticisizCount = tumu.Count(r => r.YoneticisizGecildi
+                                                && (r.Status?.Code == "Pending"
+                                                 || r.Status?.Code == "SupervisorApproved")),
+
                 ApprovedDays = tumu.Where(r => r.Status?.Code == "Approved").Sum(r => r.TotalDays),
                 TodayOnLeaveCount = tumu.Count(r => r.Status?.Code == "Approved"
                                                  && r.StartDate.Date <= DateTime.Today
                                                  && r.EndDate.Date >= DateTime.Today)
             };
 
-            // Bekleyen talepler için "onaylanırsa kalan" bilgisi
-            var bekleyenler = model.Requests.Where(r => r.Status?.Code == "Pending").ToList();
-            foreach (var r in bekleyenler)
+            // Açık talepler için "onaylanırsa kalan" bilgisi.
+            // Aynı çalışanın birkaç talebi olabilir — bakiyeyi kişi başına
+            // bir kez çekip tekrar tekrar sorgu atmıyoruz.
+            var acikOlanlar = model.Requests
+                .Where(r => r.Status?.Code == "Pending" || r.Status?.Code == "SupervisorApproved")
+                .ToList();
+
+            var bakiyeOnbellek = new Dictionary<string, LeaveBalanceVm>();
+
+            foreach (var r in acikOlanlar)
             {
-                var b = await _leaveService.GetBalanceAsync(r.UserId, r.StartDate.Year);
+                var anahtar = $"{r.UserId}|{r.StartDate.Year}";
+                if (!bakiyeOnbellek.TryGetValue(anahtar, out var b))
+                {
+                    b = await _leaveService.GetBalanceAsync(r.UserId, r.StartDate.Year);
+                    bakiyeOnbellek[anahtar] = b;
+                }
                 model.KalanSonrasi[r.Id] = b.RemainingDays - r.TotalDays;
             }
 
@@ -69,15 +122,14 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
 
         public async Task<IActionResult> Detail(int id)
         {
-            var talep = await _leaveService.GetByIdAsync(id);
-            if (talep == null)
+            var baglam = await _leaveService.GetOnayBaglamiAsync(id);
+            if (baglam?.Talep == null)
             {
                 TempData["Error"] = "İzin talebi bulunamadı.";
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.Balance = await _leaveService.GetBalanceAsync(talep.UserId, talep.StartDate.Year);
-            return View(talep);
+            return View(baglam);
         }
 
         [HttpPost]
@@ -131,6 +183,60 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
         }
 
         // ═══════════════════════════════════════════════════════
+        //  ORGANİZASYON ŞEMASI
+        // ═══════════════════════════════════════════════════════
+
+        public async Task<IActionResult> Organizasyon()
+        {
+            var model = await _leaveService.GetOrganizasyonAsync();
+            return View(model);
+        }
+
+        /// <summary>Tek çalışanın yöneticisini atar ya da kaldırır.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> YoneticiAta(string userId, string? supervisorUserId)
+        {
+            var atayanId = _userManager.GetUserId(User);
+            var (basarili, hata) = await _leaveService.SetSupervisorAsync(userId, supervisorUserId, atayanId!);
+
+            if (basarili)
+                TempData["Success"] = string.IsNullOrWhiteSpace(supervisorUserId)
+                    ? "Yönetici bağı kaldırıldı. Bu çalışanın yeni talepleri doğrudan İK onayına düşecek."
+                    : "Yönetici atandı. Bu çalışanın yeni talepleri önce yöneticisine gidecek.";
+            else
+                TempData["Error"] = hata ?? "Yönetici atanamadı.";
+
+            return RedirectToAction(nameof(Organizasyon));
+        }
+
+        /// <summary>Bir yöneticinin tüm astlarını başka yöneticiye devreder.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AstlariDevret(string eskiSupervisorUserId, string? yeniSupervisorUserId)
+        {
+            var atayanId = _userManager.GetUserId(User);
+            var (basarili, hata, tasinan) = await _leaveService.AstlariDevretAsync(
+                eskiSupervisorUserId, yeniSupervisorUserId, atayanId!);
+
+            if (basarili)
+            {
+                TempData["Success"] = string.IsNullOrWhiteSpace(yeniSupervisorUserId)
+                    ? $"{tasinan} çalışanın yönetici bağı kaldırıldı."
+                    : $"{tasinan} çalışan yeni yöneticiye devredildi.";
+
+                if (!string.IsNullOrWhiteSpace(hata))
+                    TempData["Error"] = hata;   // kısmi uyarı
+            }
+            else
+            {
+                TempData["Error"] = hata ?? "Devir işlemi başarısız.";
+            }
+
+            return RedirectToAction(nameof(Organizasyon));
+        }
+
+        // ═══════════════════════════════════════════════════════
         //  BAKİYELER
         // ═══════════════════════════════════════════════════════
 
@@ -155,7 +261,7 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
         {
             var (basarili, hata) = await _leaveService.SetEntitlementAsync(userId, yil, hakedis, devreden, aciklama);
 
-            if (basarili) TempData["Success"] = "Hakediş kaydedildi.";
+            if (basarili) TempData["Success"] = "Hakediş elle kaydedildi — toplu hesaplama bu kaydı ezmeyecek.";
             else TempData["Error"] = hata ?? "Hakediş kaydedilemedi.";
 
             return RedirectToAction(nameof(Bakiyeler), new { yil });
@@ -218,13 +324,7 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
         {
             if (!ModelState.IsValid)
             {
-                var tazele = await _leaveService.GetPersonelAsync(model.UserId);
-                if (tazele != null)
-                {
-                    model.FullName = tazele.FullName;
-                    model.UserName = tazele.UserName;
-                    model.Bakiyeler = tazele.Bakiyeler;
-                }
+                await TazeleAsync(model);
                 return View(model);
             }
 
@@ -233,18 +333,29 @@ namespace CRMOzem.Web.Areas.InsanKaynaklari.Controllers
             if (!basarili)
             {
                 ModelState.AddModelError("", hata ?? "Kayıt güncellenemedi.");
-                var tazele = await _leaveService.GetPersonelAsync(model.UserId);
-                if (tazele != null)
-                {
-                    model.FullName = tazele.FullName;
-                    model.UserName = tazele.UserName;
-                    model.Bakiyeler = tazele.Bakiyeler;
-                }
+                await TazeleAsync(model);
                 return View(model);
             }
 
             TempData["Success"] = "Özlük bilgileri güncellendi.";
             return RedirectToAction(nameof(Personel));
+        }
+
+        /// <summary>Doğrulama hatasında salt okunur alanları geri doldurur.</summary>
+        private async Task TazeleAsync(PersonelEditVm model)
+        {
+            var tazele = await _leaveService.GetPersonelAsync(model.UserId);
+            if (tazele == null) return;
+
+            model.FullName = tazele.FullName;
+            model.UserName = tazele.UserName;
+            model.Bakiyeler = tazele.Bakiyeler;
+            model.YoneticiAdi = tazele.YoneticiAdi;
+            model.AstSayisi = tazele.AstSayisi;
+            model.Kidem = tazele.Kidem;
+            model.Yas = tazele.Yas;
+            model.BuYilHakedis = tazele.BuYilHakedis;
+            model.HakedisAciklamasi = tazele.HakedisAciklamasi;
         }
 
         // ═══════════════════════════════════════════════════════

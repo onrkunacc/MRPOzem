@@ -1,0 +1,75 @@
+﻿@model CRMOzem.Core.ViewModels.OrgDugumVm
+
+@{
+    var astVar = Model.Astlar.Any();
+    var aramaMetni = $"{Model.FullName} {Model.Title} {Model.Departman}".ToLowerInvariant();
+}
+
+<li class="og-dal" data-ara="@aramaMetni">
+    <div class="og-kisi @(Model.Aktif ? "" : "pasif") @(astVar ? "yonetici" : "")">
+        @if (astVar)
+        {
+            <button type="button" class="og-kat" onclick="dalKat(this)" title="Aç / kapat">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        }
+        else
+        {
+            <span class="og-bosluk"></span>
+        }
+
+        <div class="og-avatar">@Model.BasHarfler</div>
+
+        <div class="og-bilgi">
+            <div class="og-ad">
+                @Model.FullName
+                @if (!Model.Aktif)
+                {
+                    <span class="og-rozet" style="margin-left:5px;">pasif</span>
+                }
+            </div>
+            <div class="og-alt">
+                @(Model.Title ?? "—")
+                @if (!string.IsNullOrWhiteSpace(Model.Departman))
+                {
+                    <text> · @Model.Departman</text>
+                }
+            </div>
+        </div>
+
+        <div class="og-sag">
+            @if (Model.BekleyenTalepSayisi > 0)
+            {
+                <span class="og-rozet bekleyen" title="Açık izin talebi">
+                    <i class="fas fa-hourglass-half"></i> @Model.BekleyenTalepSayisi
+                </span>
+            }
+
+            @if (astVar)
+            {
+                <span class="og-rozet ast" title="Doğrudan ast / alt ağaç toplamı">
+                    @Model.DogrudanAstSayisi ast
+                    @if (Model.AltAgacSayisi - 1 > Model.DogrudanAstSayisi)
+                    {
+                        <text> · @(Model.AltAgacSayisi - 1) toplam</text>
+                    }
+                </span>
+            }
+
+            <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost"
+                    onclick="ataSec('@Model.UserId')" title="Yöneticisini değiştir">
+                <i class="fas fa-user-pen"></i>
+            </button>
+        </div>
+    </div>
+
+    @if (astVar)
+    {
+        <ul>
+            @foreach (var ast in Model.Astlar)
+            {
+                @await Html.PartialAsync("_OrgDugum", ast)
+            }
+        </ul>
+    }
+</li>

@@ -56,6 +56,7 @@
                     <tr>
                         <th>Çalışan</th>
                         <th>Departman</th>
+                        <th>Yöneticisi</th>
                         <th>İşe Giriş</th>
                         <th class="text-center">Kıdem</th>
                         <th>Doğum Tarihi</th>
@@ -67,7 +68,7 @@
                 <tbody>
                     @foreach (var p in Model.Personeller)
                     {
-                        <tr data-ara="@($"{p.FullName} {p.UserName} {p.Title} {p.Departman}".ToLower())"
+                        <tr data-ara="@($"{p.FullName} {p.UserName} {p.Title} {p.Departman} {p.YoneticiAdi}".ToLower())"
                             style="@(p.Aktif ? "" : "opacity:.55;")">
                             <td class="kt-cell-primary">
                                 @p.FullName
@@ -80,6 +81,32 @@
                                 </div>
                             </td>
                             <td>@(string.IsNullOrWhiteSpace(p.Departman) ? "—" : p.Departman)</td>
+
+                            @* ── Organizasyon şemasındaki yeri ── *@
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(p.YoneticiAdi))
+                                {
+                                    <span style="font-size:12.5px;">@p.YoneticiAdi</span>
+                                }
+                                else if (p.Aktif)
+                                {
+                                    <span style="font-size:11.5px; color:var(--kt-warn);">
+                                        <i class="fas fa-user-slash"></i> atanmamış
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+
+                                @if (p.AstSayisi > 0)
+                                {
+                                    <div style="font-size:10.5px; color:var(--kt-primary-700); margin-top:2px;">
+                                        <i class="fas fa-users" style="font-size:9px;"></i> @p.AstSayisi kişinin yöneticisi
+                                    </div>
+                                }
+                            </td>
+
                             <td style="white-space:nowrap;">
                                 @if (p.IseGirisTarihi.HasValue)
                                 {
@@ -122,10 +149,16 @@
                                 else { <span class="text-muted">—</span> }
                             </td>
                             <td class="text-center">
-                                <a class="kt-btn kt-btn-sm kt-btn-ghost"
-                                   asp-action="PersonelDuzenle" asp-route-id="@p.UserId" title="Düzenle">
-                                    <i class="fas fa-pen"></i>
-                                </a>
+                                <div style="display:flex; gap:6px; justify-content:flex-end;">
+                                    <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                       asp-action="PersonelDuzenle" asp-route-id="@p.UserId">
+                                        <i class="fas fa-pen"></i> Düzenle
+                                    </a>
+                                    <a class="kt-btn kt-btn-sm kt-btn-ghost"
+                                       asp-action="Organizasyon" title="Organizasyon şemasında yöneticisini ata">
+                                        <i class="fas fa-sitemap"></i> Yönetici
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     }

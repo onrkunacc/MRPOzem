@@ -44,8 +44,15 @@ namespace CRMOzem.Web.Controllers
                 Year = secilenYil,
                 Leaves = await _leaveService.GetUserLeavesAsync(userId, secilenYil),
                 Balance = await _leaveService.GetBalanceAsync(userId, secilenYil),
-                AvailableYears = await _leaveService.GetAvailableYearsAsync()
+                AvailableYears = await _leaveService.GetAvailableYearsAsync(),
+
+                // Talebin önce kime gideceği ve kullanıcı yönetici mi
+                YoneticiAdi = await _leaveService.GetYoneticiAdiAsync(userId),
+                YoneticiMi = await _leaveService.YoneticiMiAsync(userId)
             };
+
+            if (model.YoneticiMi)
+                model.EkipBekleyenSayisi = await _leaveService.GetEkipBekleyenSayisiAsync(userId);
 
             return View(model);
         }
@@ -97,7 +104,17 @@ namespace CRMOzem.Web.Controllers
                 return View(model);
             }
 
-            TempData["Success"] = $"İzin talebiniz gönderildi. {request.TotalDays} iş günü, onay bekliyor.";
+            // Talep yöneticiye mi İK'ya mı düştü — mesajda açıkça söyle
+            var kime = request.YoneticisizGecildi
+                ? "İnsan Kaynakları"
+                : (request.SupervisorName ?? "yöneticiniz");
+
+            // MyLeaves görünümü TempData["Success"] okuyor — eskiden buraya
+            // "SuccessMessage" yazılıyordu ve mesaj hiç görünmüyordu.
+            TempData["Success"] =
+                $"İzin talebiniz gönderildi — {request.TotalDays} iş günü. " +
+                $"Şimdi {kime} onayında.";
+
             return RedirectToAction(nameof(MyLeaves));
         }
 
@@ -193,6 +210,7 @@ namespace CRMOzem.Web.Controllers
 
             model.QuotaDeductingTypes = turler.ToDictionary(x => x.Id, x => x.IsDeductedFromQuota);
             model.Balance = await _leaveService.GetBalanceAsync(userId, DateTime.Now.Year);
+            model.YoneticiAdi = await _leaveService.GetYoneticiAdiAsync(userId);
 
             var tatiller = await _tatilService.GetByYearAsync(DateTime.Now.Year);
             model.Tatiller = tatiller
@@ -200,5 +218,4 @@ namespace CRMOzem.Web.Controllers
                 .ToDictionary(g => g.Key, g => g.First().Ad);
         }
     }
-
 }

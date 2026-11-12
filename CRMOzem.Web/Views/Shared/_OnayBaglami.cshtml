@@ -1,0 +1,422 @@
+﻿@model CRMOzem.Core.ViewModels.OnayBaglamVm
+
+@{
+    var t = Model.Talep;
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var b = Model.Bakiye;
+
+    if (t == null)
+    {
+        return;
+    }
+
+    var kod = t.Status?.Code;
+    var asama = t.AsamaNo;
+
+    string DurumBadge(string? k) => k switch
+    {
+        "Pending" => "kt-badge-warning",
+        "SupervisorApproved" => "kt-badge-info",
+        "Approved" => "kt-badge-success",
+        "Rejected" => "kt-badge-danger",
+        "Cancelled" => "kt-badge-secondary",
+        _ => "kt-badge-secondary"
+    };
+}
+
+<style>
+    /* ── İki aşamalı onay ilerlemesi ─────────────────────────────── */
+    .ob-akis {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md);
+        overflow: hidden;
+        margin-bottom: 18px;
+        background: var(--kt-paper);
+    }
+
+    .ob-adim {
+        flex: 1;
+        padding: 13px 16px;
+        position: relative;
+        min-width: 0;
+    }
+
+        .ob-adim + .ob-adim { border-left: 1px solid var(--kt-border); }
+
+        .ob-adim .no {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--kt-bg-soft); color: var(--kt-ink-500);
+            font-size: 11px; font-weight: 700; margin-right: 7px;
+        }
+
+        .ob-adim .baslik {
+            font-size: 12.5px; font-weight: 700; color: var(--kt-ink-500);
+            display: flex; align-items: center;
+        }
+
+        .ob-adim .detay {
+            font-size: 12px; color: var(--kt-ink-400);
+            margin-top: 5px; padding-left: 27px; line-height: 1.5;
+        }
+
+    .ob-adim.tamam { background: var(--kt-pos-50); }
+    .ob-adim.tamam .no { background: var(--kt-pos); color: #fff; }
+    .ob-adim.tamam .baslik { color: var(--kt-pos-700); }
+    .ob-adim.tamam .detay { color: var(--kt-ink-700); }
+
+    .ob-adim.aktif { background: #fffbeb; }
+    .ob-adim.aktif .no { background: var(--kt-warn); color: #fff; }
+    .ob-adim.aktif .baslik { color: #92400e; }
+    .ob-adim.aktif .detay { color: #92400e; }
+
+    .ob-adim.red { background: var(--kt-neg-50); }
+    .ob-adim.red .no { background: var(--kt-neg); color: #fff; }
+    .ob-adim.red .baslik { color: var(--kt-neg-700); }
+    .ob-adim.red .detay { color: var(--kt-neg-700); }
+
+    .ob-adim.atlandi { background: var(--kt-bg); }
+
+    /* ── Bakiye şeridi ───────────────────────────────────────────── */
+    .ob-serit {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+        gap: 1px;
+        background: var(--kt-border);
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md);
+        overflow: hidden;
+    }
+
+    .ob-hucre { background: var(--kt-paper); padding: 12px 14px; text-align: center; }
+    .ob-hucre .et {
+        font-size: 10px; font-weight: 700; color: var(--kt-ink-500);
+        text-transform: uppercase; letter-spacing: .05em;
+    }
+    .ob-hucre .dg { font-size: 20px; font-weight: 700; color: var(--kt-ink-900); margin-top: 3px; line-height: 1.1; }
+    .ob-hucre .alt { font-size: 10.5px; color: var(--kt-ink-400); margin-top: 2px; }
+    .ob-hucre.iyi { background: var(--kt-pos-50); }
+    .ob-hucre.iyi .dg { color: var(--kt-pos-700); }
+    .ob-hucre.kotu { background: var(--kt-neg-50); }
+    .ob-hucre.kotu .dg { color: var(--kt-neg-700); }
+
+    /* ── Çakışma listesi ─────────────────────────────────────────── */
+    .ob-cakisma {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--kt-border);
+        font-size: 13px;
+    }
+        .ob-cakisma:last-child { border-bottom: none; }
+
+    .ob-ekip-rozet {
+        font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+        text-transform: uppercase; letter-spacing: .04em;
+        background: var(--kt-warn-50, #fffbeb); color: #92400e;
+    }
+
+    .ob-uyari {
+        display: flex; gap: 9px; align-items: flex-start;
+        border-radius: var(--kt-r-sm); padding: 11px 14px;
+        font-size: 12.5px; line-height: 1.5; margin-bottom: 14px;
+    }
+    .ob-uyari.sari { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .ob-uyari.kirmizi { background: var(--kt-neg-50); border: 1px solid #fecaca; color: var(--kt-neg-700); }
+</style>
+
+@* ═══════════ ONAY AKIŞI ═══════════ *@
+@{
+    // 1. aşama sınıfı
+    var a1 = "ob-adim";
+    if (t.YoneticisizGecildi) { a1 += " atlandi"; }
+    else if (t.SupervisorOnayladi == true) { a1 += " tamam"; }
+    else if (t.SupervisorOnayladi == false) { a1 += " red"; }
+    else if (asama == 1) { a1 += " aktif"; }
+
+    // 2. aşama sınıfı
+    var a2 = "ob-adim";
+    if (kod == "Approved") { a2 += " tamam"; }
+    else if (kod == "Rejected" && t.SupervisorOnayladi != false) { a2 += " red"; }
+    else if (asama == 2) { a2 += " aktif"; }
+}
+
+<div class="ob-akis">
+    <div class="@a1">
+        <div class="baslik"><span class="no">1</span> Yönetici Onayı</div>
+        <div class="detay">
+            @if (t.YoneticisizGecildi)
+            {
+                <text>Yöneticisi tanımlı değil — bu aşama atlandı</text>
+            }
+            else if (t.SupervisorOnayladi == true)
+            {
+                <text>
+                    @(t.SupervisorName ?? "Yönetici") onayladı
+                    @if (t.SupervisorDecisionAt.HasValue)
+                    {
+                        <text> · @t.SupervisorDecisionAt.Value.ToString("dd.MM.yyyy HH:mm")</text>
+                    }
+                </text>
+            }
+            else if (t.SupervisorOnayladi == false)
+            {
+                <text>
+                    @(t.SupervisorName ?? "Yönetici") reddetti
+                    @if (t.SupervisorDecisionAt.HasValue)
+                    {
+                        <text> · @t.SupervisorDecisionAt.Value.ToString("dd.MM.yyyy HH:mm")</text>
+                    }
+                </text>
+            }
+            else if (asama == 1)
+            {
+                <text>@(t.SupervisorName ?? "Yönetici") kararı bekleniyor</text>
+            }
+            else
+            {
+                <text>—</text>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(t.SupervisorNote))
+            {
+                <div style="margin-top:4px; font-style:italic;">
+                    <i class="fas fa-quote-left" style="font-size:9px;"></i> @t.SupervisorNote
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="@a2">
+        <div class="baslik"><span class="no">2</span> İnsan Kaynakları Onayı</div>
+        <div class="detay">
+            @if (kod == "Approved")
+            {
+                <text>@(t.DecisionByName ?? "İK") onayladı · @(t.DecisionAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</text>
+            }
+            else if (kod == "Rejected" && t.SupervisorOnayladi != false)
+            {
+                <text>@(t.DecisionByName ?? "İK") reddetti · @(t.DecisionAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</text>
+            }
+            else if (kod == "Rejected")
+            {
+                <text>Yönetici aşamasında kapandı — İK'ya düşmedi</text>
+            }
+            else if (kod == "Cancelled")
+            {
+                <text>Çalışan talebi iptal etti</text>
+            }
+            else if (asama == 2)
+            {
+                <text>İnsan Kaynakları kararı bekleniyor</text>
+            }
+            else
+            {
+                <text>Henüz sıra gelmedi</text>
+            }
+        </div>
+    </div>
+</div>
+
+@* ═══════════ UYARILAR ═══════════ *@
+@if (Model.BakiyeYetersiz)
+{
+    <div class="ob-uyari kirmizi">
+        <i class="fas fa-circle-exclamation" style="margin-top:2px;"></i>
+        <span>
+            <strong>Bakiye yetersiz.</strong>
+            Çalışanın kalan hakkı @b.RemainingDays gün, talep @t.TotalDays gün.
+            Onaylanırsa bakiye @Model.OnaySonrasiKalan gün olur — İK onayı bu durumda reddedilir.
+        </span>
+    </div>
+}
+
+@if (Model.Cakismalar.Any(x => x.AyniEkip))
+{
+    var ayniEkip = Model.Cakismalar.Count(x => x.AyniEkip);
+    <div class="ob-uyari sari">
+        <i class="fas fa-users" style="margin-top:2px;"></i>
+        <span>
+            Bu tarihlerde <strong>aynı ekipten @ayniEkip kişi daha</strong> izinli ya da izin bekliyor.
+            Aşağıdaki çakışma listesine bakın.
+        </span>
+    </div>
+}
+
+@if (t.YoneticisizGecildi)
+{
+    <div class="ob-uyari sari">
+        <i class="fas fa-user-slash" style="margin-top:2px;"></i>
+        <span>
+            Bu çalışanın organizasyon şemasında yöneticisi tanımlı olmadığı için
+            talep <strong>yönetici onayı olmadan</strong> doğrudan İK'ya düştü.
+            <a asp-area="InsanKaynaklari" asp-controller="Leave" asp-action="Organizasyon"
+               style="color:#92400e; text-decoration:underline;">Şemadan yönetici atayın</a>
+            ki sonraki talepler sırayla gelsin.
+        </span>
+    </div>
+}
+
+@* ═══════════ BAKİYE ═══════════ *@
+<div class="kt-card" style="margin-bottom:16px;">
+    <div class="kt-flex-between" style="margin-bottom:12px;">
+        <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.06em;">
+            @b.Year Bakiyesi
+        </div>
+        <div style="font-size:11.5px; color:var(--kt-ink-400);">
+            Kıdem @b.KidemYili yıl · kanuni hakediş @b.OnerilenHakedis gün
+        </div>
+    </div>
+
+    <div class="ob-serit">
+        <div class="ob-hucre">
+            <div class="et">Hakediş</div>
+            <div class="dg">@b.Entitlement</div>
+            <div class="alt">
+                @if (b.CarriedOverDays > 0)
+                {
+                    <text>@b.TotalDays + @b.CarriedOverDays devreden</text>
+                }
+                else
+                {
+                    <text>gün</text>
+                }
+            </div>
+        </div>
+        <div class="ob-hucre">
+            <div class="et">Kullanılan</div>
+            <div class="dg">@b.UsedDays</div>
+            <div class="alt">onaylı izin</div>
+        </div>
+        <div class="ob-hucre">
+            <div class="et">Bekleyen</div>
+            <div class="dg">@b.PendingDays</div>
+            <div class="alt">bu talep dahil</div>
+        </div>
+        <div class="ob-hucre">
+            <div class="et">Kalan</div>
+            <div class="dg">@b.RemainingDays</div>
+            <div class="alt">kullanılabilir</div>
+        </div>
+
+        @if (Model.OnaySonrasiKalan.HasValue)
+        {
+            <div class="ob-hucre @(Model.BakiyeYetersiz ? "kotu" : "iyi")">
+                <div class="et">Onaylanırsa</div>
+                <div class="dg">@Model.OnaySonrasiKalan.Value</div>
+                <div class="alt">gün kalır</div>
+            </div>
+        }
+        else
+        {
+            <div class="ob-hucre">
+                <div class="et">Onaylanırsa</div>
+                <div class="dg" style="font-size:14px;">Değişmez</div>
+                <div class="alt">haktan düşmez</div>
+            </div>
+        }
+    </div>
+
+    @if (!b.HasRecord)
+    {
+        <div class="kt-hint" style="margin-top:12px; color:var(--kt-warn);">
+            <i class="fas fa-triangle-exclamation"></i>
+            @b.Year yılı hakedişi hiç tanımlanmamış — bakiye 0 görünüyor.
+        </div>
+    }
+    else if (b.AsgariAltinda)
+    {
+        <div class="kt-hint" style="margin-top:12px; color:var(--kt-neg);">
+            <i class="fas fa-scale-unbalanced"></i>
+            Girilen hakediş (@b.TotalDays gün) kanuni asgarinin (@b.OnerilenHakedis gün) altında.
+        </div>
+    }
+</div>
+
+@* ═══════════ ÇAKIŞMALAR ═══════════ *@
+<div class="kt-card" style="margin-bottom:16px;">
+    <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;">
+        Aynı Tarihlerde İzinli Olanlar
+    </div>
+    <div style="font-size:12px; color:var(--kt-ink-400); margin-bottom:10px;">
+        Aynı yöneticiye bağlı ya da aynı departmandaki çalışanlar
+    </div>
+
+    @if (Model.Cakismalar.Any())
+    {
+        foreach (var c in Model.Cakismalar)
+        {
+            <div class="ob-cakisma">
+                <div style="min-width:0;">
+                    <div style="font-weight:600; color:var(--kt-ink-900);">
+                        @c.FullName
+                        @if (c.AyniEkip)
+                        {
+                            <span class="ob-ekip-rozet">aynı ekip</span>
+                        }
+                    </div>
+                    <div style="font-size:11.5px; color:var(--kt-ink-400);">
+                        @(c.Title ?? "—")
+                        @if (!string.IsNullOrWhiteSpace(c.Departman))
+                        {
+                            <text> · @c.Departman</text>
+                        }
+                        · @c.LeaveTypeName
+                    </div>
+                </div>
+                <div style="text-align:right; white-space:nowrap;">
+                    <div style="font-size:12.5px; font-weight:600; color:var(--kt-ink-700);">
+                        @c.StartDate.ToString("dd.MM") – @c.EndDate.ToString("dd.MM")
+                    </div>
+                    <div style="font-size:11px; color:var(--kt-ink-400);">
+                        @c.KesisenGun gün kesişiyor · @c.StatusName
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div style="padding:16px 0; text-align:center; color:var(--kt-ink-400); font-size:12.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:6px;"></i>
+            Bu tarihlerde başka izinli yok
+        </div>
+    }
+</div>
+
+@* ═══════════ ÇALIŞANIN DİĞER TALEPLERİ ═══════════ *@
+@if (Model.GecmisTalepler.Any())
+{
+    <div class="kt-card">
+        <div style="font-size:11px; font-weight:700; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+            @b.Year Yılındaki Diğer Talepleri
+        </div>
+
+        <div class="kt-table-wrap">
+            <table class="kt-table">
+                <thead>
+                    <tr>
+                        <th>İzin Türü</th>
+                        <th>Tarih</th>
+                        <th class="text-center">Gün</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in Model.GecmisTalepler)
+                    {
+                        <tr>
+                            <td>@g.LeaveTypeName</td>
+                            <td style="white-space:nowrap;">
+                                @g.StartDate.ToString("dd.MM.yyyy") – @g.EndDate.ToString("dd.MM.yyyy")
+                            </td>
+                            <td class="text-center"><strong>@g.TotalDays</strong></td>
+                            <td><span class="kt-badge @DurumBadge(g.StatusCode)">@g.StatusName</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

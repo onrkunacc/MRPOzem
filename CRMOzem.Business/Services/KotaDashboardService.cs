@@ -293,10 +293,34 @@ namespace CRMOzem.Business.Services
                 .Sum(h => h.UsdKarsiligi);
             var gelir = gelirler.Sum(h => h.UsdKarsiligi);
 
-            // Aylık trend — son 12 ay
-            var sonAy = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var ilkAy = sonAy.AddMonths(-11);
+            // ── Aylık trend ──────────────────────────────────────────────
+            // Pencere, kotanın KENDİ hareket aralığından türetilir.
+            // Önceden "bugünden geriye 12 ay" sabitti; hareketleri bu aralığın
+            // dışında kalan kotalarda grafik bomboş görünüyordu.
             var aylik = new List<AylikTrendVm>();
+
+            var tarihliler = hareketler
+                .Where(h => h.Yil > 0 && h.Ay >= 1 && h.Ay <= 12)
+                .ToList();
+
+            DateTime ilkAy, sonAy;
+
+            if (tarihliler.Count > 0)
+            {
+                ilkAy = tarihliler.Min(h => new DateTime(h.Yil, h.Ay, 1));
+                sonAy = tarihliler.Max(h => new DateTime(h.Yil, h.Ay, 1));
+
+                // Çok uzun aralıklarda grafik okunmaz hale gelir — son 36 ayla sınırla
+                const int maksAy = 36;
+                var toplamAy = ((sonAy.Year - ilkAy.Year) * 12) + sonAy.Month - ilkAy.Month + 1;
+                if (toplamAy > maksAy) ilkAy = sonAy.AddMonths(-(maksAy - 1));
+            }
+            else
+            {
+                // Hiç tarihli hareket yoksa grafik yerine "henüz hareket yok" görünsün
+                return KotaDetayOlustur(kota, abbott, thirdParty, diger, gelir, aylik);
+            }
+
             var cur = ilkAy;
             while (cur <= sonAy)
             {
@@ -314,6 +338,15 @@ namespace CRMOzem.Business.Services
                 cur = cur.AddMonths(1);
             }
 
+            return KotaDetayOlustur(kota, abbott, thirdParty, diger, gelir, aylik);
+        }
+
+        /// <summary>Modal VM'ini kurar — hem normal hem "hareket yok" yolundan çağrılır.</summary>
+        private static KotaDetayModalVm KotaDetayOlustur(
+            Kota kota,
+            decimal abbott, decimal thirdParty, decimal diger, decimal gelir,
+            List<AylikTrendVm> aylik)
+        {
             return new KotaDetayModalVm
             {
                 KotaID = kota.KotaID,

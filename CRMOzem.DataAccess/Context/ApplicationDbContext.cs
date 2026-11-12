@@ -64,9 +64,9 @@ namespace CRMOzem.DataAccess.Context
         public DbSet<BirimFiyatKarsilastirma> BirimFiyatKarsilastirmalari { get; set; }
         public DbSet<BirimFiyatSatir> BirimFiyatSatirlari { get; set; }
         public DbSet<BirimFiyatSonuc> BirimFiyatSonuclari { get; set; }
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) 
-        { 
-        
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        {
+
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -99,6 +99,26 @@ namespace CRMOzem.DataAccess.Context
                 .WithMany()
                 .HasForeignKey(x => x.SupervisorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Bir çalışanın TEK yöneticisi olur — organizasyon şeması ve
+            // izin akışındaki 1. aşama onayı buna dayanıyor.
+            builder.Entity<UserSupervisor>()
+                .HasIndex(x => x.UserId)
+                .IsUnique();
+
+            builder.Entity<UserSupervisor>()
+                .HasIndex(x => x.SupervisorId);
+
+            // İzin taleplerinde en sık yapılan sorgular: açık talepler,
+            // bir çalışanın talepleri ve bir yöneticinin ekibinin talepleri.
+            builder.Entity<LeaveRequest>()
+                .HasIndex(x => new { x.StatusId, x.StartDate });
+
+            builder.Entity<LeaveRequest>()
+                .HasIndex(x => new { x.UserId, x.StartDate });
+
+            builder.Entity<LeaveRequest>()
+                .HasIndex(x => x.SupervisorUserId);
 
             builder.Entity<MonthlyStatistics>()
                 .HasIndex(ms => new { ms.HospitalID, ms.TestID, ms.Month })

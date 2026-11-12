@@ -480,11 +480,62 @@
             try {
                 const res = await fetch('@Url.Action("KotaDetayPartial", "KotaDashboard", new { area = "Finans" })?id=' + id);
                 document.getElementById('modalBody').innerHTML = await res.text();
+
+                // innerHTML ile eklenen <script> çalışmaz — bu yüzden partial
+                // veriyi data-trend niteliğinde taşıyor, grafiği burada çiziyoruz.
+                modalTrendCiz();
             } catch (err) {
                 document.getElementById('modalBody').innerHTML = '<div class="kt-empty"><i class="fas fa-exclamation-circle"></i><p>Yüklenemedi</p></div>';
             }
         });
     });
+
+    // ── Modal içindeki "Aylık Hareket" grafiği ──
+    let modalTrendGrafik = null;
+
+    function modalTrendCiz() {
+        const hedef = document.getElementById('modalChartTrend');
+        if (!hedef) return;
+
+        // Önceki modalden kalan grafik örneğini temizle
+        if (modalTrendGrafik) {
+            try { modalTrendGrafik.destroy(); } catch (e) { }
+            modalTrendGrafik = null;
+        }
+
+        let veri = null;
+        try { veri = JSON.parse(hedef.dataset.trend || 'null'); } catch (e) { }
+
+        const bos = !veri || !veri.etiketler || veri.etiketler.length === 0;
+        if (bos) {
+            hedef.innerHTML = '<div class="kt-empty"><i class="fas fa-chart-column"></i>' +
+                              '<p>Bu kotada tarihli hareket yok</p></div>';
+            return;
+        }
+
+        if (typeof ApexCharts === 'undefined') {
+            hedef.innerHTML = '<div class="kt-empty"><i class="fas fa-chart-column"></i>' +
+                              '<p>Grafik kütüphanesi yüklenemedi</p></div>';
+            return;
+        }
+
+        modalTrendGrafik = new ApexCharts(hedef, {
+            chart: { type: 'bar', height: 260, fontFamily: 'inherit', toolbar: { show: false }, foreColor: '#64748b' },
+            series: [
+                { name: 'Gider', data: veri.gider },
+                { name: 'Gelir', data: veri.gelir }
+            ],
+            colors: ['#dc2626', '#059669'],
+            plotOptions: { bar: { columnWidth: '58%', borderRadius: 4 } },
+            xaxis: { categories: veri.etiketler },
+            yaxis: { labels: { formatter: v => (v / 1000).toFixed(0) + 'K' } },
+            legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px' },
+            grid: commonGrid,
+            tooltip: commonTooltip,
+            dataLabels: { enabled: false }
+        });
+        modalTrendGrafik.render();
+    }
 
     // ── CHARTS ──
     const commonGrid = { borderColor: '#e2e8f0', strokeDashArray: 4 };

@@ -21,7 +21,10 @@ namespace CRMOzem.Business.Interfaces
 
         /// <summary>
         /// Yeni izin talebi. Gün sayısını hesaplar, çakışma ve bakiye kontrolü yapar.
-        /// Bakiyeye dokunmaz — düşüm onay anında olur.
+        /// Bakiyeye dokunmaz — düşüm İK onayı anında olur.
+        ///
+        /// Çalışanın yöneticisi tanımlıysa talep 1. aşamada (Pending) açılır;
+        /// tanımlı değilse 1. aşama atlanıp doğrudan İK onayına (SupervisorApproved) düşer.
         /// </summary>
         Task<(bool Basarili, string? Hata)> CreateLeaveAsync(LeaveRequest request);
 
@@ -29,15 +32,60 @@ namespace CRMOzem.Business.Interfaces
 
         Task<bool> IsOwnerAsync(int leaveRequestId, string userId);
 
-        // ═══════════ İK — TALEPLER ═══════════
+        // ═══════════ AŞAMA 1 — YÖNETİCİ ONAYI ═══════════
+
+        /// <summary>Bu kullanıcının doğrudan astlarının id'leri.</summary>
+        Task<List<string>> GetAstIdleriAsync(string supervisorUserId);
+
+        /// <summary>Bu kullanıcı birilerinin yöneticisi mi? Menüde "Ekip İzinleri" göstermek için.</summary>
+        Task<bool> YoneticiMiAsync(string userId);
+
+        /// <summary>Bu kullanıcının kendi kararını bekleyen ast talebi sayısı.</summary>
+        Task<int> GetEkipBekleyenSayisiAsync(string supervisorUserId);
+
+        /// <summary>Çalışanın şu anki yöneticisinin adı — yoksa null.</summary>
+        Task<string?> GetYoneticiAdiAsync(string userId);
+
+        /// <summary>Yöneticinin ekip onay ekranı.</summary>
+        Task<EkipIzinIndexVm> GetEkipTalepleriAsync(string supervisorUserId, int yil);
+
+        /// <summary>
+        /// Yönetici 1. aşamayı onaylar — talep İK onayına (SupervisorApproved) geçer.
+        /// Bakiyeye dokunmaz. Çağıranın gerçekten o çalışanın yöneticisi olduğu doğrulanır.
+        /// </summary>
+        Task<(bool Basarili, string? Hata)> SupervisorApproveAsync(
+            int leaveRequestId, string supervisorUserId, string? not = null);
+
+        /// <summary>
+        /// Yönetici 1. aşamada reddeder — talep doğrudan kapanır (Rejected).
+        /// İK'ya düşmez; gerekçe çalışana görünür.
+        /// </summary>
+        Task<(bool Basarili, string? Hata)> SupervisorRejectAsync(
+            int leaveRequestId, string supervisorUserId, string gerekce);
+
+        // ═══════════ AŞAMA 2 — İK (NİHAİ) ═══════════
 
         Task<List<LeaveRequest>> GetAllAsync(int? yil = null, string? statusCode = null);
 
         Task<LeaveRequest?> GetByIdAsync(int id);
 
-        Task<(bool Basarili, string? Hata)> ApproveLeaveAsync(int leaveRequestId, string approverUserId, string? not = null);
+        /// <summary>
+        /// İK nihai onayı. Hem İK onayında (SupervisorApproved) hem de henüz
+        /// yönetici onayında (Pending) olan talep onaylanabilir — İK son söz sahibi.
+        /// Pending bir talep İK tarafından onaylanırsa 1. aşamanın atlandığı kayda geçer.
+        /// </summary>
+        Task<(bool Basarili, string? Hata)> ApproveLeaveAsync(
+            int leaveRequestId, string approverUserId, string? not = null);
 
-        Task<(bool Basarili, string? Hata)> RejectLeaveAsync(int leaveRequestId, string approverUserId, string gerekce);
+        Task<(bool Basarili, string? Hata)> RejectLeaveAsync(
+            int leaveRequestId, string approverUserId, string gerekce);
+
+        /// <summary>
+        /// Karar verirken gereken bağlam: bakiye, onay sonrası kalan,
+        /// aynı tarihlerde izinli ekip arkadaşları ve çalışanın yıl içindeki
+        /// diğer talepleri.
+        /// </summary>
+        Task<OnayBaglamVm?> GetOnayBaglamiAsync(int leaveRequestId);
 
         // ═══════════ İK — BAKİYE ═══════════
 
@@ -70,6 +118,25 @@ namespace CRMOzem.Business.Interfaces
         Task<PersonelEditVm?> GetPersonelAsync(string userId);
 
         Task<(bool Basarili, string? Hata)> UpdatePersonelAsync(PersonelEditVm model);
+
+        // ═══════════ ORGANİZASYON ŞEMASI ═══════════
+
+        /// <summary>Şema ağacı + yöneticisi atanmamışlar + atama açılırı.</summary>
+        Task<OrganizasyonVm> GetOrganizasyonAsync();
+
+        /// <summary>
+        /// Çalışanın yöneticisini atar ya da kaldırır (<paramref name="supervisorUserId"/> null).
+        /// Döngü oluşturacak atamayı reddeder — kimse kendi astının astı olamaz.
+        /// </summary>
+        Task<(bool Basarili, string? Hata)> SetSupervisorAsync(
+            string userId, string? supervisorUserId, string atayanUserId);
+
+        /// <summary>
+        /// Bir yöneticinin tüm astlarını başka bir yöneticiye devreder —
+        /// işten çıkış / görev değişikliği durumunda tek tek uğraşmamak için.
+        /// </summary>
+        Task<(bool Basarili, string? Hata, int Tasinan)> AstlariDevretAsync(
+            string eskiSupervisorUserId, string? yeniSupervisorUserId, string atayanUserId);
 
         // ═══════════ TAKVİM ═══════════
 

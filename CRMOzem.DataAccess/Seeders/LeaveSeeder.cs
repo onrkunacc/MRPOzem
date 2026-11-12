@@ -24,41 +24,71 @@ namespace CRMOzem.DataAccess.Seeders
         //  DURUMLAR
         // ═══════════════════════════════════════════════════════
         // Kodlar LeaveService içindeki sabitlerle birebir eşleşmeli.
+        //
+        // İKİ AŞAMALI AKIŞ:
+        //   Pending            → çalışanın yöneticisi karar verecek  (1. aşama)
+        //   SupervisorApproved → yönetici onayladı, İK karar verecek (2. aşama)
+        //   Approved / Rejected / Cancelled → kapandı
+        //
+        // Yöneticisi atanmamış çalışanın talebi doğrudan
+        // SupervisorApproved durumunda açılır (1. aşama atlanır).
 
         private static async Task SeedStatusesAsync(ApplicationDbContext db)
         {
             var hedef = new (string Code, string Name, string Aciklama)[]
             {
-                ("Pending",   "Bekliyor",   "Talep oluşturuldu, İnsan Kaynakları onayı bekleniyor."),
-                ("Approved",  "Onaylandı",  "Talep onaylandı, izin bakiyesinden düşüldü."),
-                ("Rejected",  "Reddedildi", "Talep reddedildi, bakiyeden düşülmedi."),
-                ("Cancelled", "İptal Edildi", "Talep çalışan tarafından iptal edildi.")
+                ("Pending",            "Yönetici Onayında",
+                    "Talep oluşturuldu, çalışanın yöneticisinin onayı bekleniyor."),
+
+                ("SupervisorApproved", "İK Onayında",
+                    "Yönetici onayladı, İnsan Kaynakları'nın nihai onayı bekleniyor."),
+
+                ("Approved",           "Onaylandı",
+                    "Talep onaylandı, izin bakiyesinden düşüldü."),
+
+                ("Rejected",           "Reddedildi",
+                    "Talep reddedildi, bakiyeden düşülmedi."),
+
+                ("Cancelled",          "İptal Edildi",
+                    "Talep çalışan tarafından iptal edildi.")
             };
 
-            var mevcut = await db.LeaveStatuses
-                .Select(s => s.Code)
-                .ToListAsync();
+            var mevcutlar = await db.LeaveStatuses.ToListAsync();
 
-            var mevcutSet = mevcut
-                .Where(c => c != null)
-                .Select(c => c!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var mevcutMap = mevcutlar
+                .Where(s => s.Code != null)
+                .GroupBy(s => s.Code!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-            var eklenecek = hedef
-                .Where(h => !mevcutSet.Contains(h.Code))
-                .Select(h => new LeaveStatus
-                {
-                    Code = h.Code,
-                    Name = h.Name,
-                    Description = h.Aciklama
-                })
-                .ToList();
+            var degisti = false;
 
-            if (eklenecek.Count > 0)
+            foreach (var h in hedef)
             {
-                db.LeaveStatuses.AddRange(eklenecek);
-                await db.SaveChangesAsync();
+                if (mevcutMap.TryGetValue(h.Code, out var kayit))
+                {
+                    // Ad ve açıklamayı hedefe hizala — "Bekliyor" artık
+                    // "Yönetici Onayında" olmalı, yoksa ekranlar yanlış yazar.
+                    if (kayit.Name != h.Name || kayit.Description != h.Aciklama)
+                    {
+                        kayit.Name = h.Name;
+                        kayit.Description = h.Aciklama;
+                        degisti = true;
+                    }
+                }
+                else
+                {
+                    db.LeaveStatuses.Add(new LeaveStatus
+                    {
+                        Code = h.Code,
+                        Name = h.Name,
+                        Description = h.Aciklama
+                    });
+                    degisti = true;
+                }
             }
+
+            if (degisti)
+                await db.SaveChangesAsync();
         }
 
         // ═══════════════════════════════════════════════════════

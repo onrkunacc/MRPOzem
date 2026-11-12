@@ -1,0 +1,241 @@
+﻿@model CRMOzem.Core.ViewModels.OnayBaglamVm
+@{
+    ViewData["Title"] = "Ekip İzin Talebi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var t = Model.Talep!;
+    var benimKararim = t.Status?.Code == "Pending";
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    .dt-satir {
+        display: grid; grid-template-columns: 160px 1fr; gap: 14px;
+        padding: 11px 0; border-bottom: 1px solid var(--kt-border); font-size: 13.5px;
+    }
+        .dt-satir:last-child { border-bottom: none; }
+        .dt-satir .et { color: var(--kt-ink-500); font-size: 12px; }
+        .dt-satir .dg { color: var(--kt-ink-900); font-weight: 600; }
+
+    @@media (max-width: 560px) {
+        .dt-satir { grid-template-columns: 1fr; gap: 2px; }
+    }
+</style>
+
+<div class="kt-page">
+
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-user-check"></i></div>
+                <div>
+                    <h1>@(t.User?.FullName ?? "—")</h1>
+                    <p>
+                        @(t.User?.Title ?? "—")
+                        @if (!string.IsNullOrWhiteSpace(t.User?.Departman))
+                        {
+                            <text> · @t.User.Departman</text>
+                        }
+                        · İZN-@t.Id.ToString("D5")
+                    </p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> Ekip İzinleri
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-check" style="color:var(--kt-pos); margin-right:7px;"></i>@TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 18px; font-size:13.5px;">
+            <i class="fas fa-circle-exclamation" style="color:var(--kt-neg); margin-right:7px;"></i>@TempData["Error"]
+        </div>
+    }
+
+    @* ═══ TALEP BİLGİLERİ ═══ *@
+    <div class="kt-card" style="margin-bottom:16px;">
+        <div class="kt-section section-primary">
+            <div class="kt-section-icon"><i class="fas fa-calendar-days"></i></div>
+            <div>
+                <span class="kt-section-title">Talep</span>
+                <span class="kt-section-desc">@t.CreatedAt.ToString("dd MMMM yyyy HH:mm", tr) tarihinde oluşturuldu</span>
+            </div>
+        </div>
+
+        <div class="dt-satir">
+            <span class="et">İzin Türü</span>
+            <span class="dg">
+                @t.LeaveType?.Name
+                @if (t.LeaveType != null && !t.LeaveType.IsDeductedFromQuota)
+                {
+                    <span class="kt-tag" style="margin-left:6px;">yıllık haktan düşmez</span>
+                }
+            </span>
+        </div>
+        <div class="dt-satir">
+            <span class="et">Tarih Aralığı</span>
+            <span class="dg">
+                @t.StartDate.ToString("dd MMMM yyyy", tr) (@t.StartDate.ToString("dddd", tr))
+                →
+                @t.EndDate.ToString("dd MMMM yyyy", tr) (@t.EndDate.ToString("dddd", tr))
+            </span>
+        </div>
+        <div class="dt-satir">
+            <span class="et">Süre</span>
+            <span class="dg">
+                @t.TotalDays iş günü
+                <span style="font-weight:400; color:var(--kt-ink-500);">
+                    (@((t.EndDate.Date - t.StartDate.Date).Days + 1) takvim günü)
+                </span>
+                @if (t.SaturdayExcluded)
+                {
+                    <div style="font-size:11.5px; color:var(--kt-ink-500); font-weight:400; margin-top:2px;">
+                        Cumartesi günleri sayılmadı
+                    </div>
+                }
+            </span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(t.Reason))
+        {
+            <div class="dt-satir">
+                <span class="et">Çalışanın Açıklaması</span>
+                <span class="dg" style="font-weight:400;">@t.Reason</span>
+            </div>
+        }
+    </div>
+
+    @* ═══ ONAY BAĞLAMI ═══ *@
+    @await Html.PartialAsync("~/Views/Shared/_OnayBaglami.cshtml", Model)
+
+    @* ═══ EYLEM ═══ *@
+    @if (benimKararim)
+    {
+        <div class="kt-card" style="margin-top:16px;">
+            <div style="font-size:13px; color:var(--kt-ink-500); margin-bottom:12px;">
+                Onayladığınızda talep İnsan Kaynakları'nın nihai onayına geçer.
+                Reddettiğinizde talep doğrudan kapanır ve gerekçeniz çalışana görünür.
+            </div>
+            <div class="kt-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> Vazgeç
+                </a>
+                <button type="button" class="kt-btn kt-btn-danger" onclick="redAc()">
+                    <i class="fas fa-xmark"></i> Reddet
+                </button>
+                <button type="button" class="kt-btn kt-btn-success" onclick="onayAc()">
+                    <i class="fas fa-check"></i> Onayla ve İK'ya Gönder
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="kt-card" style="margin-top:16px;">
+            <div class="kt-hint">
+                <i class="fas fa-circle-info"></i>
+                Bu talep artık sizin kararınızı beklemiyor — durumu: <strong>@t.Status?.Name</strong>
+            </div>
+            <div class="kt-actions">
+                <a asp-action="Index" class="kt-btn kt-btn-ghost">
+                    <i class="fas fa-arrow-left"></i> Ekip İzinleri
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@if (benimKararim)
+{
+    // ── Onay modalı ──
+    <div class="kt-modal-backdrop" id="onayModal">
+        <div class="kt-modal kt-modal-sm">
+            <div class="kt-modal-head">
+                <h5 class="kt-modal-title"><i class="fas fa-check" style="color:var(--kt-pos);"></i> Talebi Onayla</h5>
+                <button type="button" class="kt-modal-close" onclick="onayKapat()">&times;</button>
+            </div>
+            <form asp-action="Onayla" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@t.Id" />
+                <input type="hidden" name="donus" value="detay" />
+                <div class="kt-modal-body">
+                    <p style="font-size:13px; color:var(--kt-ink-700); margin:0 0 12px;">
+                        <strong>@t.User?.FullName</strong> için
+                        <strong>@t.StartDate.ToString("dd.MM.yyyy") – @t.EndDate.ToString("dd.MM.yyyy")</strong>
+                        arası <strong>@t.TotalDays iş günü</strong> izin onaylanacak ve talep
+                        İnsan Kaynakları onayına geçecek.
+                    </p>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Onay Notu</label>
+                        <textarea name="not" class="kt-textarea" rows="2"
+                                  placeholder="İnsan Kaynakları ve çalışan bu notu görecek (opsiyonel)"></textarea>
+                    </div>
+                </div>
+                <div class="kt-modal-foot">
+                    <button type="button" class="kt-btn kt-btn-ghost" onclick="onayKapat()">Vazgeç</button>
+                    <button type="submit" class="kt-btn kt-btn-success">
+                        <i class="fas fa-check"></i> Onayla ve İK'ya Gönder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    // ── Red modalı ──
+    <div class="kt-modal-backdrop" id="redModal">
+        <div class="kt-modal kt-modal-sm">
+            <div class="kt-modal-head">
+                <h5 class="kt-modal-title"><i class="fas fa-ban" style="color:var(--kt-neg);"></i> Talebi Reddet</h5>
+                <button type="button" class="kt-modal-close" onclick="redKapat()">&times;</button>
+            </div>
+            <form asp-action="Reddet" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@t.Id" />
+                <input type="hidden" name="donus" value="detay" />
+                <div class="kt-modal-body">
+                    <p style="font-size:13px; color:var(--kt-ink-500); margin:0 0 12px;">
+                        <strong style="color:var(--kt-ink-900);">@t.User?.FullName</strong> adlı çalışanın
+                        talebi reddedilecek. Talep İnsan Kaynakları'na gitmeden kapanır.
+                    </p>
+                    <div class="kt-form-group">
+                        <label class="kt-label">Red Gerekçesi <span class="req">*</span></label>
+                        <textarea name="gerekce" class="kt-textarea" rows="3" required
+                                  placeholder="Çalışan bu açıklamayı görecek"></textarea>
+                    </div>
+                </div>
+                <div class="kt-modal-foot">
+                    <button type="button" class="kt-btn kt-btn-ghost" onclick="redKapat()">Vazgeç</button>
+                    <button type="submit" class="kt-btn kt-btn-danger"><i class="fas fa-ban"></i> Reddet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    function onayAc() { var m = document.getElementById('onayModal'); if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; } }
+    function onayKapat() { var m = document.getElementById('onayModal'); if (m) { m.classList.remove('open'); document.body.style.overflow = ''; } }
+    function redAc() { var m = document.getElementById('redModal'); if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; } }
+    function redKapat() { var m = document.getElementById('redModal'); if (m) { m.classList.remove('open'); document.body.style.overflow = ''; } }
+
+    ['onayModal', 'redModal'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', function (e) {
+            if (e.target.id === id) { onayKapat(); redKapat(); }
+        });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { onayKapat(); redKapat(); }
+    });
+</script>
+}
