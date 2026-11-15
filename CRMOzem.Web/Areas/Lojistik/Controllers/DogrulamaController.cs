@@ -13,13 +13,19 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
     {
         private readonly IDogrulamaService _service;
         private readonly ISiparisApiClient _siparisApi;
+        private readonly ISiparisSyncService _sync;
         private readonly ApplicationDbContext _db;
 
-        public DogrulamaController(IDogrulamaService service,ISiparisApiClient siparisApi,ApplicationDbContext db)
+        public DogrulamaController(
+            IDogrulamaService service,
+            ISiparisApiClient siparisApi,
+            ISiparisSyncService sync,
+            ApplicationDbContext db)
         {
             _service = service;
             _siparisApi = siparisApi;
-            _db = db;   
+            _sync = sync;
+            _db = db;
         }
 
         // ═══════════════════════════════════════════════════════════
@@ -105,7 +111,103 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 return RedirectToAction(nameof(Index));
             }
             var adet = await _service.TopluOnaylaAynenAsync(talepIds, User.Identity?.Name, ct);
-            TempData["SuccessMessage"] = $"{adet} talep aynen onaylandı.";
+            TempData["SuccessMessage"] = $"{adet} talep, istenen miktarlarla onaylandı.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  ESKİ BEKLEYENLERİ KAPAT
+        //  Doğrulama yapılmadan gönderilmiş eski siparişleri kuyruktan
+        //  çıkarır ("Gönderildi" durumuna alır). Sipariş yazılımına
+        //  dokunmaz.
+        // ═══════════════════════════════════════════════════════════
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EskileriKapat(int gun, CancellationToken ct)
+        {
+            if (gun != 7 && gun != 15 && gun != 30) gun = 15;
+
+            var adet = await _service.EskiBekleyenleriKapatAsync(gun, User.Identity?.Name, ct);
+            TempData["SuccessMessage"] = adet > 0
+                ? $"{gun} günden eski {adet} talep kuyruktan çıkarıldı (\"Gönderildi\" olarak işaretlendi). \"Tümü\" sekmesinde görünmeye devam eder."
+                : $"{gun} günden eski bekleyen talep yok.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  ONAYLA — tek buton
+        //  Ekrandaki miktarlarla onaylar. Hiçbir miktar değişmediyse
+        //  "aynen", değiştiyse "düzeltildi" — ayrımı servis yapar.
+        // ═══════════════════════════════════════════════════════════
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Onayla(OnayPostDto dto, CancellationToken ct)
+        {
+            var (ok, msg) = await _service.OnaylaDuzeltilmisAsync(dto, User.Identity?.Name, ct);
+            if (ok) TempData["SuccessMessage"] = msg;
+            else TempData["Error"] = msg;
+
+            // Onaylandıysa sıradaki bekleyen talebe geç — kuyruğu hızlı eritmek için
+            if (ok)
+            {
+                var siradaki = await _db.SiparisTalepler.AsNoTracking()
+                    .Where(t => t.Durum == CRMOzem.Core.Enums.SiparisTalepDurumu.Beklemede)
+                    .OrderBy(t => t.TalepTarihi)
+                    .Select(t => (int?)t.ID)
+                    .FirstOrDefaultAsync(ct);
+
+                if (siradaki.HasValue)
+                {
+                    TempData["SuccessMessage"] = msg + " Sıradaki talep açıldı.";
+                    return RedirectToAction(nameof(Detay), new { id = siradaki.Value });
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            return RedirectToAction(nameof(Detay), new { id = dto.TalepID });
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  SİPARİŞLERİ ÇEK — sipariş yazılımından yeni talepler
+        //  (Eskiden yalnızca "Hastane Eşleşmesi" sayfası açılınca tetikleniyordu.)
+        // ═══════════════════════════════════════════════════════════
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SiparisleriCek(CancellationToken ct)
+        {
+            var sonuc = await _sync.SyncAsync(ct);
+
+            if (sonuc.Basarili)
+            {
+                var mesaj = "Siparişler çekildi · " + sonuc.Ozet;
+                if (!string.IsNullOrEmpty(sonuc.AmbalajOzeti))
+                    mesaj += " · Ambalaj: " + sonuc.AmbalajOzeti;
+                if (sonuc.EslesmeyenMusteriler.Count > 0)
+                    mesaj += $" · {sonuc.EslesmeyenMusteriler.Count} müşteri kodu hastaneyle eşleştirilmemiş";
+
+                TempData["SuccessMessage"] = mesaj;
+            }
+            else
+            {
+                TempData["Error"] = "Siparişler çekilemedi: " + (sonuc.HataMesaji ?? "bilinmeyen hata");
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  YENİDEN EŞLEŞTİR — bekleyen kalemleri katalogla tekrar eşle
+        // ═══════════════════════════════════════════════════════════
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> YenidenEslestir(CancellationToken ct)
+        {
+            var sonuc = await _sync.YenidenEslestirAsync(ct);
+
+            if (sonuc.Basarili) TempData["SuccessMessage"] = "Yeniden eşleştirildi · " + sonuc.Ozet;
+            else TempData["Error"] = "Yeniden eşleştirme başarısız: " + (sonuc.HataMesaji ?? "bilinmeyen hata");
+
             return RedirectToAction(nameof(Index));
         }
 

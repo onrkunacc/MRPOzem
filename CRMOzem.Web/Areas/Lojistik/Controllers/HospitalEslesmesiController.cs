@@ -29,11 +29,14 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 .OrderBy(e => e.InternalHospital!.HospitalName)
                 .ToListAsync(ct);
 
-            var sonuc = await _sync.SyncAsync(ct);
+            // Bağlanmayı bekleyen müşteriler: sipariş yazılımındaki bekleyen
+            // siparişlerle karşılaştırılır. Yalnızca OKUR — bu sayfayı açmak
+            // artık sipariş çekmez, hiçbir kayıt oluşturmaz.
+            var teshis = await _sync.TeshisAsync(ct);
 
             ViewBag.MevcutEslesmeler = mevcutEslesmeler;
-            ViewBag.EslesmeyenMusteriler = sonuc.EslesmeyenMusteriler;
-            ViewBag.SyncSonucOzet = sonuc.Ozet;
+            ViewBag.EslesmeyenMusteriler = teshis.EslesmeyenMusteriler;
+            ViewBag.ApiyeUlasildi = teshis.ApiyeUlasildi;
 
             ViewBag.Hospitals = await _db.Hospitals
                 .AsNoTracking()

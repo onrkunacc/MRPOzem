@@ -1,0 +1,138 @@
+﻿@*
+    ═══════════════════════════════════════════════════════════════
+    LİSTE SAYFALAMA — Lojistik ekranlarının ortak parçası
+    ═══════════════════════════════════════════════════════════════
+    Kullanım:
+        <table class="kt-table" data-sayfala="25"> … </table>
+        @await Html.PartialAsync("_Sayfalama")      (Scripts bölümünde)
+
+    · Süzgeç kullanan ekran satırı gizlemek için  tr.dataset.suz = '0'
+      yazar ve  LjSayfala.yenile(tablo)  çağırır; sayfalama yalnızca
+      süzgeçten geçen satırları sayar.
+    · class="sayfasiz" olan satırlar (ara başlık vb.) sayılmaz.
+    · Tablo olmayan listelerde:  <div data-sayfala="25" data-satir=".satir-sinifi">
+    · Satır sayısı sayfa boyundan azsa hiçbir şey göstermez.
+*@
+<style>
+    .lj-sayfa {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        padding: 10px 16px; border-top: 1px solid var(--kt-border, #e5e7eb);
+        font-size: 12.5px; color: var(--kt-ink-500, #6b7280); background: #fff;
+    }
+    .lj-sayfa .bilgi { margin-right: auto; }
+    .lj-sayfa button {
+        min-width: 32px; height: 30px; padding: 0 8px; border-radius: 6px;
+        border: 1px solid var(--kt-border, #e5e7eb); background: #fff;
+        color: var(--kt-ink-700, #374151); font-size: 12.5px; cursor: pointer;
+    }
+    .lj-sayfa button:hover:not(:disabled) { background: var(--kt-bg, #f8fafc); }
+    .lj-sayfa button.secili { background: var(--kt-primary, #4338ca); border-color: var(--kt-primary, #4338ca); color: #fff; font-weight: 700; }
+    .lj-sayfa button:disabled { opacity: .4; cursor: default; }
+    .lj-sayfa select {
+        height: 30px; border-radius: 6px; border: 1px solid var(--kt-border, #e5e7eb);
+        font-size: 12.5px; padding: 0 6px; background: #fff; color: var(--kt-ink-700, #374151);
+    }
+    .lj-sayfa .nokta { padding: 0 2px; }
+</style>
+<script>
+    (function () {
+        if (window.LjSayfala) return;
+
+        var durumlar = new WeakMap();
+
+        function kur(tablo) {
+            var d = durumlar.get(tablo);
+            if (d) return d;
+
+            var cubuk = document.createElement('div');
+            cubuk.className = 'lj-sayfa';
+            var sarici = tablo.closest('.kt-table-wrap') || tablo;
+            sarici.parentNode.insertBefore(cubuk, sarici.nextSibling);
+
+            d = { sayfa: 1, boy: parseInt(tablo.dataset.sayfala, 10) || 25, cubuk: cubuk };
+            durumlar.set(tablo, d);
+            return d;
+        }
+
+        function dugme(metin, hedef, d, tablo, secili, pasif) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = metin;
+            if (secili) b.className = 'secili';
+            if (pasif) b.disabled = true;
+            b.addEventListener('click', function () { d.sayfa = hedef; ciz(tablo); });
+            return b;
+        }
+
+        function ciz(tablo) {
+            var d = kur(tablo);
+            var hepsi = Array.prototype.slice.call(tablo.querySelectorAll(tablo.dataset.satir || 'tbody > tr'))
+                .filter(function (tr) { return !tr.classList.contains('sayfasiz'); });
+            var uygun = hepsi.filter(function (tr) { return tr.dataset.suz !== '0'; });
+
+            var toplam = uygun.length;
+            var sayfaSayisi = Math.max(1, Math.ceil(toplam / d.boy));
+            if (d.sayfa > sayfaSayisi) d.sayfa = sayfaSayisi;
+            if (d.sayfa < 1) d.sayfa = 1;
+
+            var bas = (d.sayfa - 1) * d.boy, son = bas + d.boy;
+
+            hepsi.forEach(function (tr) { tr.style.display = 'none'; });
+            uygun.forEach(function (tr, i) { tr.style.display = (i >= bas && i < son) ? '' : 'none'; });
+
+            var c = d.cubuk;
+            c.innerHTML = '';
+            if (toplam <= 25) { c.style.display = 'none'; return; }
+            c.style.display = '';
+
+            var bilgi = document.createElement('span');
+            bilgi.className = 'bilgi';
+            bilgi.textContent = (bas + 1) + '–' + Math.min(son, toplam) + ' / ' + toplam + ' kayıt';
+            c.appendChild(bilgi);
+
+            var sec = document.createElement('select');
+            [25, 50, 100].forEach(function (n) {
+                var o = document.createElement('option');
+                o.value = n; o.textContent = n + ' satır';
+                if (n === d.boy) o.selected = true;
+                sec.appendChild(o);
+            });
+            sec.addEventListener('change', function () { d.boy = parseInt(sec.value, 10); d.sayfa = 1; ciz(tablo); });
+            c.appendChild(sec);
+
+            c.appendChild(dugme('‹', d.sayfa - 1, d, tablo, false, d.sayfa === 1));
+
+            var gosterilecek = [];
+            for (var i = 1; i <= sayfaSayisi; i++) {
+                if (i === 1 || i === sayfaSayisi || Math.abs(i - d.sayfa) <= 1) gosterilecek.push(i);
+            }
+            var onceki = 0;
+            gosterilecek.forEach(function (n) {
+                if (n - onceki > 1) {
+                    var nokta = document.createElement('span');
+                    nokta.className = 'nokta'; nokta.textContent = '…';
+                    c.appendChild(nokta);
+                }
+                c.appendChild(dugme(String(n), n, d, tablo, n === d.sayfa, false));
+                onceki = n;
+            });
+
+            c.appendChild(dugme('›', d.sayfa + 1, d, tablo, false, d.sayfa === sayfaSayisi));
+        }
+
+        window.LjSayfala = {
+            yenile: function (tablo) {
+                if (!tablo) return;
+                var d = kur(tablo);
+                d.sayfa = 1;
+                ciz(tablo);
+            }
+        };
+
+        function basla() {
+            document.querySelectorAll('[data-sayfala]').forEach(ciz);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', basla);
+        else basla();
+    })();
+</script>

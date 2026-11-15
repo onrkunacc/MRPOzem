@@ -3,7 +3,7 @@
    v2 — Eşleşmeyen hastaneler için modal: dropdown ile bağla veya yeni ekle
    ═══════════════════════════════════════════════════════════════════════ *@
 @{
-    ViewData["Title"] = "Sayım Eşleşme Raporu";
+    ViewData["Title"] = "Sayım Eşleşmesi";
     Layout = "~/Views/Shared/_Layout.cshtml";
     dynamic m = Model;
     var apiHastaneler = m.ApidenGelenHastaneler as System.Collections.IEnumerable;
@@ -43,8 +43,8 @@
             <div class="kt-header-title">
                 <div class="kt-header-icon"><i class="fas fa-link"></i></div>
                 <div>
-                    <h1>Sayım Eşleşme Raporu</h1>
-                    <p>API'den gelen hastane adları ↔ CRMOzem Hospital tablosu · manuel eşleştirme desteği</p>
+                    <h1>Sayım Eşleşmesi</h1>
+                    <p>Sayım uygulamasındaki hastane adlarını hastanelere bağlayın — bağlı olmayan hastanenin sayımı alınmaz</p>
                 </div>
             </div>
             <div class="kt-header-actions">
@@ -77,9 +77,9 @@
                 <i class="fas fa-triangle-exclamation"></i> @eslesmeyen hastane eşleşmedi
             </div>
             <div style="font-size:12px; color:var(--kt-ink-700);">
-                Her satırın sağındaki dropdown'dan CRMOzem hastanesi seç veya "+" ile yeni hastane ekle.
-                Yoksay'laman gereken (örn. test hastaneleri) için "Yoksay" seçeneğini kullan.
-                Kaydettikten sonra Dashboard'dan "Sayımları Yenile"ye bas.
+                Satırın sağındaki listeden hastaneyi seçin ya da "+" ile yeni hastane ekleyin.
+                Takip edilmeyecek olanlar (örn. deneme hastaneleri) için "Yoksay" kutusunu işaretleyin.
+                Kaydettikten sonra Dashboard'dan "Sayımları Yenile"ye basın.
             </div>
         </div>
     }
@@ -88,25 +88,28 @@
     <div class="kt-card kt-card-flush">
         <div style="padding:14px 20px; border-bottom:1px solid var(--kt-border);">
             <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">
-                API'den Gelen Hastaneler (@(eslesen + eslesmeyen) toplam)
+                Sayım uygulamasındaki hastaneler (@(eslesen + eslesmeyen))
             </div>
             <div style="font-size:11.5px; color:var(--kt-ink-500); margin-top:2px;">
-                🟢 otomatik eşleşti · 🟣 manuel bağlandı · ⚪ yoksay · 🔴 eşleşmedi
+                Eşleşmeyenler en üstte · 🔴 eşleşmedi · 🟢 kendiliğinden eşleşti · 🟣 elle bağlandı · ⚪ yoksay
             </div>
         </div>
 
         <div class="se-row header">
             <div>Durum</div>
-            <div>API Adı</div>
-            <div>→ CRMOzem</div>
+            <div>Sayım uygulamasındaki ad</div>
+            <div>→ Hastane</div>
             <div class="text-end">Satır</div>
             <div class="text-center">Eşleştir / Yoksay</div>
         </div>
 
+        <div data-sayfala="25" data-satir=".se-row:not(.header)">
         @if (apiHastaneler != null)
         {
             int rowIdx = 0;
-            foreach (dynamic h in apiHastaneler)
+            foreach (dynamic h in apiHastaneler.Cast<dynamic>()
+                .OrderBy(x => (bool)x.ManuelYoksay ? 2 : ((bool)x.Eslesti ? 1 : 0))
+                .ThenBy(x => (string)x.ApiHospitalName))
             {
                 var rid = $"row{rowIdx++}";
                 bool esl = (bool)h.Eslesti;
@@ -141,7 +144,7 @@
                     </div>
                     <div style="font-weight:600;">
                         @apiAd
-                        <div style="font-size:10.5px; color:var(--kt-ink-400);">API ID: @h.ApiHospitalId</div>
+                        <div style="font-size:10.5px; color:var(--kt-ink-400);">son sayım: @(((DateTime?)h.ApiSonSayim)?.ToString("dd.MM.yyyy") ?? "—")</div>
                     </div>
                     <div>
                         @if (yoksay)
@@ -151,7 +154,9 @@
                         else if (esl)
                         {
                             <span style="color:var(--kt-ink-900); font-weight:600;">@h.InternalHospitalName</span>
-                            <div style="font-size:10.5px; color:var(--kt-ink-400);">CRMOzem ID: @h.InternalHospitalId</div>
+                            <div style="font-size:10.5px; color:@(((bool)h.BizdeEski) ? "#b45309" : "var(--kt-ink-400)");">
+                                bizdeki son sayım: @(((DateTime?)h.BizdekiSonSayim)?.ToString("dd.MM.yyyy") ?? "yok")@(((bool)h.BizdeEski) ? " — yenisi alınmamış" : "")
+                            </div>
                         }
                         else
                         {
@@ -178,7 +183,7 @@
                                 <i class="fas fa-plus"></i>
                             </button>
                             <label style="display:inline-flex; align-items:center; gap:3px; font-size:11px;">
-                                <input type="checkbox" name="yoksay" value="true" @(yoksay ? "checked" : "") /> Y
+                                <input type="checkbox" name="yoksay" value="true" @(yoksay ? "checked" : "") /> Yoksay
                             </label>
                             <button type="button" class="kt-btn kt-btn-sm kt-btn-primary"
                                     onclick="kaydetEslesme(this.closest('form'))">
@@ -189,23 +194,8 @@
                 </div>
             }
         }
-    </div>
-
-    @* ═════════ CRM HASTANELER (REFERANS) ═════════ *@
-    <details class="kt-card" style="padding:14px 20px;">
-        <summary style="cursor:pointer; font-weight:700; color:var(--kt-ink-900);">
-            <i class="fas fa-list"></i> CRMOzem Hospital Tablosu (referans)
-        </summary>
-        <div style="margin-top:12px; max-height:400px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:6px; font-family:ui-monospace,Menlo,monospace; font-size:11.5px; line-height:1.6;">
-            @if (crmHastaneler != null)
-            {
-                foreach (var h in crmHastaneler)
-                {
-                    <div>@h</div>
-                }
-            }
         </div>
-    </details>
+    </div>
 
 </div>
 
@@ -341,3 +331,5 @@
     };
 })();
 </script>
+
+@await Html.PartialAsync("_Sayfalama")

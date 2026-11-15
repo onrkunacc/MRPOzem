@@ -8,11 +8,7 @@
     var eslesmeyenler = eslesmeyenlerRaw?.Cast<dynamic>().ToList() ?? new List<dynamic>();
 
     var hospitals = ViewBag.Hospitals as IEnumerable<dynamic>;
-    var syncOzet = ViewBag.SyncSonucOzet as string;
-
-    // Debug — görünce bana sayıları söyle (sorun çözüldükten sonra silinecek)
-    var debugTip = ViewBag.EslesmeyenMusteriler?.GetType()?.FullName ?? "NULL";
-    var debugAdet = eslesmeyenler.Count;
+    var apiyeUlasildi = (ViewBag.ApiyeUlasildi as bool?) ?? false;
 }
 
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
@@ -26,15 +22,18 @@
                 <div class="kt-header-icon"><i class="fas fa-link"></i></div>
                 <div>
                     <h1>Hastane Eşleştirme</h1>
-                    <p>PHP sipariş sistemindeki kullanıcıları CRMOzem hastanelerine eşle</p>
+                    <p>Sipariş yazılımındaki müşteri kodlarını hastanelere bağlayın — bağlı olmayan müşterinin siparişi alınmaz</p>
                 </div>
             </div>
             <div class="kt-header-actions">
                 <button type="button" class="kt-btn kt-btn-primary" onclick="openAddHospitalModal(null)">
                     <i class="fas fa-plus"></i> Yeni Hastane
                 </button>
-                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index", "StokOneri")">
-                    <i class="fas fa-arrow-left"></i> Stok Önerileri
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("SayimEslesme", "Dashboard")">
+                    <i class="fas fa-clipboard-list"></i> Sayım Eşleşmesi
+                </a>
+                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index", "Dogrulama")">
+                    <i class="fas fa-arrow-left"></i> Doğrulama
                 </a>
             </div>
         </div>
@@ -53,15 +52,20 @@
         </div>
     }
 
-    <div class="kt-card" style="background:var(--kt-bg); border-style:dashed; padding:12px 18px;">
-        <div style="font-size:13px; color:var(--kt-ink-700);">
-            <i class="fas fa-circle-info" style="margin-right:6px; color:var(--kt-primary);"></i>
-            <strong>Son sync:</strong> @syncOzet
+    @if (!apiyeUlasildi)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-warn); padding:12px 20px; font-size:13px;">
+            <i class="fas fa-plug-circle-xmark" style="color:var(--kt-warn); margin-right:8px;"></i>
+            Sipariş yazılımına şu an ulaşılamıyor; eşleşmeyi bekleyen yeni müşteriler listelenemedi. Mevcut eşleşmeler aşağıda.
         </div>
-        <div style="font-size:11px; color:#9333ea; margin-top:4px;">
-            <strong>DEBUG:</strong> ViewBag tipi = <code>@debugTip</code> · dynamic cast sonrası adet = <strong>@debugAdet</strong>
+    }
+    else if (!eslesmeyenler.Any())
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 20px; font-size:13px;">
+            <i class="fas fa-check-circle" style="color:var(--kt-pos); margin-right:8px;"></i>
+            Bekleyen siparişi olan bütün müşteriler bir hastaneye bağlı.
         </div>
-    </div>
+    }
 
     @* ═════════ EŞLEŞMEYEN MÜŞTERİLER ═════════ *@
     @if (eslesmeyenler.Any())
@@ -70,18 +74,18 @@
             <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px;">
                 <div class="kt-section-icon" style="background:var(--kt-warn);"><i class="fas fa-triangle-exclamation"></i></div>
                 <div>
-                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Eşleşmeyen Müşteriler</div>
-                    <div style="font-size:12px; color:var(--kt-ink-500);">@eslesmeyenler.Count müşteri eşleştirilmemiş · bu müşterilerden gelen siparişler sync'e dahil edilmiyor</div>
+                    <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Bağlanmayı Bekleyen Müşteriler</div>
+                    <div style="font-size:12px; color:var(--kt-ink-500);">@eslesmeyenler.Count müşteri bir hastaneye bağlı değil · bağlanana kadar siparişleri alınmaz</div>
                 </div>
             </div>
 
             <div class="kt-table-wrap">
-                <table class="kt-table">
+                <table class="kt-table" data-sayfala="25">
                     <thead>
                         <tr>
                             <th>Müşteri Kodu</th>
                             <th>Müşteri Adı</th>
-                            <th>PHP'deki Kurum</th>
+                            <th>Sipariş yazılımındaki kurum</th>
                             <th class="text-center">Sipariş #</th>
                             <th>Eşleştir / Yoksay</th>
                         </tr>
@@ -141,19 +145,19 @@
             <div class="kt-section-icon" style="background:var(--kt-pos);"><i class="fas fa-check-circle"></i></div>
             <div>
                 <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Mevcut Eşleşmeler</div>
-                <div style="font-size:12px; color:var(--kt-ink-500);">@mevcut?.Count() aktif eşleşme</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">@mevcut?.Count() kayıt</div>
             </div>
         </div>
 
         @if (mevcut != null && mevcut.Any())
         {
             <div class="kt-table-wrap">
-                <table class="kt-table">
+                <table class="kt-table" data-sayfala="25">
                     <thead>
                         <tr>
                             <th>Müşteri Kodu</th>
-                            <th>PHP Kurum</th>
-                            <th>→ CRMOzem Hastane</th>
+                            <th>Sipariş yazılımındaki kurum</th>
+                            <th>→ Hastane</th>
                             <th class="text-center">Durum</th>
                             <th>Not</th>
                             <th class="text-center" style="width:1%;"></th>
@@ -335,3 +339,5 @@
         };
     })();
 </script>
+
+@await Html.PartialAsync("_Sayfalama")

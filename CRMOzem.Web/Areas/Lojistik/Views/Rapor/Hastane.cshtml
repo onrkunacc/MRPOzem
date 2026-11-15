@@ -1,0 +1,274 @@
+﻿@model CRMOzem.Core.ViewModels.RaporHastaneVm
+@{
+    var o = Model.Ozet;
+    ViewData["Title"] = o.HospitalName + " — Rapor";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    string DurumText(StokDurumu d) => d switch
+    {
+        StokDurumu.Kritik => "Kritik",
+        StokDurumu.Dusuk => "Düşük",
+        StokDurumu.Izlemede => "İzlemede",
+        StokDurumu.Saglikli => "Yeterli",
+        StokDurumu.Durgun => "Durgun",
+        _ => "—"
+    };
+    string DurumCls(StokDurumu d) => d switch
+    {
+        StokDurumu.Kritik => "kt-badge-danger",
+        StokDurumu.Dusuk => "kt-badge-warning",
+        StokDurumu.Saglikli => "kt-badge-success",
+        _ => "kt-badge-secondary"
+    };
+    string DengeText(DengeDurumu d) => d switch
+    {
+        DengeDurumu.Dengeli => "Gönderim ile kullanım dengeli",
+        DengeDurumu.Birikiyor => "Kullanılandan fazla gönderilmiş — stok birikiyor",
+        DengeDurumu.Eriyor => "Gönderilenden fazla kullanılmış — stok eriyor",
+        _ => "Bu dönemde kullanım girişi yok"
+    };
+    string Sayi(decimal d) => d.ToString("N0", tr);
+
+    var enBuyukAy = Math.Max(1m, Model.Aylar.Count == 0 ? 1m : Model.Aylar.Max(a => Math.Max(a.GonderilenKutu, a.KullanilanKutu)));
+}
+
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    .rp-grafik { display: flex; align-items: flex-end; gap: 14px; height: 210px; padding: 26px 4px 0; overflow-x: auto; }
+    .rp-ay { flex: 1; min-width: 54px; display: flex; flex-direction: column; align-items: center; height: 100%; }
+    .rp-ay .sutunlar { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; border-bottom: 1px solid var(--kt-border); }
+    .rp-ay .sutun { width: 18px; border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+    .rp-ay .sutun.g { background: #4338ca; }
+    .rp-ay .sutun.k { background: #0891b2; }
+    .rp-ay .sutun.yok { background: repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 3px, #fff 3px, #fff 6px); height: 26px !important; }
+    .rp-ay .sutun span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--kt-ink-500); white-space: nowrap; }
+    .rp-ay .ad { font-size: 11px; color: var(--kt-ink-500); margin-top: 6px; white-space: nowrap; }
+    .rp-aciklama { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--kt-ink-500); margin-top: 12px; }
+    .rp-aciklama i { margin-right: 5px; }
+</style>
+
+<div class="kt-page">
+
+    <div class="kt-header">
+        <div class="kt-header-inner">
+            <div class="kt-header-title">
+                <div class="kt-header-icon"><i class="fas fa-hospital"></i></div>
+                <div>
+                    <h1>@o.HospitalName</h1>
+                    <p>
+                        @(o.SonSayimTarihi.HasValue ? $"Son sayım {o.SonSayimTarihi:dd.MM.yyyy}" : "Fiziki sayım yok")
+                        ·
+                        @(o.KullanimSonAy.HasValue ? $"kullanım girişi {o.KullanimSonAy.Value.ToString("MMMM yyyy", tr)}'e kadar" : "kullanım girişi yok")
+                    </p>
+                </div>
+            </div>
+            <div class="kt-header-actions">
+                <form method="get" style="display:inline-flex; align-items:center; gap:6px;">
+                    <span style="font-size:12px; color:var(--kt-ink-500);">Dönem</span>
+                    <select name="ay" class="kt-select" style="width:120px;" onchange="this.form.submit()">
+                        @foreach (var a in new[] { 3, 6, 12 })
+                        {
+                            <option value="@a" selected="@(a == Model.DonemAy)">Son @a ay</option>
+                        }
+                    </select>
+                </form>
+                <a class="kt-btn kt-btn-ghost" asp-controller="StokOneri" asp-action="HastaneDetay" asp-route-id="@o.HospitalID">
+                    <i class="fas fa-boxes-stacked"></i> Sipariş Önerisi
+                </a>
+                <a class="kt-btn kt-btn-ghost" asp-action="Index" asp-route-ay="@Model.DonemAy">
+                    <i class="fas fa-arrow-left"></i> Tüm Hastaneler
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @* ═══ ÖZET ═══ *@
+    <div class="kt-kpi-grid">
+        <div class="kt-kpi accent-dark">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Eldeki Stok</div>
+                <div class="kt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Sayi(o.StokKutu)</div>
+            <div class="kt-kpi-foot">kutu · @o.UrunSayisi ürün</div>
+        </div>
+        <div class="kt-kpi accent-warn">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Kaç Ay Yeter</div>
+                <div class="kt-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+            </div>
+            <div class="kt-kpi-value">@(o.StokAy.HasValue ? o.StokAy.Value.ToString("0.#", tr) : "—")</div>
+            <div class="kt-kpi-foot">aylık tüketim @o.AylikKutu.ToString("N1", tr) kutu</div>
+        </div>
+        <div class="kt-kpi accent-primary">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Gönderilen</div>
+                <div class="kt-kpi-icon"><i class="fas fa-truck"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Sayi(o.GonderilenKutu)</div>
+            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+        </div>
+        <div class="kt-kpi accent-pos">
+            <div class="kt-kpi-head">
+                <div class="kt-kpi-label">Kullanılan</div>
+                <div class="kt-kpi-icon"><i class="fas fa-vial"></i></div>
+            </div>
+            <div class="kt-kpi-value">@Sayi(o.KullanilanKutu)</div>
+            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+        </div>
+    </div>
+
+    @* ═══ AY AY ═══ *@
+    <div class="kt-card">
+        <div class="kt-flex-between" style="flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">Ay ay gönderim ve kullanım</div>
+            <div style="font-size:12.5px; color:var(--kt-ink-700);">
+                <i class="fas fa-scale-balanced" style="color:var(--kt-ink-400); margin-right:5px;"></i>@DengeText(o.Denge)
+                @if (o.Denge != DengeDurumu.Bilinmiyor)
+                {
+                    <strong style="margin-left:4px;">(@o.FarkKutu.ToString("+#,0;-#,0;0", tr) kutu)</strong>
+                }
+            </div>
+        </div>
+
+        <div class="rp-grafik">
+            @foreach (var a in Model.Aylar)
+            {
+                var gh = (a.GonderilenKutu * 100m / enBuyukAy).ToString("0", inv);
+                var kh = (a.KullanilanKutu * 100m / enBuyukAy).ToString("0", inv);
+
+                <div class="rp-ay">
+                    <div class="sutunlar">
+                        <div class="sutun g" style="height:@gh%" title="Gönderilen: @Sayi(a.GonderilenKutu) kutu"><span>@Sayi(a.GonderilenKutu)</span></div>
+                        @if (a.KullanimGirildi)
+                        {
+                            <div class="sutun k" style="height:@kh%" title="Kullanılan: @Sayi(a.KullanilanKutu) kutu"><span>@Sayi(a.KullanilanKutu)</span></div>
+                        }
+                        else
+                        {
+                            <div class="sutun yok" title="Bu ay için kullanım girişi yapılmamış"></div>
+                        }
+                    </div>
+                    <div class="ad">@a.Ay.ToString("MMM yy", tr)</div>
+                </div>
+            }
+        </div>
+
+        <div class="rp-aciklama">
+            <span><i class="fas fa-square" style="color:#4338ca;"></i>Gönderilen (kutu)</span>
+            <span><i class="fas fa-square" style="color:#0891b2;"></i>Kullanılan (kutu)</span>
+            <span><i class="fas fa-square" style="color:#cbd5e1;"></i>Kullanım girişi yapılmamış ay</span>
+        </div>
+    </div>
+
+    @* ═══ ÜRÜNLER ═══ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--kt-border); display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="margin-right:auto;">
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Ürünler</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">Stoğu en az yetecek olan en üstte</div>
+            </div>
+            <input type="text" id="urunAra" class="kt-input" placeholder="Ürün ara…" style="width:220px;" />
+        </div>
+
+        @if (Model.Urunler.Any())
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" id="urunTablo" data-sayfala="25">
+                    <thead>
+                        <tr>
+                            <th>Ürün</th>
+                            <th class="text-right">Eldeki Stok</th>
+                            <th class="text-right">Aylık Tüketim</th>
+                            <th class="text-center">Kaç Ay Yeter</th>
+                            <th class="text-right">Gönderilen</th>
+                            <th class="text-right">Kullanılan</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model.Urunler)
+                        {
+                            <tr class="rp-urun" data-ara="@((u.UrunAdi + " " + u.ReferenceNumber).ToLower(tr))">
+                                <td class="kt-cell-primary">
+                                    <a asp-action="Urun" asp-route-testId="@u.TestID" style="color:inherit; text-decoration:none;" title="Bu ürün diğer hastanelerde ne kadar var?">
+                                        @u.UrunAdi
+                                    </a>
+                                    @if (!string.IsNullOrWhiteSpace(u.ReferenceNumber))
+                                    {
+                                        <div style="font-size:11px; color:var(--kt-ink-400);">@u.ReferenceNumber</div>
+                                    }
+                                </td>
+                                <td class="text-right"><strong style="@(u.StokKutu < 0 ? "color:var(--kt-neg);" : "")" title="@(u.StokKutu < 0 ? "Kayıtlara göre eksi: gönderim kaydı eksik ya da kullanım fazla girilmiş" : "")">@u.StokKutu.ToString("0.#", tr)</strong> <span class="text-muted" style="font-size:11px;">@u.Birim</span></td>
+                                <td class="text-right">@u.AylikKutu.ToString("0.#", tr)</td>
+                                <td class="text-center">
+                                    @if (u.StokAy.HasValue)
+                                    {
+                                        <strong style="color:@(u.StokAy < 1 ? "var(--kt-neg)" : u.StokAy < 2 ? "var(--kt-warn-700)" : "var(--kt-ink-900)");">@u.StokAy.Value.ToString("0.#", tr) ay</strong>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-right">@u.GonderilenKutu.ToString("0.#", tr)</td>
+                                <td class="text-right">
+                                    @if (u.KullanimTakipli)
+                                    {
+                                        @u.KullanilanKutu.ToString("0.#", tr)
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" title="Bu ürünün kullanımı girilmiyor; tüketim gönderimden tahmin edilir">—</span>
+                                    }
+                                </td>
+                                <td><span class="kt-badge @DurumCls(u.Durum)">@DurumText(u.Durum)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="urunYok" style="display:none; padding:34px 20px; text-align:center; color:var(--kt-ink-400); font-size:13px;">
+                <i class="fas fa-magnifying-glass" style="margin-right:6px;"></i> Aramaya uyan ürün yok
+            </div>
+        }
+        else
+        {
+            <div class="kt-empty">
+                <i class="fas fa-box-open"></i>
+                <p>Bu hastane için hesaplanabilir ürün yok.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+@await Html.PartialAsync("_Sayfalama")
+<script>
+    (function () {
+        var satirlar = Array.prototype.slice.call(document.querySelectorAll('tr.rp-urun'));
+        var ara = document.getElementById('urunAra');
+        var tablo = document.getElementById('urunTablo');
+        var yok = document.getElementById('urunYok');
+
+        function uygula() {
+            var q = ara ? ara.value.trim().toLocaleLowerCase('tr-TR') : '';
+            var gorunen = 0;
+            satirlar.forEach(function (tr) {
+                var ok = !q || (tr.dataset.ara || '').indexOf(q) !== -1;
+                tr.dataset.suz = ok ? '1' : '0';
+                if (ok) gorunen++;
+            });
+            if (tablo) tablo.style.display = gorunen > 0 ? '' : 'none';
+            if (yok) yok.style.display = gorunen > 0 ? 'none' : 'block';
+            if (tablo && window.LjSayfala) window.LjSayfala.yenile(tablo);
+        }
+
+        if (ara) ara.addEventListener('input', uygula);
+    })();
+</script>
+}

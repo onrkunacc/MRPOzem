@@ -70,12 +70,15 @@ namespace CRMOzem.Business.Services
                 .Distinct()
                 .Count();
 
-            var son30GunToplam = tumTalepler
+            var son30GunKalemler = tumTalepler
                 .Where(t => t.OnayTarihi.HasValue && t.OnayTarihi >= son30Gun
                          && (t.Durum == SiparisTalepDurumu.OnaylandiAynen
                           || t.Durum == SiparisTalepDurumu.OnaylandiDuzeltildi))
                 .SelectMany(t => t.Kalemler)
-                .Sum(k => k.OnaylananTest ?? 0);
+                .ToList();
+
+            var son30GunToplam = son30GunKalemler.Sum(k => k.OnaylananTest ?? 0);
+            var son30GunKutu = son30GunKalemler.Sum(OnaylananKutu);
 
             return new DashboardKpiVm
             {
@@ -84,8 +87,25 @@ namespace CRMOzem.Business.Services
                 BuHaftaOnaylanan = buHaftaOnay,
                 BuHaftaReddedilen = buHaftaRed,
                 AktifHastaneSayisi = aktifHastane,
-                Son30GunToplamOnayTest = son30GunToplam
+                Son30GunToplamOnayTest = son30GunToplam,
+                Son30GunToplamOnayKutu = Math.Round(son30GunKutu, 0)
             };
+        }
+
+        /// <summary>
+        /// Onaylanan miktarı sipariş birimine (kutu / flakon / adet) çevirir.
+        /// Onay test cinsinden saklanır; hastanenin istediği birim, talepteki
+        /// test ÷ kutu oranından bulunur.
+        /// </summary>
+        private static decimal OnaylananKutu(SiparisTalepKalem k)
+        {
+            var onay = k.OnaylananTest ?? 0;
+            if (onay <= 0) return 0;
+
+            if (k.HastaneTalepKutu is > 0 && k.HastaneTalepTest > 0)
+                return onay / ((decimal)k.HastaneTalepTest / k.HastaneTalepKutu.Value);
+
+            return onay;
         }
 
         // ═══════════════════════════════════════════════════════════
@@ -222,9 +242,11 @@ namespace CRMOzem.Business.Services
                 uyarilar.Add(new VeriSagligiUyarisiVm
                 {
                     Tur = UyariTuru.SayimYok,
-                    Baslik = $"{sayimYokSayi} eşleşmiş hastanenin hiç sayımı yok",
-                    Aciklama = "Mapping yapıldı ama FizikiSayim kaydı bulunamadı — stok hesabı yapılamaz",
+                    Baslik = $"Sipariş veren {sayimYokSayi} hastanenin sayımı bize düşmemiş",
+                    Aciklama = "Sayım yapılmamış ya da sayım uygulamasındaki hastane adı eşleşmiyor. Stok tahminle hesaplanıyor.",
                     Adet = sayimYokSayi,
+                    AksiyonUrl = "/Lojistik/Dashboard/SayimEslesme",
+                    AksiyonText = "Sayım eşleşmesi",
                     Seviye = "danger"
                 });
             }
@@ -235,8 +257,10 @@ namespace CRMOzem.Business.Services
                 {
                     Tur = UyariTuru.EskiSayim,
                     Baslik = $"{eskiSayimSayi} hastanenin sayımı güncel değil",
-                    Aciklama = "Son fiziki sayım 120+ gün önce — hesaplamalar hatalı olabilir",
+                    Aciklama = "Son fiziki sayım 120 günden eski. Stok tahmini zayıflıyor; yeni sayım planlanmalı.",
                     Adet = eskiSayimSayi,
+                    AksiyonUrl = "/Lojistik/Dashboard/SaglikRaporu",
+                    AksiyonText = "Hangileri?",
                     Seviye = "warn"
                 });
             }
@@ -244,35 +268,64 @@ namespace CRMOzem.Business.Services
             // 2. Negatif stok
             var negatifStokSayisi = await _db.SiparisTalepKalemleri
                 .AsNoTracking()
-                .CountAsync(k => k.HesapGuncelStok < 0, ct);
+                .CountAsync(k => k.HesapGuncelStok < 0
+                              && k.SiparisTalep!.Durum == SiparisTalepDurumu.Beklemede, ct);
 
             if (negatifStokSayisi > 0)
             {
                 uyarilar.Add(new VeriSagligiUyarisiVm
                 {
                     Tur = UyariTuru.NegatifStok,
-                    Baslik = $"{negatifStokSayisi} kalemde hesap stok NEGATİF",
-                    Aciklama = "Kullanım gönderimden fazla — veri girişi hatası olabilir",
+                    Baslik = $"Bekleyen {negatifStokSayisi} kalemde hesaplanan stok eksi çıkıyor",
+                    Aciklama = "Bildirilen kullanım, sayım + gönderimden fazla. Gönderim kaydı eksik ya da kullanım fazla girilmiş olabilir.",
                     Adet = negatifStokSayisi,
+                    AksiyonUrl = "/Lojistik/Dashboard/SaglikRaporu",
+                    AksiyonText = "Hangileri?",
                     Seviye = "danger"
                 });
             }
 
             // 3. Eşleşmeyen reaktif (snapshot var, MappedTestID yok)
+            // Aynı ürün her hastanede ve her lotta ayrı satırdır; satır değil ÜRÜN sayılır.
             var eslesmeyenTest = await _db.FizikiSayimSnapshotlari
                 .AsNoTracking()
-                .CountAsync(s => s.SayimAktifMi
-                              && s.UrunTipi == UrunTipi.Reaktif
-                              && !s.MappedTestID.HasValue, ct);
+                .Where(s => s.SayimAktifMi
+                         && s.UrunTipi == UrunTipi.Reaktif
+                         && !s.MappedTestID.HasValue)
+                .Select(s => s.ReferenceNumber)
+                .Distinct()
+                .CountAsync(ct);
 
             if (eslesmeyenTest > 0)
             {
                 uyarilar.Add(new VeriSagligiUyarisiVm
                 {
                     Tur = UyariTuru.EslesmeyeTest,
-                    Baslik = $"{eslesmeyenTest} reaktif Tests tablosuyla eşleşmedi",
-                    Aciklama = "SutCode normalize kuralı tutmadı — bu reaktifler stok hesabına girmiyor",
+                    Baslik = $"Sayımdaki {eslesmeyenTest} reaktif ürün katalogda bulunamadı",
+                    Aciklama = "Referans numarası Testler listesinde yok. Bu ürünlerin sayımı stok hesabına girmiyor.",
                     Adet = eslesmeyenTest,
+                    AksiyonUrl = "/Lojistik/Dashboard/SaglikRaporu",
+                    AksiyonText = "Hangileri?",
+                    Seviye = "warn"
+                });
+            }
+
+            // 4. Bekleyen siparişlerde katalogla eşleşmeyen ürün
+            var eslesmeyenKalem = await _db.SiparisTalepKalemleri
+                .AsNoTracking()
+                .CountAsync(k => !k.TestID.HasValue
+                              && k.SiparisTalep!.Durum == SiparisTalepDurumu.Beklemede, ct);
+
+            if (eslesmeyenKalem > 0)
+            {
+                uyarilar.Add(new VeriSagligiUyarisiVm
+                {
+                    Tur = UyariTuru.EslesmeyeTest,
+                    Baslik = $"Bekleyen siparişlerde {eslesmeyenKalem} kalem katalogla eşleşmedi",
+                    Aciklama = "Bu kalemler için öneri hesaplanamıyor. Ürünün referans numarası Testler listesine eklenmeli.",
+                    Adet = eslesmeyenKalem,
+                    AksiyonUrl = "/Lojistik/Dogrulama",
+                    AksiyonText = "Doğrulamada gör",
                     Seviye = "warn"
                 });
             }
@@ -303,7 +356,8 @@ namespace CRMOzem.Business.Services
                 Kullanici = t.OnaylayanKullanici,
                 Not = t.OnayNotu,
                 KalemSayisi = t.Kalemler.Count,
-                ToplamOnaylananTest = t.Kalemler.Sum(k => k.OnaylananTest ?? 0)
+                ToplamOnaylananTest = t.Kalemler.Sum(k => k.OnaylananTest ?? 0),
+                ToplamOnaylananKutu = Math.Round(t.Kalemler.Sum(OnaylananKutu), 0)
             }).ToList();
         }
     }

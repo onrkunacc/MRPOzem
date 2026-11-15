@@ -15,13 +15,16 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
         private readonly ILojistikDashboardService _service;
         private readonly ISaglikRaporuService _saglik;
         private readonly IFizikiSayimSyncService _sayimSync;
+        private readonly ISiparisSyncService _siparisSync;
 
         public DashboardController(
             ApplicationDbContext db,
             ILojistikDashboardService service,
             ISaglikRaporuService saglik,
-            IFizikiSayimSyncService sayimSync)
+            IFizikiSayimSyncService sayimSync,
+            ISiparisSyncService siparisSync)
         {
+            _siparisSync = siparisSync;
             _db = db;
             _service = service;
             _saglik = saglik;
@@ -39,6 +42,15 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
         public async Task<IActionResult> SaglikRaporu(CancellationToken ct)
         {
             var vm = await _saglik.UretAsync(ct);
+
+            // Gelmeyen siparişler / düşmeyen sayımlar — iki dış uygulamayla
+            // karşılaştırma. Yalnızca okur; biri cevap vermezse sayfa yine açılır.
+            try { ViewBag.SiparisTeshis = await _siparisSync.TeshisAsync(ct); }
+            catch { ViewBag.SiparisTeshis = null; }
+
+            try { ViewBag.SayimRapor = await _sayimSync.TestEslesmeAsync(ct); }
+            catch { ViewBag.SayimRapor = null; }
+
             return View(vm);
         }
 
@@ -47,27 +59,33 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
         // ═══════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SayimlariYenile(CancellationToken ct)
+        public async Task<IActionResult> SayimlariYenile(string? donus, CancellationToken ct)
         {
             var sonuc = await _sayimSync.SyncAsync(hospitalId: null, ct);
 
             if (sonuc.Basarili)
             {
-                var mesaj = $"Sayım sync başarılı · Çekilen: {sonuc.CekilenSatir} satır · " +
-                            $"Yeni: {sonuc.YeniEklenen} · Güncellenen: {sonuc.Guncellenen} · " +
-                            $"Reaktif eşleşen: {sonuc.ReaktifEslesen} · Reaktif eşleşmeyen: {sonuc.ReaktifEslesemeyen}";
+                var mesaj = $"Sayımlar alındı: {sonuc.CekilenSatir} satır okundu, " +
+                            $"{sonuc.YeniEklenen} yeni, {sonuc.Guncellenen} güncellendi.";
+
+                if (sonuc.KapatilanEskiSatir > 0)
+                    mesaj += $" Yerine yenisi gelen {sonuc.KapatilanEskiSatir} eski sayım satırı kapatıldı.";
+
+                if (sonuc.ReaktifEslesemeyen > 0)
+                    mesaj += $" {sonuc.ReaktifEslesemeyen} reaktif satırı katalogda bulunamadı.";
 
                 if (sonuc.EslesemeyenHastaneler.Any())
-                    mesaj += $" · ⚠ {sonuc.EslesemeyenHastaneler.Count} hastane adı eşleşmedi";
+                    mesaj += $" ⚠ {sonuc.EslesemeyenHastaneler.Count} hastane adı eşleşmediği için " +
+                             $"{sonuc.AtlanilanHastaneSizKayit} satır alınamadı — Veri Kontrol ekranına bakın.";
 
                 TempData["SuccessMessage"] = mesaj;
             }
             else
             {
-                TempData["Error"] = $"Sayım sync HATASI: {sonuc.HataMesaji}";
+                TempData["Error"] = $"Sayımlar alınamadı: {sonuc.HataMesaji}";
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(donus == nameof(SaglikRaporu) ? nameof(SaglikRaporu) : nameof(Index));
         }
 
         // ═══════════════════════════════════════════════════════════

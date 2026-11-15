@@ -32,6 +32,7 @@ namespace CRMOzem.Business.Services
             vm.Kontroller.Add(await K05_OluMappingler(ct));
             vm.Kontroller.Add(await K06_UcSapmalar(ct));
             vm.Kontroller.Add(await K07_DonemUyumsuzlugu(ct));
+            vm.Kontroller.Add(await K08_KullanimGirisiGeride(ct));
 
             return vm;
         }
@@ -45,34 +46,45 @@ namespace CRMOzem.Business.Services
             var k = new SaglikKontrolVm
             {
                 Kod = "K01",
-                Kategori = "Mapping",
-                Baslik = "Reaktif ürün → Test eşleşmesi",
-                Aciklama = "Fiziki sayımda görünen reaktif ürünlerin Tests tablosundaki SutCode ile eşleşip eşleşmediği kontrol edilir.",
-                CozumOnerisi = "Bu reaktifler stok hesabına girmez. Tests tablosunda SutCode değerini kontrol et — leading-zero farkı normalize ediliyor ama farklı yazım varsa (örn. 'E124' vs '01E0124') eşleşme olmaz.",
+                Kategori = "Eşleştirme",
+                Baslik = "Sayımda olup katalogda bulunmayan reaktifler",
+                Aciklama = "Sayımda görünen reaktif ürünün referans numarası Testler listesinde yoksa o ürünün sayımı stok hesabına girmez.",
+                CozumOnerisi = "Testler listesinde ürünün referans (SUT) kodunu kontrol edin. Tire, nokta, boşluk ve baştaki sıfır farkları artık sorun değil; kodun kendisi farklıysa ya da ürün listede hiç yoksa eklenmeli. Düzelttikten sonra Dashboard'dan \"Sayımları Yenile\" deyin.",
                 AksiyonUrl = "/Istatistik/Test/Index",
-                AksiyonText = "Testleri Göster"
+                AksiyonText = "Testler listesi"
             };
 
-            var eslesmeyenler = await _db.FizikiSayimSnapshotlari
+            var ham = await _db.FizikiSayimSnapshotlari
                 .AsNoTracking()
                 .Where(s => s.SayimAktifMi
                          && s.UrunTipi == UrunTipi.Reaktif
                          && !s.MappedTestID.HasValue)
                 .Select(s => new { s.ProductName, s.ReferenceNumber, s.HospitalID })
-                .Take(100)
                 .ToListAsync(ct);
 
-            k.BulguAdeti = eslesmeyenler.Count;
-            if (eslesmeyenler.Count == 0)
+            // Aynı ürün her hastanede ve her lotta ayrı satırdır — ürün bazında topla
+            var urunler = ham
+                .GroupBy(x => (x.ReferenceNumber ?? "").Trim().ToUpperInvariant())
+                .Select(g => new
+                {
+                    Ref = g.Key,
+                    Ad = g.First().ProductName,
+                    Hastane = g.Select(x => x.HospitalID).Distinct().Count()
+                })
+                .OrderByDescending(x => x.Hastane)
+                .ToList();
+
+            k.BulguAdeti = urunler.Count;
+            if (urunler.Count == 0)
             {
                 k.Durum = KontrolDurumu.Gecti;
             }
             else
             {
-                k.Durum = eslesmeyenler.Count > 10 ? KontrolDurumu.Hata : KontrolDurumu.Dikkat;
-                k.BulguDetaylar = eslesmeyenler
+                k.Durum = urunler.Count > 10 ? KontrolDurumu.Hata : KontrolDurumu.Dikkat;
+                k.BulguDetaylar = urunler
                     .Take(20)
-                    .Select(x => $"{x.ProductName} · Ref: {x.ReferenceNumber ?? "—"} · Hastane #{x.HospitalID}")
+                    .Select(x => $"{x.Ad} · Ref: {(x.Ref.Length > 0 ? x.Ref : "—")} · {x.Hastane} hastanede")
                     .ToList();
             }
 
@@ -91,17 +103,18 @@ namespace CRMOzem.Business.Services
                 Kod = "K02",
                 Kategori = "Hesaplama",
                 Baslik = "Negatif güncel stok",
-                Aciklama = "Hesap stok (sayım + gönderim − kullanım) negatif çıkan kalemler. Kullanım, gönderimden fazla kayıt edilmiş demektir.",
-                CozumOnerisi = "İlgili hastane için İstatistik girişlerini kontrol et — hastane sayımdan sonra fazla kullanım bildirilmiş olabilir, veya gönderim kaydı eksiktir.",
-                AksiyonUrl = "/Lojistik/StokOneri/Index",
-                AksiyonText = "Stok Öneri Ekranı"
+                Aciklama = "Bekleyen siparişlerde hesaplanan stok (sayım + gönderim − kullanım) eksi çıkan kalemler. Kâğıt üzerinde olmayan ürün kullanılmış görünüyor.",
+                CozumOnerisi = "Hastanenin gönderim kayıtlarını ve İstatistik (kullanım) girişlerini karşılaştırın: ya bir gönderim kaydı eksik ya da kullanım fazla girilmiş. Raporlama ekranında hastanenin gönderim–kullanım dengesine bakabilirsiniz.",
+                AksiyonUrl = "/Lojistik/Rapor",
+                AksiyonText = "Raporlama"
             };
 
             var negatifler = await _db.SiparisTalepKalemleri
                 .AsNoTracking()
                 .Include(x => x.SiparisTalep)
                 .ThenInclude(t => t!.Hospital)
-                .Where(x => x.HesapGuncelStok < 0)
+                .Where(x => x.HesapGuncelStok < 0
+                         && x.SiparisTalep!.Durum == SiparisTalepDurumu.Beklemede)
                 .Select(x => new
                 {
                     x.ProductName,
@@ -109,7 +122,6 @@ namespace CRMOzem.Business.Services
                     x.HesapGuncelStok,
                     HospitalName = x.SiparisTalep!.Hospital!.HospitalName
                 })
-                .Take(50)
                 .ToListAsync(ct);
 
             k.BulguAdeti = negatifler.Count;
@@ -122,7 +134,7 @@ namespace CRMOzem.Business.Services
                 k.Durum = KontrolDurumu.Hata;
                 k.BulguDetaylar = negatifler
                     .Take(20)
-                    .Select(x => $"{x.HospitalName} · {x.ProductName} · Stok: {x.HesapGuncelStok}")
+                    .Select(x => $"{x.HospitalName} · {x.ProductName} · hesaplanan stok: {x.HesapGuncelStok:N0} test")
                     .ToList();
             }
 
@@ -141,8 +153,10 @@ namespace CRMOzem.Business.Services
                 Kod = "K03",
                 Kategori = "Veri bütünlüğü",
                 Baslik = "Fiziki sayım güncelliği",
-                Aciklama = "Mapping'li hastaneler için son sayım tarihinin 120 günden eski olup olmadığı veya hiç sayım kaydı bulunmadığı kontrol edilir.",
-                CozumOnerisi = "Eski sayım olan hastanelerde yeni sayım planla — stok hesabı güvenilir değil. Operasyon kuralı: her hastane 3 ayda bir sayılır."
+                Aciklama = "Sipariş veren hastanelerde son sayım 120 günden eski mi, ya da hiç sayım kaydı yok mu?",
+                CozumOnerisi = "Sayımı eski hastanelerde yeni sayım planlayın (kural: 3 ayda bir). \"Hiç sayım kaydı yok\" görünen hastanede sayım yapıldıysa sorun eşleşmededir: aşağıdaki \"Düşmeyen sayımlar\" bölümüne bakın.",
+                AksiyonUrl = "/Lojistik/Dashboard/SayimEslesme",
+                AksiyonText = "Sayım eşleşmesi"
             };
 
             var sinir = DateTime.Now.AddDays(-120);
@@ -212,9 +226,9 @@ namespace CRMOzem.Business.Services
             {
                 Kod = "K04",
                 Kategori = "Veri bütünlüğü",
-                Baslik = "Onaylanmış ama kalem miktarı 0/null olanlar",
-                Aciklama = "Durumu 'Onaylandı' olan taleplerde her kalemin OnaylananTest > 0 olması gerekir. 0 veya null kalanlar bug sinyali.",
-                CozumOnerisi = "Doğrulama ekranında ilgili talebi tekrar aç, miktarları gözden geçir. Düzeltilmiş onay akışında bir sorun olabilir."
+                Baslik = "Onaylanmış ama miktarı kaydedilmemiş kalemler",
+                Aciklama = "Onaylanan siparişte her kalemin onay miktarı kayıtlı olmalı. Miktarı bilerek 0 yapılan (gönderilmeyecek) kalemler sorun sayılmaz; burada yalnızca miktarı hiç yazılmamış olanlar listelenir.",
+                CozumOnerisi = "Bu kayıtlar eski sürümde onaylanmış olabilir. Sayıları azsa yok sayılabilir; \"yolda\" hesabına girmezler."
             };
 
             var hatalilar = await _db.SiparisTalepKalemleri
@@ -223,7 +237,7 @@ namespace CRMOzem.Business.Services
                 .ThenInclude(t => t!.Hospital)
                 .Where(x => (x.SiparisTalep!.Durum == SiparisTalepDurumu.OnaylandiAynen
                           || x.SiparisTalep.Durum == SiparisTalepDurumu.OnaylandiDuzeltildi)
-                         && (!x.OnaylananTest.HasValue || x.OnaylananTest == 0))
+                         && !x.OnaylananTest.HasValue)
                 .Select(x => new
                 {
                     x.SiparisTalepID,
@@ -231,7 +245,6 @@ namespace CRMOzem.Business.Services
                     HospitalName = x.SiparisTalep!.Hospital!.HospitalName,
                     x.OnaylananTest
                 })
-                .Take(50)
                 .ToListAsync(ct);
 
             k.BulguAdeti = hatalilar.Count;
@@ -244,7 +257,7 @@ namespace CRMOzem.Business.Services
                 k.Durum = KontrolDurumu.Dikkat;
                 k.BulguDetaylar = hatalilar
                     .Take(20)
-                    .Select(x => $"Talep #{x.SiparisTalepID} · {x.HospitalName} · {x.ProductName} · OnaylananTest: {x.OnaylananTest?.ToString() ?? "null"}")
+                    .Select(x => $"Talep #{x.SiparisTalepID} · {x.HospitalName} · {x.ProductName}")
                     .ToList();
             }
 
@@ -261,10 +274,10 @@ namespace CRMOzem.Business.Services
             var k = new SaglikKontrolVm
             {
                 Kod = "K05",
-                Kategori = "Mapping",
-                Baslik = "Ölü mapping — uzun süredir sipariş yok",
-                Aciklama = "Aktif eşleştirilmiş olduğu halde 90 günden uzun süredir hiç sipariş gelmeyen müşteri kodları.",
-                CozumOnerisi = "Bu müşteriler sipariş vermeyi bırakmış olabilir, veya musteri_kodu değişmiş olabilir. İlgili hastaneye sor; gerekiyorsa Yoksay işaretle.",
+                Kategori = "Eşleştirme",
+                Baslik = "Uzun süredir sipariş gelmeyen hastaneler",
+                Aciklama = "Sipariş yazılımıyla eşleştirilmiş ama 90 günden uzun süredir siparişi görünmeyen müşteri kodları.",
+                CozumOnerisi = "Hastane sipariş vermeyi bırakmış ya da sipariş yazılımındaki müşteri kodu değişmiş olabilir. Kod değiştiyse yeni kodu Hastane Eşleşmesi ekranında bağlayın; aşağıdaki \"Gelmeyen siparişler\" bölümü yeni kodu gösterir.",
                 AksiyonUrl = "/Lojistik/HospitalEslesmesi/Index",
                 AksiyonText = "Eşleştirmeyi Düzenle"
             };
@@ -331,9 +344,11 @@ namespace CRMOzem.Business.Services
             {
                 Kod = "K06",
                 Kategori = "Hesaplama",
-                Baslik = "Aşırı uç sapma — veri girişi hatası sinyali",
-                Aciklama = "Bekleyen taleplerde SapmaYuzde > %300 (veya < -%95) olan kalemler. Normalde bu sapmalar fiziksel olarak anlamsız — veri hatası demek.",
-                CozumOnerisi = "İlgili kalemde: ambalaj yanlış mı (adet/kutu karışmış mı), KutuBasinaAdet doğru mu, hastane yanlış sayı mı yazdı?"
+                Baslik = "Öneriden çok uzak istekler",
+                Aciklama = "Bekleyen siparişlerde istenen miktar önerinin 4 katından fazla (ya da neredeyse hiç) olan kalemler. Çoğu zaman gerçek ihtiyaç değil, birim ya da veri hatasıdır.",
+                CozumOnerisi = "Kalemde şunlara bakın: kutu yerine adet (ya da tersi) mi yazılmış, Testler listesindeki \"kutu başına adet\" doğru mu, hastane yanlış sayı mı girmiş?",
+                AksiyonUrl = "/Lojistik/Dogrulama",
+                AksiyonText = "Doğrulama"
             };
 
             var sapanlar = await _db.SiparisTalepKalemleri
@@ -367,7 +382,7 @@ namespace CRMOzem.Business.Services
                     .Take(20)
                     .Select(x =>
                         $"Talep #{x.SiparisTalepID} · {x.HospitalName} · {x.ProductName} · " +
-                        $"istek: {x.HastaneTalepTest} / öneri: {x.OnerilenTest} / sapma: {x.SapmaYuzde:+0.0;-0.0;0}%")
+                        $"istenen: {x.HastaneTalepTest:N0} test · önerilen: {x.OnerilenTest:N0} test · fark: %{x.SapmaYuzde:+0;-0;0}")
                     .ToList();
             }
 
@@ -385,9 +400,9 @@ namespace CRMOzem.Business.Services
             {
                 Kod = "K07",
                 Kategori = "Veri bütünlüğü",
-                Baslik = "Hedef dönem anormal",
-                Aciklama = "Bekleyen taleplerin HedefDonem değerinin bugünden 90 gün öncesi ile 90 gün sonrası dışında olması durumu.",
-                CozumOnerisi = "PHP tarafında siparis_tarihi alanı yanlış olabilir, veya hastane geçmiş/gelecek döneme ait sipariş yazmış."
+                Baslik = "Tarihi tuhaf siparişler",
+                Aciklama = "Bekleyen siparişlerden tarihi bugünden 90 günden fazla geride ya da ileride olanlar.",
+                CozumOnerisi = "Sipariş yazılımındaki sipariş tarihi yanlış olabilir. Sipariş geçerli değilse Doğrulama ekranından reddedin."
             };
 
             var ustSinir = DateTime.Now.AddDays(90);
@@ -420,6 +435,86 @@ namespace CRMOzem.Business.Services
                 k.BulguDetaylar = anormaller
                     .Take(20)
                     .Select(x => $"Talep #{x.ID} · {x.HospitalName} · dönem: {x.HedefDonem:MMMM yyyy} · talep tarihi: {x.TalepTarihi:dd.MM.yyyy}")
+                    .ToList();
+            }
+
+            k.SureMs = sw.ElapsedMilliseconds;
+            return k;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  K08 — Kullanım (İstatistik) girişi geride kalan hastaneler
+        // ═══════════════════════════════════════════════════════════
+        //  Stok hesabındaki "kullanım" İstatistik modülündeki aylık test
+        //  sayılarından (MonthlyStatistics) gelir. Giriş yapılmayan aylar
+        //  ortalamadan TAHMİN edilir; giriş ne kadar gerideyse tahmin payı
+        //  o kadar büyür.
+        private async Task<SaglikKontrolVm> K08_KullanimGirisiGeride(CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            var k = new SaglikKontrolVm
+            {
+                Kod = "K08",
+                Kategori = "Veri bütünlüğü",
+                Baslik = "Kullanım (istatistik) girişi geride kalan hastaneler",
+                Aciklama = "Stok hesabındaki kullanım, İstatistik modülüne girilen aylık test sayılarından alınır. Geçen ayın girişi yapılmamış hastanelerde aradaki dönem ortalamadan tahmin edilir.",
+                CozumOnerisi = "Bu hastanelerin eksik aylarını İstatistik modülünden girin. Giriş tamamlanınca stok tahmini kesinleşir ve veri güveni yükselir.",
+                AksiyonUrl = "/Lojistik/Rapor",
+                AksiyonText = "Raporlama"
+            };
+
+            var buAy = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var gecenAy = buAy.AddMonths(-1);
+
+            var hospitalIds = await _db.HospitalEslesmeleri
+                .AsNoTracking()
+                .Where(e => !e.Yoksay && e.InternalHospitalID.HasValue)
+                .Select(e => e.InternalHospitalID!.Value)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var sonAylar = await _db.MonthlyStatistics
+                .AsNoTracking()
+                .Where(m => hospitalIds.Contains(m.HospitalID))
+                .GroupBy(m => m.HospitalID)
+                .Select(g => new { HospitalID = g.Key, Son = g.Max(x => x.Month) })
+                .ToListAsync(ct);
+            var sonMap = sonAylar.ToDictionary(x => x.HospitalID, x => x.Son);
+
+            var adlar = await _db.Hospitals
+                .AsNoTracking()
+                .Where(h => hospitalIds.Contains(h.HospitalID))
+                .Select(h => new { h.HospitalID, h.HospitalName })
+                .ToListAsync(ct);
+
+            var bulgular = new List<(int Sira, string Metin)>();
+            foreach (var h in adlar)
+            {
+                if (!sonMap.TryGetValue(h.HospitalID, out var son))
+                {
+                    bulgular.Add((999, $"{h.HospitalName} · hiç kullanım girişi yok"));
+                    continue;
+                }
+
+                var sonAy = new DateTime(son.Year, son.Month, 1);
+                if (sonAy >= gecenAy) continue;
+
+                var eksik = ((buAy.Year - sonAy.Year) * 12 + buAy.Month - sonAy.Month) - 1;
+                bulgular.Add((eksik, $"{h.HospitalName} · son giriş {sonAy:MMMM yyyy} · {eksik} ay eksik"));
+            }
+
+            k.BulguAdeti = bulgular.Count;
+            if (bulgular.Count == 0)
+            {
+                k.Durum = KontrolDurumu.Gecti;
+            }
+            else
+            {
+                k.Durum = KontrolDurumu.Dikkat;
+                k.BulguDetaylar = bulgular
+                    .OrderByDescending(x => x.Sira)
+                    .Take(20)
+                    .Select(x => x.Metin)
                     .ToList();
             }
 

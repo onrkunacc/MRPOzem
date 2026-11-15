@@ -20,7 +20,7 @@ namespace CRMOzem.Core.ViewModels
     {
         Gecti = 1,     // ✓ her şey yolunda
         Dikkat = 2,    // ⚠ bulgu var ama kritik değil
-        Hata = 3       // ✗ sistem tutarsız — pilot öncesi düzeltilmeli
+        Hata = 3       // ✗ sonuçları doğrudan etkiliyor — öncelikle düzeltilmeli
     }
 
     public class SaglikKontrolVm

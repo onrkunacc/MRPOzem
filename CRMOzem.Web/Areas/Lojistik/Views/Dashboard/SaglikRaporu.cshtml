@@ -1,7 +1,15 @@
 ﻿@using CRMOzem.Core.ViewModels
+@using CRMOzem.Business.Interfaces
 @model SaglikRaporuVm
 @{
-    ViewData["Title"] = "Sistem Sağlık Raporu";
+    ViewData["Title"] = "Veri Kontrol";
+    var siparis = ViewBag.SiparisTeshis as SiparisTeshisSonuc;
+    var sayim = ViewBag.SayimRapor as EslesmeRaporuVm;
+
+    // Engeli olan (kendiliğinden gelmeyecek) siparişler
+    var engelli = siparis?.Gelmeyenler.Where(g => g.Neden != "Henüz çekilmedi").ToList() ?? new List<GelmeyenSiparis>();
+    var sayimSorunlu = sayim?.ApidenGelenHastaneler
+        .Where(h => !h.ManuelYoksay && (!h.Eslesti || h.BizdeEski)).ToList() ?? new List<EslesmeDetay>();
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     string DurumIcon(KontrolDurumu d) => d switch
@@ -188,9 +196,9 @@
             <div class="kt-header-title">
                 <div class="kt-header-icon"><i class="fas fa-stethoscope"></i></div>
                 <div>
-                    <h1>Sistem Sağlık Raporu</h1>
+                    <h1>Veri Kontrol</h1>
                     <p>
-                        Pilot öncesi tutarlılık kontrolleri · @Model.HesaplamaZamani.ToString("dd.MM.yyyy HH:mm")
+                        Gelmeyen siparişler, düşmeyen sayımlar ve veri tutarlılığı · @Model.HesaplamaZamani.ToString("dd.MM.yyyy HH:mm")
                     </p>
                 </div>
             </div>
@@ -199,82 +207,204 @@
                     <i class="fas fa-arrow-left"></i> Dashboard
                 </a>
                 <a class="kt-btn kt-btn-primary" href="@Url.Action("SaglikRaporu")">
-                    <i class="fas fa-rotate"></i> Yeniden Çalıştır
+                    <i class="fas fa-rotate"></i> Yeniden Kontrol Et
                 </a>
             </div>
         </div>
     </div>
 
-    @* ═════════ ÖZET ═════════ *@
-    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-        <div class="sr-ozet-kart" style="background: #f0fdf4; border-color: #16a34a; flex: 1;">
-            <div class="sr-ozet-sayi" style="color: #16a34a;">@Model.ToplamGecen</div>
-            <div class="sr-ozet-label" style="color: #16a34a;">✓ Geçti</div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-pos); padding:12px 20px;">
+            <i class="fas fa-check-circle" style="color:var(--kt-pos); margin-right:8px;"></i>@TempData["SuccessMessage"]
         </div>
-        <div class="sr-ozet-kart" style="background: #fffbeb; border-color: #f59e0b; flex: 1;">
-            <div class="sr-ozet-sayi" style="color: #f59e0b;">@Model.ToplamDikkat</div>
-            <div class="sr-ozet-label" style="color: #f59e0b;">⚠ Dikkat</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-neg); padding:12px 20px;">
+            <i class="fas fa-exclamation-circle" style="color:var(--kt-neg); margin-right:8px;"></i>@TempData["Error"]
         </div>
-        <div class="sr-ozet-kart" style="background: #fef2f2; border-color: #dc2626; flex: 1;">
-            <div class="sr-ozet-sayi" style="color: #dc2626;">@Model.ToplamHata</div>
-            <div class="sr-ozet-label" style="color: #dc2626;">✗ Hata</div>
+    }
+
+    @* ═════════ GELMEYEN SİPARİŞLER ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="kt-section-icon"><i class="fas fa-cart-arrow-down"></i></div>
+            <div style="flex:1; min-width:220px;">
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">Gelmeyen siparişler</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">
+                    Sipariş yazılımında bekleyen ama bizde görünmeyen siparişler ve nedenleri
+                </div>
+            </div>
+            @if (siparis != null && siparis.ApiyeUlasildi)
+            {
+                <div style="font-size:12px; color:var(--kt-ink-500); text-align:right;">
+                    Sipariş yazılımında <strong>@siparis.ApidekiSiparis</strong> bekleyen sipariş ·
+                    <strong>@siparis.Alinmis</strong> tanesi bizde
+                </div>
+            }
         </div>
-        <div class="sr-ozet-kart" style="background: #f8fafc; border-color: var(--kt-border); flex: 1;">
-            <div class="sr-ozet-sayi" style="color: var(--kt-ink-900);">@Model.Kontroller.Count</div>
-            <div class="sr-ozet-label" style="color: var(--kt-ink-500);">Toplam Kontrol</div>
-        </div>
+
+        @if (siparis == null || !siparis.ApiyeUlasildi)
+        {
+            <div style="padding:16px 20px; color:#991b1b; background:#fef2f2; font-size:13px;">
+                <i class="fas fa-plug-circle-xmark"></i>
+                Sipariş yazılımına ulaşılamadı; karşılaştırma yapılamadı.
+                @(siparis?.HataMesaji)
+                Adres ve API anahtarı (appsettings → SiparisApi) ile sunucunun erişilebilir olduğunu kontrol edin.
+            </div>
+        }
+        else
+        {
+            if (siparis.CekilmeyiBekleyen > 0)
+            {
+                <div style="padding:12px 20px; background:#eff6ff; font-size:13px; color:#1e40af; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span><i class="fas fa-circle-info"></i>
+                        <strong>@siparis.CekilmeyiBekleyen</strong> yeni sipariş çekilmeyi bekliyor — bir engeli yok.</span>
+                    <a class="kt-btn kt-btn-primary" href="@Url.Action("Index", "Dogrulama")" style="margin-left:auto;">
+                        Doğrulamaya git ve "Siparişleri Çek"e bas
+                    </a>
+                </div>
+            }
+
+            if (siparis.ApiSinirinaTakildi)
+            {
+                <div style="padding:12px 20px; background:#fffbeb; font-size:13px; color:#92400e;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    Son 60 günde 500'den fazla sipariş var; sipariş yazılımı en yeni 500'ünü gönderdiği için daha eskileri okunamadı.
+                </div>
+            }
+
+            if (siparis.EskiOlduguIcinAlinmayan > 0)
+            {
+                <div style="padding:10px 20px; font-size:12.5px; color:var(--kt-ink-500); border-bottom:1px solid var(--kt-border);">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    @siparis.EskiOlduguIcinAlinmayan sipariş 60 günden eski olduğu için bilerek alınmıyor
+                    (sipariş yazılımında işlenen siparişler de "bekliyor" görünmeye devam ediyor; bu bir sorun değil).
+                </div>
+            }
+
+            if (engelli.Count == 0)
+            {
+                <div style="padding:16px 20px; color:#15803d; font-size:13px;">
+                    <i class="fas fa-circle-check"></i> Engele takılan sipariş yok.
+                </div>
+            }
+            else
+            {
+                <div class="kt-table-wrap">
+                    <table class="kt-table" data-sayfala="25">
+                        <thead>
+                            <tr>
+                                <th>Sipariş No</th>
+                                <th>Kurum</th>
+                                <th>Müşteri Kodu</th>
+                                <th class="text-center">Tarih</th>
+                                <th>Neden gelmedi?</th>
+                                <th>Ne yapılmalı?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var g in engelli)
+                            {
+                                <tr>
+                                    <td style="font-variant-numeric:tabular-nums;">#@g.OrderId</td>
+                                    <td>@(g.KurumAdi ?? "—")</td>
+                                    <td><code>@(string.IsNullOrEmpty(g.MusteriKodu) ? "—" : g.MusteriKodu)</code></td>
+                                    <td class="text-center" style="font-size:12px;">@(g.Tarih?.ToString("dd.MM.yyyy") ?? "—")</td>
+                                    <td style="font-weight:600; color:#b45309;">@g.Neden</td>
+                                    <td style="font-size:12.5px; color:var(--kt-ink-700);">@g.Cozum</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
     </div>
 
-    @* ═════════ PILOT DURUMU ═════════ *@
-    @if (Model.ToplamHata > 0)
-    {
-        <div class="kt-card" style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 14px 20px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-shield-exclamation" style="font-size: 24px; color: #dc2626;"></i>
-                <div>
-                    <div style="font-weight: 700; color: #991b1b; font-size: 14px;">
-                        PİLOT ÖNCESİ DÜZELTİLMELİ
-                    </div>
-                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
-                        @Model.ToplamHata adet HATA bulgusu var — bunlar sistemin güvenilirliğini etkiler.
-                        Çözüm sonrası raporu tekrar çalıştır.
-                    </div>
+    @* ═════════ DÜŞMEYEN SAYIMLAR ═════════ *@
+    <div class="kt-card kt-card-flush">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="kt-section-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div style="flex:1; min-width:220px;">
+                <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px;">Düşmeyen sayımlar</div>
+                <div style="font-size:12px; color:var(--kt-ink-500);">
+                    Sayım uygulamasında olup bize yansımamış sayımlar ve nedenleri
                 </div>
             </div>
+            <form method="post" action="@Url.Action("SayimlariYenile")" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="donus" value="SaglikRaporu" />
+                <button type="submit" class="kt-btn kt-btn-success"><i class="fas fa-rotate"></i> Sayımları Yenile</button>
+            </form>
         </div>
-    }
-    else if (Model.ToplamDikkat > 0)
-    {
-        <div class="kt-card" style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 20px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-circle-exclamation" style="font-size: 24px; color: #f59e0b;"></i>
-                <div>
-                    <div style="font-weight: 700; color: #92400e; font-size: 14px;">
-                        PİLOTA UYGUN — Dikkat edilecek @Model.ToplamDikkat madde var
-                    </div>
-                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
-                        Kritik hata yok, pilote başlanabilir. Dikkat maddeleri izlenmeli ve zamanla düzeltilmeli.
-                    </div>
-                </div>
+
+        @if (sayim == null || !sayim.ApiyeUlasildi)
+        {
+            <div style="padding:16px 20px; color:#991b1b; background:#fef2f2; font-size:13px;">
+                <i class="fas fa-plug-circle-xmark"></i>
+                Sayım uygulamasına ulaşılamadı; karşılaştırma yapılamadı.
+                Adres ve API anahtarı (appsettings → StokSayimApi) ile sunucunun erişilebilir olduğunu kontrol edin.
             </div>
-        </div>
-    }
-    else
-    {
-        <div class="kt-card" style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 20px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-shield-check" style="font-size: 24px; color: #16a34a;"></i>
-                <div>
-                    <div style="font-weight: 700; color: #15803d; font-size: 14px;">
-                        ✓ TÜM KONTROLLER GEÇTİ — Sistem pilote hazır
-                    </div>
-                    <div style="font-size: 12px; color: var(--kt-ink-700); margin-top: 2px;">
-                        Veri tutarlı, hesaplamalar sağlıklı. Pilot başlatılabilir.
-                    </div>
-                </div>
+        }
+        else if (sayimSorunlu.Count == 0)
+        {
+            <div style="padding:16px 20px; color:#15803d; font-size:13px;">
+                <i class="fas fa-circle-check"></i>
+                Sayım uygulamasındaki @sayim.ApidenGelenHastaneler.Count hastanenin tamamı eşleşmiş ve sayımları güncel.
             </div>
-        </div>
-    }
+        }
+        else
+        {
+            <div class="kt-table-wrap">
+                <table class="kt-table" data-sayfala="25">
+                    <thead>
+                        <tr>
+                            <th>Sayım uygulamasındaki hastane</th>
+                            <th class="text-center">Oradaki son sayım</th>
+                            <th class="text-center">Bizdeki son sayım</th>
+                            <th>Neden düşmedi?</th>
+                            <th>Ne yapılmalı?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in sayimSorunlu.OrderBy(x => x.Eslesti).ThenBy(x => x.ApiHospitalName))
+                        {
+                            <tr>
+                                <td>
+                                    @h.ApiHospitalName
+                                    <div style="font-size:11px; color:var(--kt-ink-400);">@h.SatirSayisi sayım satırı</div>
+                                </td>
+                                <td class="text-center" style="font-size:12px;">@(h.ApiSonSayim?.ToString("dd.MM.yyyy") ?? "—")</td>
+                                <td class="text-center" style="font-size:12px;">@(h.BizdekiSonSayim?.ToString("dd.MM.yyyy") ?? "yok")</td>
+                                @if (!h.Eslesti)
+                                {
+                                    <td style="font-weight:600; color:#b45309;">Hastane adı bizdeki hiçbir hastaneyle eşleşmiyor</td>
+                                    <td style="font-size:12.5px;">
+                                        <a href="@Url.Action("SayimEslesme")">Sayım Eşleşme</a> ekranında bu adı bir hastaneye bağlayın, sonra "Sayımları Yenile".
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td style="font-weight:600; color:#b45309;">Yeni sayım henüz alınmamış</td>
+                                    <td style="font-size:12.5px;">"Sayımları Yenile" düğmesine basın.</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @* ═════════ TUTARLILIK KONTROLLERİ ═════════ *@
+    <div style="font-weight:700; color:var(--kt-ink-900); font-size:14px; margin: 6px 2px -4px;">
+        Tutarlılık kontrolleri
+        <span style="font-weight:400; font-size:12px; color:var(--kt-ink-500);">
+            · @Model.ToplamGecen sorunsuz · @Model.ToplamDikkat dikkat · @Model.ToplamHata hata — ayrıntı için satıra tıklayın
+        </span>
+    </div>
 
     @* ═════════ KONTROLLER ═════════ *@
     <div>
@@ -289,8 +419,7 @@
                     </div>
                     <div class="sr-kontrol-info">
                         <div class="sr-kontrol-baslik">
-                            <span style="color: var(--kt-ink-400); font-weight: 400; margin-right: 4px;">@k.Kod</span>
-                            @k.Baslik
+                                                        @k.Baslik
                             <span class="sr-kontrol-kategori" style="margin-left: 6px;">@k.Kategori</span>
                         </div>
                         <div class="sr-kontrol-aciklama">@k.Aciklama</div>
@@ -304,9 +433,6 @@
                         {
                             @k.BulguAdeti
                         }
-                    </div>
-                    <div style="font-size: 10.5px; color: var(--kt-ink-400); margin-left: 8px; min-width: 50px; text-align: right;">
-                        @k.SureMs ms
                     </div>
                     <i class="fas fa-chevron-down" style="color: var(--kt-ink-400); transition: transform 0.2s;"></i>
                 </div>
@@ -323,7 +449,7 @@
                         }
 
                         <div style="margin-top: 10px; font-size: 12px; color: var(--kt-ink-500); margin-bottom: 6px;">
-                            <strong>Bulgular</strong> (ilk @k.BulguDetaylar.Count göster, toplam @k.BulguAdeti)
+                            <strong>Bulgular</strong>@(k.BulguAdeti > k.BulguDetaylar.Count ? $" (toplam {k.BulguAdeti}, ilk {k.BulguDetaylar.Count} tanesi)" : "")
                         </div>
                         <div class="sr-bulgu-list">
                             @foreach (var b in k.BulguDetaylar)
@@ -346,15 +472,14 @@
         }
     </div>
 
-    @* ═════════ ALT NOT ═════════ *@
     <div class="kt-card" style="padding: 12px 18px; background: var(--kt-bg); border-style: dashed;">
         <div style="font-size: 11.5px; color: var(--kt-ink-500); line-height: 1.6;">
-            <strong style="color: var(--kt-ink-700);">Not:</strong>
-            Bu rapor pilot öncesi "sistem mantıklı sonuç üretiyor mu?" sorusunun cevabıdır.
-            <strong style="color: #dc2626;">HATA</strong> bulguları düzeltilmeden pilot başlatılması önerilmez.
-            <strong style="color: #f59e0b;">DİKKAT</strong> bulguları izlenmeli ama blocker değil.
-            Her kontrolün çözüm önerisi vardır — kart başlığına tıklayarak detayları aç.
+            <strong style="color: #dc2626;">Hata</strong> = stok ve öneri rakamlarını doğrudan bozuyor, öncelikle düzeltilmeli ·
+            <strong style="color: #f59e0b;">Dikkat</strong> = izlenmeli, işi durdurmaz.
+            Bu sayfa yalnızca okur; hiçbir kaydı değiştirmez.
         </div>
     </div>
 
 </div>
+
+@await Html.PartialAsync("_Sayfalama")

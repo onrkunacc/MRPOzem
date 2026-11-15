@@ -27,6 +27,9 @@ namespace CRMOzem.Core.ViewModels
         public int BuHaftaReddedilen { get; set; }
         public int AktifHastaneSayisi { get; set; }    // son 30 gün sipariş veren
         public int Son30GunToplamOnayTest { get; set; }
+
+        /// <summary>Son 30 günde onaylanan miktar — sipariş birimiyle (kutu).</summary>
+        public decimal Son30GunToplamOnayKutu { get; set; }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -97,5 +100,6 @@ namespace CRMOzem.Core.ViewModels
         public string? Not { get; set; }
         public int KalemSayisi { get; set; }
         public int ToplamOnaylananTest { get; set; }
+        public decimal ToplamOnaylananKutu { get; set; }
     }
 }

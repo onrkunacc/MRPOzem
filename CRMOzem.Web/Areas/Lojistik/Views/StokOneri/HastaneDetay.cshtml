@@ -1,15 +1,125 @@
 ﻿@model CRMOzem.Core.ViewModels.HastaneStokPaneliVm
-@using CRMOzem.Core.Enums
 @{
-    ViewData["Title"] = $"Stok Paneli — {Model.HospitalName}";
+    ViewData["Title"] = $"Stok · {Model.HospitalName}";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    string Sayi(decimal v) => v.ToString("0.#", tr);
+
+    string DurumText(StokDurumu d) => d switch
+    {
+        StokDurumu.Kritik => "Kritik",
+        StokDurumu.Dusuk => "Düşük",
+        StokDurumu.Izlemede => "İzlemede",
+        StokDurumu.Saglikli => "Yeterli",
+        StokDurumu.Durgun => "Durgun",
+        _ => "Veri yok"
+    };
+    string DurumKod(StokDurumu d) => d switch
+    {
+        StokDurumu.Kritik => "kritik",
+        StokDurumu.Dusuk => "dusuk",
+        StokDurumu.Izlemede => "izleme",
+        StokDurumu.Saglikli => "yeterli",
+        StokDurumu.Durgun => "durgun",
+        _ => "veriyok"
+    };
+    string GuvenText(VeriGuveni g) => g switch
+    {
+        VeriGuveni.Yuksek => "Yüksek",
+        VeriGuveni.Orta => "Orta",
+        VeriGuveni.Dusuk => "Düşük",
+        _ => "—"
+    };
+    string GuvenCls(VeriGuveni g) => g switch
+    {
+        VeriGuveni.Yuksek => "gv-yuksek",
+        VeriGuveni.Orta => "gv-orta",
+        VeriGuveni.Dusuk => "gv-dusuk",
+        _ => "gv-yok"
+    };
+
+    // Çubuk ölçeği: hedefin 2 katı tam genişlik
+    var cubukTavan = Model.HedefRunwayAy * 2m;
 }
 
-@await Html.PartialAsync("_KotaDesignSystem")
+@await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
+
+<style>
+    .gv { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .gv::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--kt-ink-400); }
+    .gv-yuksek { color: var(--kt-pos-700); } .gv-yuksek::before { background: var(--kt-pos); }
+    .gv-orta { color: var(--kt-warn-700); } .gv-orta::before { background: var(--kt-warn); }
+    .gv-dusuk { color: var(--kt-neg-700); } .gv-dusuk::before { background: var(--kt-neg); }
+    .gv-yok { color: var(--kt-ink-400); }
+
+    /* Seçili sekmedeki sayı koyu zeminde okunsun */
+    .kt-chip.active strong { color: inherit; }
+
+    .so-serit {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 1px; background: var(--kt-border);
+        border: 1px solid var(--kt-border); border-radius: var(--kt-r-md); overflow: hidden;
+    }
+    .so-serit > div { background: var(--kt-paper); padding: 12px 15px; }
+    .so-serit .et { font-size: 10.5px; font-weight: 700; color: var(--kt-ink-500); text-transform: uppercase; letter-spacing: .05em; }
+    .so-serit .dg { font-size: 14px; font-weight: 700; color: var(--kt-ink-900); margin-top: 3px; }
+    .so-serit .alt { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; }
+
+    .so-uyari {
+        display: flex; gap: 9px; align-items: flex-start;
+        background: var(--kt-warn-50); border: 1px solid #fde68a; color: var(--kt-warn-700);
+        border-radius: var(--kt-r-sm); padding: 9px 13px; font-size: 12.5px; line-height: 1.5; margin-top: 8px;
+    }
+
+    /* ── Durum rozetleri ─────────────────────────────────────── */
+    .so-durum {
+        display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700;
+        padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+    }
+    .so-durum.kritik { background: var(--kt-neg-50); color: var(--kt-neg-700); }
+    .so-durum.dusuk { background: #ffedd5; color: #9a3412; }
+    .so-durum.izleme { background: var(--kt-warn-50); color: var(--kt-warn-700); }
+    .so-durum.yeterli { background: var(--kt-pos-50); color: var(--kt-pos-700); }
+    .so-durum.durgun { background: var(--kt-bg-soft); color: var(--kt-ink-700); }
+    .so-durum.veriyok { background: var(--kt-bg-soft); color: var(--kt-ink-400); }
+
+    tr.so-urun > td { vertical-align: top; }
+    tr.so-urun.kritik > td:first-child { box-shadow: inset 3px 0 0 var(--kt-neg); }
+    tr.so-urun.dusuk > td:first-child { box-shadow: inset 3px 0 0 #f97316; }
+
+    .so-buyuk { font-size: 16px; font-weight: 700; color: var(--kt-ink-900); line-height: 1.1; }
+    .so-birim { font-size: 11px; color: var(--kt-ink-500); font-weight: 500; }
+    .so-kucuk { font-size: 11px; color: var(--kt-ink-400); margin-top: 2px; }
+
+    /* ── Yetme süresi çubuğu ─────────────────────────────────── */
+    .so-cubuk { position: relative; height: 7px; background: var(--kt-bg-soft); border-radius: 999px; margin-top: 6px; min-width: 110px; }
+    .so-cubuk > i { display: block; height: 100%; border-radius: 999px; background: var(--kt-pos); }
+    .so-cubuk.kritik > i { background: var(--kt-neg); }
+    .so-cubuk.dusuk > i { background: #f97316; }
+    .so-cubuk.izleme > i { background: var(--kt-warn); }
+    .so-cubuk > b { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; background: var(--kt-ink-900); opacity: .55; }
+
+    .so-nasil { background: none; border: none; padding: 0; margin-top: 4px; cursor: pointer; font-size: 11.5px; color: var(--kt-primary); font-weight: 600; }
+    .so-nasil:hover { text-decoration: underline; }
+
+    tr.so-adimlar { display: none; }
+    tr.so-adimlar.acik { display: table-row; }
+    tr.so-adimlar > td { background: var(--kt-bg); padding: 12px 20px 14px 26px; }
+
+    .so-adim-tablo { border-collapse: collapse; font-size: 12.5px; }
+    .so-adim-tablo td { padding: 3px 12px 3px 0; color: var(--kt-ink-700); }
+    .so-adim-tablo td.isaret { width: 16px; font-weight: 700; color: var(--kt-ink-500); text-align: center; }
+    .so-adim-tablo td.deger { text-align: right; font-weight: 600; color: var(--kt-ink-900); white-space: nowrap; }
+    .so-adim-tablo td.not { color: var(--kt-ink-400); font-size: 11.5px; }
+    .so-adim-tablo tr.sonuc td { border-top: 1px solid var(--kt-border-strong); padding-top: 5px; font-weight: 700; }
+
+    .so-satir-uyari { font-size: 11.5px; color: var(--kt-warn-700); margin-top: 3px; }
+</style>
 
 <div class="kt-page">
 
-    @* ═════════ HEADER ═════════ *@
     <div class="kt-header">
         <div class="kt-header-inner">
             <div class="kt-header-title">
@@ -17,219 +127,218 @@
                 <div>
                     <h1>@Model.HospitalName</h1>
                     <p>
-                        Sayım #@Model.SonSayimNo · @Model.SonSayimTarihi?.ToString("dd.MM.yyyy")
-                        @if (Model.GunlerdenSayimdanBeri.HasValue)
+                        @Model.ToplamUrun ürün ·
+                        @if (Model.OnerilenKalemSayisi > 0)
                         {
-                            <span class="text-muted"> · @Model.GunlerdenSayimdanBeri gün önce</span>
+                            <text><strong>@Model.OnerilenKalemSayisi kalem için sipariş öneriliyor</strong> (@Model.OnerilenToplamKutu.ToString("N0", tr) kutu)</text>
                         }
-                        · @Model.ToplamUrun reaktif analiz edildi
+                        else
+                        {
+                            <text>şu an sipariş gerektiren ürün görünmüyor</text>
+                        }
                     </p>
                 </div>
             </div>
             <div class="kt-header-actions">
-                <a class="kt-btn kt-btn-ghost" href="@Url.Action("Index")">
-                    <i class="fas fa-arrow-left"></i> Hastaneler
-                </a>
-                <form method="get" action="@Url.Action("HastaneDetay")" style="display:inline-flex; gap:6px; align-items:center;">
+                <form method="get" style="display:inline-flex; align-items:center; gap:6px;">
                     <input type="hidden" name="id" value="@Model.HospitalID" />
-                    <label class="kt-label" style="margin:0;">Hedef (ay):</label>
-                    <select name="runwayAy" class="kt-input" style="width:90px;" onchange="this.form.submit()">
-                        <option value="1" selected="@(Model.HedefRunwayAy == 1)">1</option>
-                        <option value="2" selected="@(Model.HedefRunwayAy == 2)">2</option>
-                        <option value="3" selected="@(Model.HedefRunwayAy == 3)">3</option>
-                        <option value="4" selected="@(Model.HedefRunwayAy == 4)">4</option>
-                        <option value="6" selected="@(Model.HedefRunwayAy == 6)">6</option>
+                    <span style="font-size:12px; color:var(--kt-ink-500);">Hedef</span>
+                    <select name="runwayAy" class="kt-select" style="width:90px;" onchange="this.form.submit()">
+                        @for (var a = 1; a <= 6; a++)
+                        {
+                            <option value="@a" selected="@(a == Model.HedefRunwayAy)">@a ay</option>
+                        }
                     </select>
                 </form>
+                <a class="kt-btn kt-btn-dark" asp-action="Excel" asp-route-id="@Model.HospitalID" asp-route-runwayAy="@Model.HedefRunwayAy">
+                    <i class="fas fa-file-excel"></i> Sipariş Önerisi
+                </a>
+                <a class="kt-btn kt-btn-ghost" asp-action="Excel" asp-route-id="@Model.HospitalID" asp-route-runwayAy="@Model.HedefRunwayAy" asp-route-tumu="true">
+                    <i class="fas fa-file-excel"></i> Tüm Stok
+                </a>
+                <a class="kt-btn kt-btn-ghost" asp-action="Index" asp-route-hedefAy="@Model.HedefRunwayAy">
+                    <i class="fas fa-arrow-left"></i> Hastaneler
+                </a>
             </div>
         </div>
     </div>
 
-    @* ═════════ KPI ═════════ *@
-    <div class="kt-kpi-grid">
-        <div class="kt-kpi accent-neg">
-            <div class="kt-kpi-head">
-                <div class="kt-kpi-label">Kritik</div>
-                <div class="kt-kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
-            </div>
-            <div class="kt-kpi-value">@Model.KritikSayisi</div>
-            <div class="kt-kpi-foot">&lt; 30 gün yetecek</div>
-        </div>
-        <div class="kt-kpi accent-warn">
-            <div class="kt-kpi-head">
-                <div class="kt-kpi-label">Düşük</div>
-                <div class="kt-kpi-icon"><i class="fas fa-clock"></i></div>
-            </div>
-            <div class="kt-kpi-value">@Model.DusukSayisi</div>
-            <div class="kt-kpi-foot">30-60 gün</div>
-        </div>
-        <div class="kt-kpi accent-primary">
-            <div class="kt-kpi-head">
-                <div class="kt-kpi-label">İzlemede</div>
-                <div class="kt-kpi-icon"><i class="fas fa-eye"></i></div>
-            </div>
-            <div class="kt-kpi-value">@Model.IzlemedeSayisi</div>
-            <div class="kt-kpi-foot">60-90 gün</div>
-        </div>
-        <div class="kt-kpi accent-pos">
-            <div class="kt-kpi-head">
-                <div class="kt-kpi-label">Sağlıklı</div>
-                <div class="kt-kpi-icon"><i class="fas fa-check-circle"></i></div>
-            </div>
-            <div class="kt-kpi-value">@Model.SaglikliSayisi</div>
-            <div class="kt-kpi-foot">90+ gün yetecek</div>
-        </div>
-    </div>
-
-    @* ═════════ ÖNERİ ÖZETİ ═════════ *@
-    @if (Model.OnerilenToplamTest > 0)
-    {
-        <div class="kt-card" style="border-left:4px solid var(--kt-primary);">
-            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                <div style="font-size:36px; color:var(--kt-primary);">
-                    <i class="fas fa-boxes-packing"></i>
-                </div>
-                <div style="flex:1; min-width:200px;">
-                    <div style="font-size:12px; font-weight:600; color:var(--kt-ink-500); text-transform:uppercase; letter-spacing:0.05em;">
-                        Önerilen Toplam Sipariş (@Model.HedefRunwayAy ay kalan gün için)
-                    </div>
-                    <div style="font-size:28px; font-weight:800; color:var(--kt-ink-900); font-variant-numeric: tabular-nums;">
-                        @Model.OnerilenToplamTest.ToString("N0") test
-                    </div>
-                    <div style="font-size:13px; color:var(--kt-ink-500);">
-                        ≈ @Model.OnerilenToplamKutu kutu · @Model.Satirlar.Count(s => s.OnerilenTest > 0) ürüne dağıtılmış
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @* ═════════ SATIRLAR ═════════ *@
-    <div class="kt-card kt-card-flush">
-        <div style="padding:18px 24px; border-bottom:1px solid var(--kt-border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <div class="kt-section-icon"><i class="fas fa-flask-vial"></i></div>
+    @* ═══ VERİ DURUMU ═══ *@
+    <div class="kt-card">
+        <div class="so-serit">
             <div>
-                <div style="font-weight:700; color:var(--kt-ink-900); font-size:15px;">Reaktif Analizi</div>
-                <div style="font-size:12px; color:var(--kt-ink-500);">Kritik olanlar üstte · tıkla → hesaplama ayrıntısı</div>
+                <div class="et">Son Fiziki Sayım</div>
+                <div class="dg">@(Model.SonSayimTarihi.HasValue ? Model.SonSayimTarihi.Value.ToString("dd.MM.yyyy") : "Yok")</div>
+                <div class="alt">
+                    @if (Model.GunlerdenSayimdanBeri.HasValue)
+                    {
+                        <text>@Model.GunlerdenSayimdanBeri gün önce</text>
+                    }
+                    else
+                    {
+                        <text>stok kayıt farkından hesaplanıyor</text>
+                    }
+                </div>
             </div>
-            <div style="margin-left:auto; display:flex; gap:8px;">
-                <input type="text" id="satirSearch" class="kt-input" placeholder="🔍 Ürün ara..." style="width:220px;" />
-                <select id="durumFilter" class="kt-input" style="width:150px;">
-                    <option value="">Tüm durumlar</option>
-                    <option value="1">Sadece Kritik</option>
-                    <option value="2">Düşük</option>
-                    <option value="3">İzlemede</option>
-                    <option value="4">Sağlıklı</option>
-                </select>
+            <div>
+                <div class="et">Kullanım Verisi</div>
+                <div class="dg">@(Model.KullanimSonAy.HasValue ? Model.KullanimSonAy.Value.ToString("MMMM yyyy", tr) : "Yok")</div>
+                <div class="alt">son 12 ayda @Model.RaporlananAySayisi ay raporlandı</div>
+            </div>
+            <div>
+                <div class="et">Gönderim Kaydı</div>
+                <div class="dg">@(Model.GonderimSonAy.HasValue ? Model.GonderimSonAy.Value.ToString("MMMM yyyy", tr) : "Yok")</div>
+                <div class="alt">girilen son ay</div>
+            </div>
+            <div>
+                <div class="et">Veri Güveni</div>
+                <div class="dg"><span class="gv @GuvenCls(Model.Guven)" style="font-size:14px;">@GuvenText(Model.Guven)</span></div>
+                <div class="alt">hastane geneli</div>
+            </div>
+            <div>
+                <div class="et">Kurallar</div>
+                <div class="dg">@Model.HedefRunwayAy ay hedef</div>
+                <div class="alt">tedarik süresi @Model.TedarikGun gün</div>
             </div>
         </div>
 
+        @foreach (var u in Model.Uyarilar)
+        {
+            <div class="so-uyari">
+                <i class="fas fa-triangle-exclamation" style="margin-top:2px;"></i>
+                <span>@u</span>
+            </div>
+        }
+    </div>
+
+    @* ═══ SÜZGEÇ ═══ *@
+    <div class="kt-card" style="padding:12px 18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="kt-chip-row" id="durumCipleri">
+            <button type="button" class="kt-chip active" data-durum="">Tümü <strong style="margin-left:4px;">@Model.ToplamUrun</strong></button>
+            <button type="button" class="kt-chip" data-durum="kritik">Kritik <strong style="margin-left:4px;">@Model.KritikSayisi</strong></button>
+            <button type="button" class="kt-chip" data-durum="dusuk">Düşük <strong style="margin-left:4px;">@Model.DusukSayisi</strong></button>
+            <button type="button" class="kt-chip" data-durum="izleme">İzlemede <strong style="margin-left:4px;">@Model.IzlemedeSayisi</strong></button>
+            <button type="button" class="kt-chip" data-durum="yeterli">Yeterli <strong style="margin-left:4px;">@Model.SaglikliSayisi</strong></button>
+            <button type="button" class="kt-chip" data-durum="durgun">Durgun <strong style="margin-left:4px;">@Model.DurgunSayisi</strong></button>
+            <button type="button" class="kt-chip" data-durum="veriyok">Veri yok <strong style="margin-left:4px;">@Model.VeriYokSayisi</strong></button>
+        </div>
+
+        <div style="margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label style="font-size:12.5px; color:var(--kt-ink-700); display:flex; gap:6px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="yalnizOneri" /> Yalnız sipariş önerilenler
+            </label>
+            <input type="text" id="urunAra" class="kt-input" placeholder="Ürün ya da referans ara..." style="width:230px;" />
+        </div>
+    </div>
+
+    @* ═══ ÜRÜNLER ═══ *@
+    <div class="kt-card kt-card-flush">
         @if (Model.Satirlar.Any())
         {
             <div class="kt-table-wrap">
-                <table class="kt-table" id="satirTable">
+                <table class="kt-table" id="urunTablo" data-sayfala="25">
                     <thead>
                         <tr>
                             <th>Ürün</th>
-                            <th>Kod</th>
-                            <th class="text-right">Sayım Stok</th>
-                            <th class="text-right" title="Sayım tarihinden sonraki aylarda gelen gönderim toplamı">
-                                + Gönderim
-                            </th>
-                            <th class="text-right" title="Sayım tarihinden sonraki aylarda yapılan test kullanımı toplamı">
-                                − Kullanım
-                            </th>
-                            <th class="text-right">Güncel Stok</th>
-                            <th class="text-right" title="Son 3 ayın toplam kullanımı / 3">Aylık Ort.</th>
-                            <th class="text-right" title="Güncel stok mevcut kullanım hızıyla kaç gün yetecek">
-                                Kalan Gün
-                            </th>
-                            <th class="text-right">Önerilen</th>
-                            <th class="text-center">Durum</th>
+                            <th class="text-right">Bugünkü Stok</th>
+                            <th class="text-right">Aylık Tüketim</th>
+                            <th>Kaç Ay Yeter <span style="font-weight:400; text-transform:none; letter-spacing:0;">(çizgi = hedef)</span></th>
+                            <th class="text-right">Önerilen Sipariş</th>
+                            <th>Durum</th>
+                            <th>Veri Güveni</th>
                         </tr>
                     </thead>
                     <tbody>
+                        @{ var sira = 0; }
                         @foreach (var s in Model.Satirlar)
                         {
-                            var durumCls = s.Durum switch
-                            {
-                                StokDurumu.Kritik   => "kt-badge-danger",
-                                StokDurumu.Dusuk    => "kt-badge-warning",
-                                StokDurumu.Izlemede => "kt-badge-info",
-                                StokDurumu.Saglikli => "kt-badge-success",
-                                StokDurumu.Durgun   => "kt-badge-secondary",
-                                _ => "kt-badge-secondary"
-                            };
-                            var durumIcon = s.Durum switch
-                            {
-                                StokDurumu.Kritik   => "fa-triangle-exclamation",
-                                StokDurumu.Dusuk    => "fa-clock",
-                                StokDurumu.Izlemede => "fa-eye",
-                                StokDurumu.Saglikli => "fa-check-circle",
-                                StokDurumu.Durgun   => "fa-pause",
-                                _ => "fa-circle-question"
-                            };
-                            var runwayText = s.RunwayGun >= 9999 ? "∞"
-                                           : s.RunwayGun > 365 ? "> 1 yıl"
-                                           : $"{s.RunwayGun} gün";
-                            var runwayColor = s.Durum == StokDurumu.Kritik ? "var(--kt-neg)"
-                                           : s.Durum == StokDurumu.Dusuk ? "var(--kt-warn)"
-                                           : "var(--kt-ink-700)";
+                            sira++;
+                            var kod = DurumKod(s.Durum);
+                            var stokBiliniyor = s.StokKaynagi != StokKaynagi.Yok;
+                            var oran = s.StokAy.HasValue && cubukTavan > 0
+                                ? Math.Min(100m, Math.Max(0m, s.StokAy.Value / cubukTavan * 100m))
+                                : 0m;
 
-                            // ★ UX: 0 ile "veri yok" ayrımı — artık 0 sayısı net gösteriliyor
-                            var gonderimText = s.SayimdanSonraGonderim > 0
-                                ? $"+{s.SayimdanSonraGonderim:N0}"
-                                : "0";
-                            var gonderimColor = s.SayimdanSonraGonderim > 0
-                                ? "var(--kt-pos)"
-                                : "var(--kt-ink-400)";
-                            var kullanimText = s.SayimdanSonraKullanim > 0
-                                ? $"−{s.SayimdanSonraKullanim:N0}"
-                                : "0";
-                            var kullanimColor = s.SayimdanSonraKullanim > 0
-                                ? "var(--kt-neg)"
-                                : "var(--kt-ink-400)";
-
-                            <tr data-search="@($"{s.TestAdi} {s.ProductName} {s.ReferenceNumber}".ToLower())"
-                                data-durum="@((int)s.Durum)"
-                                title="@s.HesaplamaOzeti">
+                            <tr class="so-urun @kod"
+                                data-durum="@kod"
+                                data-oneri="@(s.OnerilenTest > 0 ? "1" : "0")"
+                                data-ara="@($"{s.TestAdi} {s.ProductName} {s.ReferenceNumber} {s.Platform}".ToLower(tr))">
                                 <td>
-                                    <div class="kt-cell-primary">@s.TestAdi</div>
-                                    @if (!string.IsNullOrEmpty(s.ProductName) && s.ProductName != s.TestAdi)
+                                    <div style="font-weight:600; color:var(--kt-ink-900); font-size:13.5px;">@s.TestAdi</div>
+                                    <div class="so-kucuk" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                        @if (!string.IsNullOrWhiteSpace(s.ReferenceNumber))
+                                        {
+                                            <span class="kt-code-badge ghost">@s.ReferenceNumber</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(s.Platform))
+                                        {
+                                            <span>@s.Platform</span>
+                                        }
+                                        @if (s.KutuBirimli)
+                                        {
+                                            <span>1 kutu = @s.BoxTextCount.ToString("N0", tr) test</span>
+                                        }
+                                    </div>
+                                    @foreach (var u in s.Uyarilar)
                                     {
-                                        <div style="font-size:11.5px; color:var(--kt-ink-500);">@s.ProductName</div>
+                                        <div class="so-satir-uyari"><i class="fas fa-circle-info"></i> @u</div>
                                     }
                                 </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(s.ReferenceNumber))
+
+                                <td class="text-right" style="white-space:nowrap;">
+                                    @if (stokBiliniyor)
                                     {
-                                        <span class="kt-code-badge ghost">@s.ReferenceNumber</span>
+                                        if (s.KutuBirimli && s.StokKutu.HasValue)
+                                        {
+                                            <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
+                                                @Sayi(s.StokKutu.Value) <span class="so-birim">kutu</span>
+                                            </div>
+                                            <div class="so-kucuk">@s.HesapGuncelStok.ToString("N0", tr) test</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
+                                                @s.HesapGuncelStok.ToString("N0", tr) <span class="so-birim">adet</span>
+                                            </div>
+                                        }
+                                        if (s.Yolda > 0)
+                                        {
+                                            <div class="so-kucuk" style="color:var(--kt-primary-700);">+ @s.Yolda.ToString("N0", tr) test yolda</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">bilinmiyor</span>
                                     }
                                 </td>
-                                <td class="text-right kt-money">@s.SonSayimTestCount.ToString("N0")</td>
-                                <td class="text-right kt-money-pos" style="color:@gonderimColor;">
-                                    @gonderimText
-                                </td>
-                                <td class="text-right kt-money-neg" style="color:@kullanimColor;">
-                                    @kullanimText
-                                </td>
-                                <td class="text-right kt-money-strong"
-                                    style="color:@(s.HesapGuncelStok < 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
-                                    @s.HesapGuncelStok.ToString("N0")
-                                </td>
-                                <td class="text-right">
-                                    @s.OrtalamaAylikKullanim.ToString("N1")
-                                    <div style="font-size:10.5px; color:var(--kt-ink-400);">son 3 ay / 3</div>
-                                </td>
-                                <td class="text-right">
-                                    <span style="color:@runwayColor; font-weight:600;">@runwayText</span>
-                                </td>
-                                <td class="text-right">
-                                    @if (s.OnerilenTest > 0)
+
+                                <td class="text-right" style="white-space:nowrap;">
+                                    @if (s.OrtalamaAylikKullanim > 0)
                                     {
-                                        <strong>@s.OnerilenTest.ToString("N0")</strong>
-                                        <div style="font-size:11px; color:var(--kt-ink-500);">
-                                            = @s.OnerilenKutu kutu
+                                        <div style="font-weight:600;">@s.OrtalamaAylikKullanim.ToString("N0", tr) <span class="so-birim">test</span></div>
+                                        <div class="so-kucuk">
+                                            @(s.TuketimKaynagi == TuketimKaynagi.Kullanim ? $"son {s.OrtalamaAySayisi} ay kullanım" : "gönderim ortalaması")
+                                        </div>
+                                        if (s.TrendYuzde.HasValue && Math.Abs(s.TrendYuzde.Value) >= 15)
+                                        {
+                                            <div class="so-kucuk" style="color:@(s.TrendYuzde.Value > 0 ? "var(--kt-neg)" : "var(--kt-pos-700)");">
+                                                <i class="fas @(s.TrendYuzde.Value > 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down")"></i>
+                                                %@Math.Abs(s.TrendYuzde.Value).ToString("0")
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (s.StokAy.HasValue)
+                                    {
+                                        <div style="font-weight:700; color:var(--kt-ink-900);">@Sayi(s.StokAy.Value) ay</div>
+                                        <div class="so-cubuk @kod">
+                                            <i style="width:@(oran.ToString("0.#", inv))%"></i><b></b>
                                         </div>
                                     }
                                     else
@@ -237,16 +346,33 @@
                                         <span class="text-muted">—</span>
                                     }
                                 </td>
-                                <td class="text-center">
-                                    <span class="kt-badge @durumCls">
-                                        <i class="fas @durumIcon"></i> @s.Durum
-                                    </span>
-                                    @if (s.Uyarilar.Any())
+
+                                <td class="text-right" style="white-space:nowrap;">
+                                    @if (s.OnerilenTest > 0)
                                     {
-                                        <div style="margin-top:4px; font-size:10px; color:var(--kt-warn);"
-                                             title="@string.Join(" | ", s.Uyarilar)">
-                                            <i class="fas fa-triangle-exclamation"></i> @s.Uyarilar.Count uyarı
-                                        </div>
+                                        <div class="so-buyuk" style="color:var(--kt-primary);">@s.OnerilenKutu.ToString("N0", tr) <span class="so-birim">@s.Birim</span></div>
+                                        if (s.KutuBirimli)
+                                        {
+                                            <div class="so-kucuk">@s.OnerilenTest.ToString("N0", tr) test</div>
+                                        }
+                                    }
+                                    else if (stokBiliniyor && s.OrtalamaAylikKullanim > 0)
+                                    {
+                                        <span style="color:var(--kt-ink-500); font-size:12.5px;">gerek yok</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+
+                                <td><span class="so-durum @kod">@DurumText(s.Durum)</span></td>
+
+                                <td>
+                                    <span class="gv @GuvenCls(s.Guven)" title="@s.GuvenNedeni">@GuvenText(s.Guven)</span>
+                                    @if (s.Guven != VeriGuveni.Yuksek && !string.IsNullOrWhiteSpace(s.GuvenNedeni))
+                                    {
+                                        <div class="so-kucuk" style="max-width:190px;">@s.GuvenNedeni</div>
                                     }
                                 </td>
                             </tr>
@@ -254,65 +380,66 @@
                     </tbody>
                 </table>
             </div>
+
+            <div id="urunYok" style="display:none; padding:34px 20px; text-align:center; color:var(--kt-ink-400); font-size:13px;">
+                <i class="fas fa-magnifying-glass" style="margin-right:6px;"></i> Bu süzgece uyan ürün yok
+            </div>
         }
         else
         {
             <div class="kt-empty">
-                <i class="fas fa-flask-vial"></i>
-                <p>Bu hastane için analiz edilebilir reaktif bulunamadı</p>
-                <p style="font-size:12px; margin-top:8px;">
-                    Önce fiziki sayım yapılmış ve Test eşleşmesi mevcut olmalı.
+                <i class="fas fa-boxes-stacked"></i>
+                <p>
+                    Bu hastane için ürün verisi yok. Fiziki sayım, gönderim ya da kullanım kaydı girildiğinde
+                    ürünler burada listelenir.
                 </p>
             </div>
         }
     </div>
-
-    @* ═════════ AÇIKLAMA ═════════ *@
-    <div class="kt-card" style="padding:14px 20px; background:var(--kt-bg); border-style:dashed;">
-        <div style="font-size:12.5px; color:var(--kt-ink-500); line-height:1.6;">
-            <strong style="color:var(--kt-ink-700);">Hesaplama kuralları:</strong>
-            <ul style="margin:6px 0 0 18px; padding:0;">
-                <li>
-                    <strong>+ Gönderim / − Kullanım:</strong> yalnızca
-                    <strong>@Model.SonSayimTarihi?.ToString("MMMM yyyy")</strong>
-                    sayımından <em>sonraki</em> aylarda kaydedilen hareketleri gösterir.
-                    Bu kolonlarda <code>0</code> görürsen "henüz hareket yok" anlamına gelir.
-                </li>
-                <li>
-                    <strong>Güncel Stok</strong> = Sayım Stok + Gönderim − Kullanım
-                </li>
-                <li>
-                    <strong>Aylık Ort.</strong> son 3 ay istatistik girişlerinden hesaplanır
-                    (sayım tarihinden bağımsız — eski aylara da girdiğin veriler buraya dahildir).
-                </li>
-                <li>
-                    <strong>Kalan Gün</strong> = Güncel Stok ÷ (Aylık Ort. ÷ 30)
-                </li>
-                <li>
-                    <strong>Önerilen:</strong> hedef kalan gün süresi (<strong>@Model.HedefRunwayAy ay</strong>)
-                    için gerekli toplam test, güncel stoktan düşülmüş hâli — kutu başı test sayısına göre
-                    yukarı yuvarlanır.
-                </li>
-            </ul>
-        </div>
-    </div>
-
 </div>
 
+@section Scripts {
+@await Html.PartialAsync("_Sayfalama")
 <script>
-(function () {
-    function applyFilters() {
-        var q = (document.getElementById('satirSearch').value || '').trim().toLowerCase();
-        var d = document.getElementById('durumFilter').value;
-        document.querySelectorAll('#satirTable tbody tr').forEach(function (tr) {
-            var okQ = !q || tr.dataset.search.includes(q);
-            var okD = !d || tr.dataset.durum === d;
-            tr.style.display = (okQ && okD) ? '' : 'none';
+    (function () {
+        var satirlar = Array.prototype.slice.call(document.querySelectorAll('tr.so-urun'));
+        var cipler = Array.prototype.slice.call(document.querySelectorAll('#durumCipleri .kt-chip'));
+        var ara = document.getElementById('urunAra');
+        var oneri = document.getElementById('yalnizOneri');
+        var tablo = document.getElementById('urunTablo');
+        var yok = document.getElementById('urunYok');
+        var seciliDurum = '';
+
+        function uygula() {
+            var q = ara ? ara.value.trim().toLocaleLowerCase('tr-TR') : '';
+            var yalniz = oneri && oneri.checked;
+            var gorunen = 0;
+
+            satirlar.forEach(function (tr) {
+                var ok = (!seciliDurum || tr.dataset.durum === seciliDurum)
+                      && (!yalniz || tr.dataset.oneri === '1')
+                      && (!q || (tr.dataset.ara || '').indexOf(q) !== -1);
+
+                tr.dataset.suz = ok ? '1' : '0';
+                if (ok) gorunen++;
+            });
+
+            if (tablo) tablo.style.display = gorunen > 0 ? '' : 'none';
+            if (yok) yok.style.display = gorunen > 0 ? 'none' : 'block';
+            if (tablo && window.LjSayfala) window.LjSayfala.yenile(tablo);
+        }
+
+        cipler.forEach(function (c) {
+            c.addEventListener('click', function () {
+                cipler.forEach(function (x) { x.classList.remove('active'); });
+                c.classList.add('active');
+                seciliDurum = c.dataset.durum || '';
+                uygula();
+            });
         });
-    }
-    var s = document.getElementById('satirSearch');
-    var f = document.getElementById('durumFilter');
-    if (s) s.addEventListener('input', applyFilters);
-    if (f) f.addEventListener('change', applyFilters);
-})();
+
+        if (ara) ara.addEventListener('input', uygula);
+        if (oneri) oneri.addEventListener('change', uygula);
+    })();
 </script>
+}

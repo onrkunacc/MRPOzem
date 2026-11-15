@@ -224,15 +224,15 @@
             </a>
             <ul class="collapse list-unstyled pl-4 w-100" id="lojistik-yon-menu">
                 <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Dogrulama" asp-action="Index">
-                        <i class="fe fe-shield fe-14"></i>
-                        <span class="ml-1 item-text">Sipariş Doğrulama</span>
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Dashboard" asp-action="Index">
+                        <i class="fe fe-grid fe-14"></i>
+                        <span class="ml-1 item-text">Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="HospitalEslesmesi" asp-action="Index">
-                        <i class="fe fe-link fe-14"></i>
-                        <span class="ml-1 item-text">Hastane Eşleştirme</span>
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Dogrulama" asp-action="Index">
+                        <i class="fe fe-shield fe-14"></i>
+                        <span class="ml-1 item-text">Sipariş Doğrulama</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -242,9 +242,21 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" asp-area="Lojistik" asp-controller="Dashboard" asp-action="Index">
-                        <i class="fe fe-grid fe-16"></i>
-                        <span class="ml-3 item-text">Dashboard</span>
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Rapor" asp-action="Index">
+                        <i class="fe fe-bar-chart-2 fe-14"></i>
+                        <span class="ml-1 item-text">Stok Raporu</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="HospitalEslesmesi" asp-action="Index">
+                        <i class="fe fe-link fe-14"></i>
+                        <span class="ml-1 item-text">Hastane Eşleştirme</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link pl-3" asp-area="Lojistik" asp-controller="Dashboard" asp-action="SaglikRaporu">
+                        <i class="fe fe-check-circle fe-14"></i>
+                        <span class="ml-1 item-text">Veri Kontrol</span>
                     </a>
                 </li>
             </ul>
@@ -664,26 +676,34 @@
                 <span class="ml-3 item-text">Dashboard</span>
             </a>
         </li>
-        @* ★ YENİ: Sipariş Doğrulama (ana ekran) *@
         <li class="nav-item">
             <a class="nav-link" asp-area="Lojistik" asp-controller="Dogrulama" asp-action="Index">
                 <i class="fe fe-shield fe-16"></i>
                 <span class="ml-3 item-text">Sipariş Doğrulama</span>
             </a>
         </li>
-
-        @* ★ YENİ: Hastane Eşleştirme *@
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Lojistik" asp-controller="StokOneri" asp-action="Index">
+                <i class="fe fe-package fe-16"></i>
+                <span class="ml-3 item-text">Stok Öneri</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Lojistik" asp-controller="Rapor" asp-action="Index">
+                <i class="fe fe-bar-chart-2 fe-16"></i>
+                <span class="ml-3 item-text">Stok Raporu</span>
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link" asp-area="Lojistik" asp-controller="HospitalEslesmesi" asp-action="Index">
                 <i class="fe fe-link fe-16"></i>
                 <span class="ml-3 item-text">Hastane Eşleştirme</span>
             </a>
         </li>
-
         <li class="nav-item">
-            <a class="nav-link" asp-area="Lojistik" asp-controller="StokOneri" asp-action="Index">
-                <i class="fe fe-package fe-16"></i>
-                <span class="ml-3 item-text">Stok Öneri</span>
+            <a class="nav-link" asp-area="Lojistik" asp-controller="Dashboard" asp-action="SaglikRaporu">
+                <i class="fe fe-check-circle fe-16"></i>
+                <span class="ml-3 item-text">Veri Kontrol</span>
             </a>
         </li>
 

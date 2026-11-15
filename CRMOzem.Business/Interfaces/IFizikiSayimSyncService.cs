@@ -23,13 +23,17 @@ namespace CRMOzem.Business.Interfaces
         public int ReaktifEslesen { get; set; }           // ← YENİ: kaç reaktif Test ile eşleşti
         public int ReaktifEslesemeyen { get; set; }       // ← YENİ: kaç reaktif eşleşmedi
         public List<string> EslesemeyenHastaneler { get; set; } = new();
+
+        /// <summary>Yerine yeni sayım geldiği için pasife alınan eski sayım satırı.</summary>
+        public int KapatilanEskiSatir { get; set; }
         public DateTime BaslamaZamani { get; set; } = DateTime.Now;
         public DateTime BitisZamani { get; set; }
         public string? HataMesaji { get; set; }
 
         public string Ozet =>
             $"Çekilen: {CekilenSatir} · Yeni: {YeniEklenen} · Güncellenen: {Guncellenen}"
-            + (AtlanilanHastaneSizKayit > 0 ? $" · Atlanan: {AtlanilanHastaneSizKayit}" : "")
+            + (AtlanilanHastaneSizKayit > 0 ? $" · Hastanesi eşleşmediği için atlanan: {AtlanilanHastaneSizKayit}" : "")
+            + (KapatilanEskiSatir > 0 ? $" · Kapatılan eski sayım satırı: {KapatilanEskiSatir}" : "")
             + $" · Reaktif eşleşen: {ReaktifEslesen}/{ReaktifEslesen + ReaktifEslesemeyen}"
             + $" · {(BitisZamani - BaslamaZamani).TotalSeconds:N1}sn";
     }
@@ -40,6 +44,9 @@ namespace CRMOzem.Business.Interfaces
         public List<string> CRMOzemdekiHastaneler { get; set; } = new();
         public int EslesenSayisi { get; set; }
         public int EslesemeyenSayisi { get; set; }
+
+        /// <summary>false ise sayım uygulamasına ulaşılamadı.</summary>
+        public bool ApiyeUlasildi { get; set; }
     }
 
     public class EslesmeDetay
@@ -52,5 +59,15 @@ namespace CRMOzem.Business.Interfaces
         public string? InternalHospitalName { get; set; }
         public bool ManuelEslestirildi { get; set; }   // true = user manuel bağladı
         public bool ManuelYoksay { get; set; }         // true = user "yoksay" dedi
+
+        /// <summary>Sayım uygulamasındaki son sayım tarihi.</summary>
+        public DateTime? ApiSonSayim { get; set; }
+
+        /// <summary>Bizde kayıtlı son (aktif) sayım tarihi.</summary>
+        public DateTime? BizdekiSonSayim { get; set; }
+
+        /// <summary>Sayım uygulamasında daha yeni sayım var ama bize düşmemiş.</summary>
+        public bool BizdeEski => Eslesti && ApiSonSayim.HasValue
+            && (!BizdekiSonSayim.HasValue || BizdekiSonSayim.Value.Date < ApiSonSayim.Value.Date);
     }
 }
