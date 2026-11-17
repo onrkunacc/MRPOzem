@@ -14,7 +14,8 @@ namespace CRMOzem.Core.ViewModels
     //    2. Bir hastanede ürün ürün durum ne?
     //    3. Bir ürün hangi hastanelerde, ne kadar var? ("nerede ne var")
     //
-    //  Bütün miktarlar KUTU cinsindendir (kutuyla satılmayan üründe adet).
+    //  Bütün miktarlar TEST adedidir. (Sayım, gönderim ve kullanım test olarak
+    //  girilir; yalnızca hastane siparişi kutu olarak istenir.)
     //  Stok rakamı Stok Öneri ve Doğrulama ekranlarıyla aynı hesaptan gelir.
     // ═══════════════════════════════════════════════════════════════
 
@@ -31,7 +32,14 @@ namespace CRMOzem.Core.ViewModels
         Birikiyor = 2,
 
         /// <summary>Kullanılan gönderilenden belirgin fazla — stok eriyor.</summary>
-        Eriyor = 3
+        Eriyor = 3,
+
+        /// <summary>
+        /// Fark 3 katı aşıyor: gerçek bir tüketim farkı değil, büyük olasılıkla
+        /// kayıt sorunu (gönderim eksik girilmiş ya da gönderim ve kullanım
+        /// farklı birimle — kutu / test — girilmiş).
+        /// </summary>
+        KontrolEdilmeli = 4
     }
 
     public class RaporHastaneSatirVm
@@ -46,22 +54,29 @@ namespace CRMOzem.Core.ViewModels
 
         public int UrunSayisi { get; set; }
 
-        /// <summary>Bugünkü tahmini stok — kutu.</summary>
-        public decimal StokKutu { get; set; }
+        /// <summary>Bugünkü stok — test. Fiziki sayımı olmayan hastanede null.</summary>
+        public decimal? StokTest { get; set; }
 
-        /// <summary>Aylık ortalama tüketim — kutu.</summary>
-        public decimal AylikKutu { get; set; }
+        /// <summary>Stoğu (sayımı) bilinen ürün sayısı.</summary>
+        public int SayimliUrun { get; set; }
 
-        /// <summary>Dönemde gönderilen — kutu.</summary>
-        public decimal GonderilenKutu { get; set; }
+        /// <summary>Aylık ortalama tüketim — test.</summary>
+        public decimal AylikTest { get; set; }
 
-        /// <summary>Dönemde kullanılan — kutu.</summary>
-        public decimal KullanilanKutu { get; set; }
+        /// <summary>Dönemde gönderilen — test.</summary>
+        public decimal GonderilenTest { get; set; }
 
-        public decimal FarkKutu => GonderilenKutu - KullanilanKutu;
+        /// <summary>Dönemde kullanılan — test.</summary>
+        public decimal KullanilanTest { get; set; }
 
-        /// <summary>Eldeki stok kaç ay yeter (tüketim yoksa null).</summary>
-        public decimal? StokAy => AylikKutu > 0 ? Math.Max(0m, Math.Round(StokKutu / AylikKutu, 1)) : null;
+        public decimal FarkTest => GonderilenTest - KullanilanTest;
+
+        /// <summary>Sayımlı ürünlerin aylık tüketimi — kaç ay yeter hesabı için.</summary>
+        public decimal SayimliAylikTest { get; set; }
+
+        /// <summary>Eldeki stok kaç ay yeter (sayım ya da tüketim yoksa null).</summary>
+        public decimal? StokAy => StokTest.HasValue && SayimliAylikTest > 0
+            ? Math.Max(0m, Math.Round(StokTest.Value / SayimliAylikTest, 1)) : null;
 
         public int KritikUrun { get; set; }
 
@@ -69,8 +84,9 @@ namespace CRMOzem.Core.ViewModels
         {
             get
             {
-                if (KullanilanKutu <= 0) return DengeDurumu.Bilinmiyor;
-                var oran = GonderilenKutu / KullanilanKutu;
+                if (KullanilanTest <= 0) return DengeDurumu.Bilinmiyor;
+                var oran = GonderilenTest / KullanilanTest;
+                if (oran > 3m || oran < 1m / 3m) return DengeDurumu.KontrolEdilmeli;
                 if (oran > 1.15m) return DengeDurumu.Birikiyor;
                 if (oran < 0.85m) return DengeDurumu.Eriyor;
                 return DengeDurumu.Dengeli;
@@ -87,16 +103,24 @@ namespace CRMOzem.Core.ViewModels
 
         public List<RaporHastaneSatirVm> Hastaneler { get; set; } = new();
 
-        public decimal ToplamStok => Hastaneler.Sum(h => h.StokKutu);
-        public decimal ToplamGonderilen => Hastaneler.Sum(h => h.GonderilenKutu);
-        public decimal ToplamKullanilan => Hastaneler.Sum(h => h.KullanilanKutu);
-        public decimal ToplamAylik => Hastaneler.Sum(h => h.AylikKutu);
-        public decimal? ToplamStokAy => ToplamAylik > 0 ? Math.Max(0m, Math.Round(ToplamStok / ToplamAylik, 1)) : null;
+        /// <summary>Fiziki sayımı olan hastane sayısı.</summary>
+        public int SayimliHastane => Hastaneler.Count(h => h.StokTest.HasValue);
+        public int SayimsizHastane => Hastaneler.Count(h => !h.StokTest.HasValue);
+
+        /// <summary>Yalnızca sayımı olan hastanelerin stoğu.</summary>
+        public decimal ToplamStok => Hastaneler.Sum(h => h.StokTest ?? 0);
+        public decimal ToplamGonderilen => Hastaneler.Sum(h => h.GonderilenTest);
+        public decimal ToplamKullanilan => Hastaneler.Sum(h => h.KullanilanTest);
+        public decimal ToplamAylik => Hastaneler.Sum(h => h.AylikTest);
+        private decimal ToplamSayimliAylik => Hastaneler.Where(h => h.StokTest.HasValue).Sum(h => h.SayimliAylikTest);
+        public decimal? ToplamStokAy => SayimliHastane > 0 && ToplamSayimliAylik > 0
+            ? Math.Max(0m, Math.Round(ToplamStok / ToplamSayimliAylik, 1)) : null;
 
         public int Dengeli => Hastaneler.Count(h => h.Denge == DengeDurumu.Dengeli);
         public int Birikiyor => Hastaneler.Count(h => h.Denge == DengeDurumu.Birikiyor);
         public int Eriyor => Hastaneler.Count(h => h.Denge == DengeDurumu.Eriyor);
         public int Bilinmiyor => Hastaneler.Count(h => h.Denge == DengeDurumu.Bilinmiyor);
+        public int KontrolEdilmeli => Hastaneler.Count(h => h.Denge == DengeDurumu.KontrolEdilmeli);
     }
 
     // ── Tek hastane ──────────────────────────────────────────────
@@ -104,8 +128,8 @@ namespace CRMOzem.Core.ViewModels
     public class RaporAyVm
     {
         public DateTime Ay { get; set; }
-        public decimal GonderilenKutu { get; set; }
-        public decimal KullanilanKutu { get; set; }
+        public decimal GonderilenTest { get; set; }
+        public decimal KullanilanTest { get; set; }
 
         /// <summary>O ay için kullanım (istatistik) girişi yapılmış mı?</summary>
         public bool KullanimGirildi { get; set; }
@@ -116,12 +140,13 @@ namespace CRMOzem.Core.ViewModels
         public int TestID { get; set; }
         public string UrunAdi { get; set; } = "";
         public string? ReferenceNumber { get; set; }
-        public string Birim { get; set; } = "kutu";
+        public string Birim { get; set; } = "test";
 
-        public decimal StokKutu { get; set; }
-        public decimal AylikKutu { get; set; }
-        public decimal GonderilenKutu { get; set; }
-        public decimal KullanilanKutu { get; set; }
+        /// <summary>Fiziki sayımı yoksa null.</summary>
+        public decimal? StokTest { get; set; }
+        public decimal AylikTest { get; set; }
+        public decimal GonderilenTest { get; set; }
+        public decimal KullanilanTest { get; set; }
         public decimal? StokAy { get; set; }
         public StokDurumu Durum { get; set; }
 
@@ -149,8 +174,8 @@ namespace CRMOzem.Core.ViewModels
     {
         public int HospitalID { get; set; }
         public string HospitalName { get; set; } = "";
-        public decimal StokKutu { get; set; }
-        public decimal AylikKutu { get; set; }
+        public decimal StokTest { get; set; }
+        public decimal AylikTest { get; set; }
         public decimal? StokAy { get; set; }
         public StokDurumu Durum { get; set; }
         public DateTime? SonSayimTarihi { get; set; }
@@ -161,13 +186,13 @@ namespace CRMOzem.Core.ViewModels
         public int? TestID { get; set; }
         public string? UrunAdi { get; set; }
         public string? ReferenceNumber { get; set; }
-        public string Birim { get; set; } = "kutu";
+        public string Birim { get; set; } = "test";
 
         public List<RaporUrunSecenekVm> Urunler { get; set; } = new();
         public List<RaporUrunHastaneSatirVm> Hastaneler { get; set; } = new();
 
-        public decimal ToplamStok => Hastaneler.Sum(h => h.StokKutu);
-        public decimal ToplamAylik => Hastaneler.Sum(h => h.AylikKutu);
+        public decimal ToplamStok => Hastaneler.Sum(h => h.StokTest);
+        public decimal ToplamAylik => Hastaneler.Sum(h => h.AylikTest);
         public decimal? ToplamStokAy => ToplamAylik > 0 ? Math.Max(0m, Math.Round(ToplamStok / ToplamAylik, 1)) : null;
     }
 }

@@ -37,6 +37,8 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             ViewBag.MevcutEslesmeler = mevcutEslesmeler;
             ViewBag.EslesmeyenMusteriler = teshis.EslesmeyenMusteriler;
             ViewBag.ApiyeUlasildi = teshis.ApiyeUlasildi;
+            ViewBag.GecersizEskiEslesmeler = teshis.GecersizEskiEslesmeler
+                .Select(x => x.Trim().ToUpperInvariant()).ToList();
 
             ViewBag.Hospitals = await _db.Hospitals
                 .AsNoTracking()
@@ -75,7 +77,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 mevcut.ExternalKurumAdi = kurumAdi;
                 mevcut.Not = not;
                 mevcut.GuncellemeTarihi = DateTime.Now;
-                TempData["SuccessMessage"] = $"'{kod}' güncellendi.";
+                TempData["SuccessMessage"] = $"'{kurumAdi ?? kod}' güncellendi.";
             }
             else
             {
@@ -95,7 +97,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                     OlusturmaTarihi = DateTime.Now,
                     OlusturanKullanici = User.Identity?.Name
                 });
-                TempData["SuccessMessage"] = $"'{kod}' eşleştirildi.";
+                TempData["SuccessMessage"] = $"'{kurumAdi ?? kod}' eşleştirildi.";
             }
 
             await _db.SaveChangesAsync(ct);

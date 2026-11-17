@@ -180,9 +180,9 @@
         </div>
 
         <div class="dg-kpi-tile" style="border-left-color: #0891b2; cursor:default;">
-            <div class="dg-kpi-label"><i class="fas fa-box"></i> Onaylanan Kutu</div>
-            <div class="dg-kpi-value" style="color:#0891b2;">@Model.Kpi.Son30GunToplamOnayKutu.ToString("N0")</div>
-            <div class="dg-kpi-hint">son 30 gün · @Model.Kpi.Son30GunToplamOnayTest.ToString("N0") test</div>
+            <div class="dg-kpi-label"><i class="fas fa-vial"></i> Onaylanan Test</div>
+            <div class="dg-kpi-value" style="color:#0891b2;">@Model.Kpi.Son30GunToplamOnayTest.ToString("N0")</div>
+            <div class="dg-kpi-hint">son 30 gün · @Model.Kpi.Son30GunToplamOnayKutu.ToString("N0") kutu sipariş</div>
         </div>
     </div>
 
@@ -371,7 +371,7 @@
                                     @a.HospitalName
                                 </div>
                                 <div style="font-size: 10.5px; color: var(--kt-ink-500); margin-top: 2px;">
-                                    @a.KalemSayisi kalem · @a.ToplamOnaylananKutu.ToString("N0") kutu
+                                    @a.KalemSayisi kalem · @a.ToplamOnaylananTest.ToString("N0") test
                                     @if (!string.IsNullOrWhiteSpace(a.Kullanici))
                                     {
                                         <span> · @a.Kullanici</span>

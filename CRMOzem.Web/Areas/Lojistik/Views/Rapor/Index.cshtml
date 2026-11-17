@@ -9,13 +9,15 @@
         DengeDurumu.Dengeli => "Dengeli",
         DengeDurumu.Birikiyor => "Stok birikiyor",
         DengeDurumu.Eriyor => "Stok eriyor",
+        DengeDurumu.KontrolEdilmeli => "Kayıtları kontrol edin",
         _ => "Kullanım girilmemiş"
     };
     string DengeCls(DengeDurumu d) => d switch
     {
         DengeDurumu.Dengeli => "kt-badge-success",
         DengeDurumu.Birikiyor => "kt-badge-warning",
-        DengeDurumu.Eriyor => "kt-badge-danger",
+        DengeDurumu.Eriyor => "kt-badge-warning",
+        DengeDurumu.KontrolEdilmeli => "kt-badge-danger",
         _ => "kt-badge-secondary"
     };
     string Sayi(decimal d) => d.ToString("N0", tr);
@@ -87,14 +89,22 @@
                 <div class="kt-kpi-label">Hastanelerdeki Stok</div>
                 <div class="kt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
             </div>
-            <div class="kt-kpi-value">@Sayi(Model.ToplamStok)</div>
-            <div class="kt-kpi-foot">
-                kutu
-                @if (Model.ToplamStokAy.HasValue)
-                {
-                    <text> · ortalama @Model.ToplamStokAy.Value.ToString("0.#", tr) ay yeter</text>
-                }
-            </div>
+            @if (Model.SayimliHastane > 0)
+            {
+                <div class="kt-kpi-value">@Sayi(Model.ToplamStok)</div>
+                <div class="kt-kpi-foot">
+                    test · @Model.SayimliHastane hastanenin sayımından
+                    @if (Model.ToplamStokAy.HasValue)
+                    {
+                        <text> · @Model.ToplamStokAy.Value.ToString("0.#", tr) ay yeter</text>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="kt-kpi-value" style="color:var(--kt-ink-400);">—</div>
+                <div class="kt-kpi-foot">fiziki sayım girilince hesaplanır</div>
+            }
         </div>
         <div class="kt-kpi accent-primary">
             <div class="kt-kpi-head">
@@ -102,7 +112,7 @@
                 <div class="kt-kpi-icon"><i class="fas fa-truck"></i></div>
             </div>
             <div class="kt-kpi-value">@Sayi(Model.ToplamGonderilen)</div>
-            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+            <div class="kt-kpi-foot">test · son @Model.DonemAy ay</div>
         </div>
         <div class="kt-kpi accent-pos">
             <div class="kt-kpi-head">
@@ -110,7 +120,7 @@
                 <div class="kt-kpi-icon"><i class="fas fa-vial"></i></div>
             </div>
             <div class="kt-kpi-value">@Sayi(Model.ToplamKullanilan)</div>
-            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+            <div class="kt-kpi-foot">test · son @Model.DonemAy ay</div>
         </div>
         <div class="kt-kpi accent-warn">
             <div class="kt-kpi-head">
@@ -118,9 +128,18 @@
                 <div class="kt-kpi-icon"><i class="fas fa-scale-balanced"></i></div>
             </div>
             <div class="kt-kpi-value">@((Model.ToplamGonderilen - Model.ToplamKullanilan).ToString("+#,0;-#,0;0", tr))</div>
-            <div class="kt-kpi-foot">@Model.Dengeli dengeli · @Model.Birikiyor birikiyor · @Model.Eriyor eriyor</div>
+            <div class="kt-kpi-foot">@Model.Dengeli dengeli · @Model.Birikiyor birikiyor · @Model.Eriyor eriyor@(Model.KontrolEdilmeli > 0 ? $" · {Model.KontrolEdilmeli} kontrol edilmeli" : "")</div>
         </div>
     </div>
+
+    @if (Model.SayimsizHastane > 0)
+    {
+        <div class="kt-card" style="border-left:3px solid var(--kt-warn); padding:12px 18px; font-size:13px; color:var(--kt-ink-700);">
+            <i class="fas fa-clipboard-list" style="color:var(--kt-warn); margin-right:6px;"></i>
+            <strong>@Model.SayimsizHastane hastanenin fiziki sayımı yok</strong> — bu hastanelerde eldeki stok ve kaç ay yeteceği hesaplanmaz.
+            Sayımlar girilip Dashboard'dan "Sayımları Yenile" denince oluşur.
+        </div>
+    }
 
     @* ═══ HASTANELER ═══ *@
     <div class="kt-card kt-card-flush">
@@ -136,6 +155,7 @@
                 <option value="Dengeli">Dengeli</option>
                 <option value="Birikiyor">Stok birikiyor</option>
                 <option value="Eriyor">Stok eriyor</option>
+                <option value="KontrolEdilmeli">Kayıtları kontrol edin</option>
                 <option value="Bilinmiyor">Kullanım girilmemiş</option>
             </select>
             <input type="text" id="hastaneAra" class="kt-input" placeholder="Hastane ara…" style="width:220px;" />
@@ -161,9 +181,9 @@
                         @foreach (var h in Model.Hastaneler)
                         {
                             var url = Url.Action("Hastane", new { id = h.HospitalID, ay = Model.DonemAy });
-                            var enBuyuk = Math.Max(1m, Math.Max(h.GonderilenKutu, h.KullanilanKutu));
-                            var gYuzde = (h.GonderilenKutu * 100m / enBuyuk).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
-                            var kYuzde = (h.KullanilanKutu * 100m / enBuyuk).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                            var enBuyuk = Math.Max(1m, Math.Max(h.GonderilenTest, h.KullanilanTest));
+                            var gYuzde = (h.GonderilenTest * 100m / enBuyuk).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                            var kYuzde = (h.KullanilanTest * 100m / enBuyuk).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
 
                             <tr class="rp-satir" data-url="@url" data-ara="@h.HospitalName.ToLower(tr)" data-denge="@h.Denge">
                                 <td class="kt-cell-primary">
@@ -183,8 +203,17 @@
                                         <span style="color:var(--kt-warn-700);">sayım yok</span>
                                     }
                                 </td>
-                                <td class="text-right"><strong style="@(h.StokKutu < 0 ? "color:var(--kt-neg);" : "")" title="@(h.StokKutu < 0 ? "Kayıtlara göre eksi: gönderim kaydı eksik ya da kullanım fazla girilmiş" : "")">@Sayi(h.StokKutu)</strong> <span class="text-muted" style="font-size:11px;">kutu</span></td>
-                                <td class="text-right">@h.AylikKutu.ToString("N1", tr)</td>
+                                <td class="text-right">
+                                    @if (h.StokTest.HasValue)
+                                    {
+                                        <strong style="@(h.StokTest < 0 ? "color:var(--kt-neg);" : "")" title="@(h.StokTest < 0 ? "Sayımdan sonra kaydedilen kullanım, gönderimden fazla" : "")">@Sayi(h.StokTest.Value)</strong> <span class="text-muted" style="font-size:11px;">test</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Fiziki sayım girilmeden stok hesaplanmaz">sayım yok</span>
+                                    }
+                                </td>
+                                <td class="text-right">@h.AylikTest.ToString("N0", tr)</td>
                                 <td class="text-center">
                                     @if (h.StokAy.HasValue)
                                     {
@@ -197,9 +226,9 @@
                                 </td>
                                 <td>
                                     <div class="rp-ikili">
-                                        <span class="et">@Sayi(h.GonderilenKutu)</span>
+                                        <span class="et">@Sayi(h.GonderilenTest)</span>
                                         <div class="rp-cubuk"><span class="g" style="width:@gYuzde%"></span></div>
-                                        <span class="et">@Sayi(h.KullanilanKutu)</span>
+                                        <span class="et">@Sayi(h.KullanilanTest)</span>
                                         <div class="rp-cubuk"><span class="k" style="width:@kYuzde%"></span></div>
                                     </div>
                                 </td>
@@ -211,7 +240,7 @@
                                     else
                                     {
                                         <span class="@(h.Denge == DengeDurumu.Birikiyor ? "rp-fark-arti" : h.Denge == DengeDurumu.Eriyor ? "rp-fark-eksi" : "")">
-                                            @h.FarkKutu.ToString("+#,0;-#,0;0", tr)
+                                            @h.FarkTest.ToString("+#,0;-#,0;0", tr)
                                         </span>
                                     }
                                 </td>
@@ -243,9 +272,11 @@
             <span><strong style="color:var(--kt-ink-700);">Dengeli</strong>: gönderilen ile kullanılan arasındaki fark %15'in altında</span>
             <span><strong style="color:var(--kt-ink-700);">Stok birikiyor</strong>: kullanılandan fazla gönderilmiş</span>
             <span><strong style="color:var(--kt-ink-700);">Stok eriyor</strong>: gönderilenden fazla kullanılmış</span>
+            <span><strong style="color:var(--kt-ink-700);">Kayıtları kontrol edin</strong>: fark 3 katı aşıyor — gerçek tüketim farkı değil, kayıt sorunu (eksik gönderim ya da kutu / test karışıklığı); ayrıntı Veri Kontrol'de</span>
         </div>
         <div style="font-size:11.5px; color:var(--kt-ink-400); margin-top:6px;">
-            Miktarlar kutu cinsindendir. Gönderilen / kullanılan karşılaştırması yalnızca kullanımı girilen ürünler (reaktifler) üzerinden yapılır.
+            Miktarlar test adedidir. Eldeki stok yalnızca fiziki sayımı olan hastanede hesaplanır.
+            Gönderilen / kullanılan karşılaştırması, kullanımı girilen ürünler ve aylar üzerinden yapılır.
         </div>
     </div>
 </div>

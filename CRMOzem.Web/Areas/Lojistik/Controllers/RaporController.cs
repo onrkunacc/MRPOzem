@@ -62,7 +62,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             ws.Cell(1, 1).Style.Font.Bold = true;
             ws.Cell(1, 1).Style.Font.FontSize = 14;
             ws.Cell(2, 1).Value =
-                $"{DateTime.Now:dd.MM.yyyy} · dönem: {vm.DonemBas:MM.yyyy} – {vm.DonemSon:MM.yyyy} (son {vm.DonemAy} ay) · miktarlar kutu";
+                $"{DateTime.Now:dd.MM.yyyy} · dönem: {vm.DonemBas:MM.yyyy} – {vm.DonemSon:MM.yyyy} (son {vm.DonemAy} ay) · miktarlar test";
             ws.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
 
             var basliklar = new[]
@@ -91,12 +91,13 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 }
                 else ws.Cell(r, 2).Value = "sayım yok";
 
-                ws.Cell(r, 3).Value = Math.Round(h.StokKutu, 0);
-                ws.Cell(r, 4).Value = Math.Round(h.AylikKutu, 1);
+                if (h.StokTest.HasValue) ws.Cell(r, 3).Value = Math.Round(h.StokTest.Value, 0);
+                else ws.Cell(r, 3).Value = "sayım yok";
+                ws.Cell(r, 4).Value = Math.Round(h.AylikTest, 0);
                 if (h.StokAy.HasValue) ws.Cell(r, 5).Value = h.StokAy.Value; else ws.Cell(r, 5).Value = "—";
-                ws.Cell(r, 6).Value = Math.Round(h.GonderilenKutu, 0);
-                ws.Cell(r, 7).Value = Math.Round(h.KullanilanKutu, 0);
-                ws.Cell(r, 8).Value = Math.Round(h.FarkKutu, 0);
+                ws.Cell(r, 6).Value = Math.Round(h.GonderilenTest, 0);
+                ws.Cell(r, 7).Value = Math.Round(h.KullanilanTest, 0);
+                ws.Cell(r, 8).Value = Math.Round(h.FarkTest, 0);
 
                 var d = ws.Cell(r, 9);
                 d.Value = DengeAdi(h.Denge);
@@ -105,6 +106,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                     DengeDurumu.Dengeli => "#dcfce7",
                     DengeDurumu.Birikiyor => "#fef9c3",
                     DengeDurumu.Eriyor => "#ffedd5",
+                    DengeDurumu.KontrolEdilmeli => "#fee2e2",
                     _ => "#f1f5f9"
                 });
                 r++;
@@ -113,7 +115,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             // Toplam satırı
             ws.Cell(r, 1).Value = "TOPLAM";
             ws.Cell(r, 3).Value = Math.Round(vm.ToplamStok, 0);
-            ws.Cell(r, 4).Value = Math.Round(vm.ToplamAylik, 1);
+            ws.Cell(r, 4).Value = Math.Round(vm.ToplamAylik, 0);
             if (vm.ToplamStokAy.HasValue) ws.Cell(r, 5).Value = vm.ToplamStokAy.Value;
             ws.Cell(r, 6).Value = Math.Round(vm.ToplamGonderilen, 0);
             ws.Cell(r, 7).Value = Math.Round(vm.ToplamKullanilan, 0);
@@ -149,17 +151,6 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             }
 
             var hareket = await HareketYukleAsync(new[] { id }, bas, son, ct);
-            var kutuIci = await KutuIciYukleAsync(ct);
-
-            // Hastanenin kendi sayımındaki kutu içi adet katalogdakinden önceliklidir
-            var hastaneKutuIci = panel.Satirlar
-                .Where(s => s.TestID.HasValue)
-                .GroupBy(s => s.TestID!.Value)
-                .ToDictionary(g => g.Key, g => g.First().KutuBirimli ? Math.Max(1, g.First().BoxTextCount) : 1);
-
-            decimal Kutu(int testId, int adet) =>
-                adet / (decimal)(hastaneKutuIci.TryGetValue(testId, out var k) ? k
-                               : kutuIci.TryGetValue(testId, out var kk) ? kk : 1);
 
             var vm = new RaporHastaneVm { DonemAy = donem };
 
@@ -167,32 +158,40 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             var gonderimByTest = hareket.Gonderim.GroupBy(x => x.TestID).ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
             var kullanimByTest = hareket.Kullanim.GroupBy(x => x.TestID).ToDictionary(g => g.Key, g => g.Sum(x => x.Adet));
 
-            foreach (var s in panel.Satirlar.Where(x => x.TestID.HasValue && x.Durum != StokDurumu.VeriYok))
+            foreach (var s in panel.Satirlar.Where(x => x.TestID.HasValue))
             {
                 var tid = s.TestID!.Value;
+                var stokVar = s.StokKaynagi != StokKaynagi.Yok;
+
+                // Ne stoğu ne dönemde hareketi olan ürün listeyi kalabalıklaştırmasın
+                if (!stokVar && !gonderimByTest.ContainsKey(tid) && !kullanimByTest.ContainsKey(tid)) continue;
+
                 vm.Urunler.Add(new RaporUrunSatirVm
                 {
                     TestID = tid,
                     UrunAdi = s.TestAdi,
                     ReferenceNumber = s.ReferenceNumber,
-                    Birim = s.Birim,
-                    StokKutu = s.StokKutu ?? s.HesapGuncelStok,
-                    AylikKutu = s.AylikKutu ?? s.OrtalamaAylikKullanim,
-                    GonderilenKutu = Math.Round(Kutu(tid, gonderimByTest.GetValueOrDefault(tid)), 1),
-                    KullanilanKutu = Math.Round(Kutu(tid, kullanimByTest.GetValueOrDefault(tid)), 1),
-                    StokAy = s.StokAy,
+                    Birim = "test",
+                    StokTest = stokVar ? s.HesapGuncelStok : null,
+                    AylikTest = s.OrtalamaAylikKullanim,
+                    GonderilenTest = gonderimByTest.GetValueOrDefault(tid),
+                    KullanilanTest = kullanimByTest.GetValueOrDefault(tid),
+                    StokAy = stokVar ? s.StokAy : null,
                     Durum = s.Durum,
                     KullanimTakipli = s.TuketimKaynagi == TuketimKaynagi.Kullanim
                 });
             }
 
             vm.Urunler = vm.Urunler
-                .OrderBy(u => u.StokAy ?? 999m)
+                .OrderBy(u => u.StokTest.HasValue ? 0 : 1)
+                .ThenBy(u => u.StokAy ?? 999m)
                 .ThenBy(u => u.UrunAdi)
                 .ToList();
 
             // ── Ay ay ──
-            // Grafik de üstteki toplamlarla aynı kümeyi kullanır: kullanımı girilen ürünler
+            // Grafik de üstteki toplamlarla aynı kümeyi kullanır: kullanımı girilen
+            // ürünler. Kullanım girilmemiş ayın gönderimi de gösterilir (çubuk
+            // taranmış görünür) ama karşılaştırmaya katılmaz.
             var kullanimAylari = hareket.Kullanim.Select(x => x.Ay).ToHashSet();
             var takipliUrunler = hareket.Kullanim.Select(x => x.TestID).ToHashSet();
             for (var a = bas; a < son; a = a.AddMonths(1))
@@ -200,13 +199,13 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 vm.Aylar.Add(new RaporAyVm
                 {
                     Ay = a,
-                    GonderilenKutu = Math.Round(hareket.Gonderim.Where(x => x.Ay == a && takipliUrunler.Contains(x.TestID)).Sum(x => Kutu(x.TestID, x.Adet)), 0),
-                    KullanilanKutu = Math.Round(hareket.Kullanim.Where(x => x.Ay == a).Sum(x => Kutu(x.TestID, x.Adet)), 0),
+                    GonderilenTest = Math.Round(hareket.Gonderim.Where(x => x.Ay == a && takipliUrunler.Contains(x.TestID)).Sum(x => (decimal)x.Adet), 0),
+                    KullanilanTest = Math.Round(hareket.Kullanim.Where(x => x.Ay == a).Sum(x => (decimal)x.Adet), 0),
                     KullanimGirildi = kullanimAylari.Contains(a)
                 });
             }
 
-            vm.Ozet = HastaneOzeti(panel, hareket, kutuIci);
+            vm.Ozet = HastaneOzeti(panel, hareket);
             return View(vm);
         }
 
@@ -223,7 +222,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             // Seçenekler: herhangi bir hastanede hesabı çıkan ürünler
             vm.Urunler = paneller.Values
                 .SelectMany(p => p.Satirlar)
-                .Where(s => s.TestID.HasValue && s.Durum != StokDurumu.VeriYok)
+                .Where(s => s.TestID.HasValue && s.StokKaynagi != StokKaynagi.Yok)
                 .GroupBy(s => s.TestID!.Value)
                 .Select(g => new RaporUrunSecenekVm
                 {
@@ -239,26 +238,25 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             {
                 foreach (var p in paneller.Values)
                 {
-                    var s = p.Satirlar.FirstOrDefault(x => x.TestID == testId && x.Durum != StokDurumu.VeriYok);
+                    var s = p.Satirlar.FirstOrDefault(x => x.TestID == testId && x.StokKaynagi != StokKaynagi.Yok);
                     if (s == null) continue;
 
                     vm.UrunAdi ??= s.TestAdi;
                     vm.ReferenceNumber ??= s.ReferenceNumber;
-                    vm.Birim = s.Birim;
 
                     vm.Hastaneler.Add(new RaporUrunHastaneSatirVm
                     {
                         HospitalID = p.HospitalID,
                         HospitalName = p.HospitalName,
-                        StokKutu = s.StokKutu ?? s.HesapGuncelStok,
-                        AylikKutu = s.AylikKutu ?? s.OrtalamaAylikKullanim,
+                        StokTest = s.HesapGuncelStok,
+                        AylikTest = s.OrtalamaAylikKullanim,
                         StokAy = s.StokAy,
                         Durum = s.Durum,
                         SonSayimTarihi = s.SonSayimTarihi
                     });
                 }
 
-                vm.Hastaneler = vm.Hastaneler.OrderByDescending(h => h.StokKutu).ToList();
+                vm.Hastaneler = vm.Hastaneler.OrderByDescending(h => h.StokTest).ToList();
             }
 
             return View(vm);
@@ -274,7 +272,6 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             var paneller = await TumPanellerAsync(ct);
 
             var hareket = await HareketYukleAsync(paneller.Keys.ToList(), bas, son, ct);
-            var kutuIci = await KutuIciYukleAsync(ct);
 
             var vm = new RaporIndexVm { DonemAy = donem, DonemBas = bas, DonemSon = son.AddMonths(-1) };
 
@@ -286,10 +283,12 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                     Kullanim = hareket.Kullanim.Where(x => x.HospitalID == p.HospitalID).ToList()
                 };
 
-                var satir = HastaneOzeti(p, hHareket, kutuIci);
+                var satir = HastaneOzeti(p, hHareket);
 
                 // Ne stoğu ne hareketi olan hastane listeyi kalabalıklaştırmasın
-                if (satir.UrunSayisi == 0 && satir.GonderilenKutu == 0 && satir.KullanilanKutu == 0) continue;
+                if (!satir.StokTest.HasValue && satir.AylikTest == 0
+                    && satir.GonderilenTest == 0 && satir.KullanilanTest == 0
+                    && !hHareket.Gonderim.Any()) continue;
 
                 vm.Hastaneler.Add(satir);
             }
@@ -304,20 +303,17 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
         /// kontrol ve sarfın kullanım kaydı olmadığından onları katmak
         /// "gönderdik ama kullanılmadı" gibi yanlış bir fark doğururdu.
         /// </summary>
-        private static RaporHastaneSatirVm HastaneOzeti(
-            HastaneStokPaneliVm p, Hareketler hareket, Dictionary<int, int> kutuIci)
+        private static RaporHastaneSatirVm HastaneOzeti(HastaneStokPaneliVm p, Hareketler hareket)
         {
-            var hesaplanan = p.Satirlar.Where(s => s.TestID.HasValue && s.Durum != StokDurumu.VeriYok).ToList();
+            var urunler = p.Satirlar.Where(s => s.TestID.HasValue).ToList();
+            var sayimli = urunler.Where(s => s.StokKaynagi != StokKaynagi.Yok).ToList();
 
-            var hastaneKutuIci = hesaplanan
-                .GroupBy(s => s.TestID!.Value)
-                .ToDictionary(g => g.Key, g => g.First().KutuBirimli ? Math.Max(1, g.First().BoxTextCount) : 1);
-
-            decimal Kutu(int testId, int adet) =>
-                adet / (decimal)(hastaneKutuIci.TryGetValue(testId, out var k) ? k
-                               : kutuIci.TryGetValue(testId, out var kk) ? kk : 1);
-
+            // Gönderim–kullanım karşılaştırması aynı küme üzerinden yapılır:
+            // kullanımı girilen ürünler ve kullanımı girilen aylar. (Kullanım
+            // girilmemiş ayın gönderimini katmak "birikiyor" gibi yanlış bir
+            // fark doğururdu.)
             var takipli = hareket.Kullanim.Select(x => x.TestID).ToHashSet();
+            var kullanimAylari = hareket.Kullanim.Select(x => x.Ay).ToHashSet();
 
             return new RaporHastaneSatirVm
             {
@@ -325,12 +321,18 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 HospitalName = p.HospitalName,
                 SonSayimTarihi = p.SonSayimTarihi,
                 KullanimSonAy = p.KullanimSonAy,
-                UrunSayisi = hesaplanan.Count,
+                UrunSayisi = urunler.Count(s => s.StokKaynagi != StokKaynagi.Yok || s.OrtalamaAylikKullanim > 0),
+                SayimliUrun = sayimli.Count,
                 KritikUrun = p.KritikSayisi,
-                StokKutu = Math.Round(hesaplanan.Sum(s => s.StokKutu ?? s.HesapGuncelStok), 0),
-                AylikKutu = Math.Round(hesaplanan.Sum(s => s.AylikKutu ?? s.OrtalamaAylikKullanim), 1),
-                GonderilenKutu = Math.Round(hareket.Gonderim.Where(x => takipli.Contains(x.TestID)).Sum(x => Kutu(x.TestID, x.Adet)), 0),
-                KullanilanKutu = Math.Round(hareket.Kullanim.Sum(x => Kutu(x.TestID, x.Adet)), 0)
+                StokTest = sayimli.Count > 0
+                    ? sayimli.Sum(s => (decimal)s.HesapGuncelStok)
+                    : null,
+                AylikTest = Math.Round(urunler.Sum(s => s.OrtalamaAylikKullanim), 1),
+                SayimliAylikTest = Math.Round(sayimli.Sum(s => s.OrtalamaAylikKullanim), 1),
+                GonderilenTest = Math.Round(hareket.Gonderim
+                    .Where(x => takipli.Contains(x.TestID) && kullanimAylari.Contains(x.Ay))
+                    .Sum(x => (decimal)x.Adet), 0),
+                KullanilanTest = Math.Round(hareket.Kullanim.Sum(x => (decimal)x.Adet), 0)
             };
         }
 
@@ -370,23 +372,12 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             return new Hareketler { Gonderim = gonderim, Kullanim = kullanim };
         }
 
-        /// <summary>Katalogdaki "kutu başına adet" — kutuyla girilmeyen üründe 1.</summary>
-        private async Task<Dictionary<int, int>> KutuIciYukleAsync(CancellationToken ct)
-        {
-            var ham = await _db.Tests.AsNoTracking()
-                .Select(t => new { t.TestID, t.GirisTipi, t.KutuBasinaAdet })
-                .ToListAsync(ct);
-
-            return ham.ToDictionary(
-                t => t.TestID,
-                t => t.GirisTipi == TestGirisTipi.Kutu && t.KutuBasinaAdet is > 0 ? t.KutuBasinaAdet.Value : 1);
-        }
-
         public static string DengeAdi(DengeDurumu d) => d switch
         {
             DengeDurumu.Dengeli => "Dengeli",
             DengeDurumu.Birikiyor => "Stok birikiyor",
             DengeDurumu.Eriyor => "Stok eriyor",
+            DengeDurumu.KontrolEdilmeli => "Kayıtları kontrol edin",
             _ => "Kullanım girilmemiş"
         };
 

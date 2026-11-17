@@ -19,21 +19,55 @@
     .se-row {
         display: grid;
         grid-template-columns: 50px 1fr 1fr 80px 240px;
-        gap: 10px; padding: 10px 14px;
+        gap: 10px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--kt-border);
-        align-items: center; font-size: 12.5px;
+        align-items: center;
+        font-size: 12.5px;
     }
-    .se-row.header {
-        background: var(--kt-bg); font-weight: 700; font-size: 11px;
-        text-transform: uppercase; letter-spacing: 0.03em; color: var(--kt-ink-500);
+
+        .se-row.header {
+            background: var(--kt-bg);
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--kt-ink-500);
+        }
+
+        .se-row:hover:not(.header) {
+            background: #f8fafc;
+        }
+
+        .se-row.eslesti {
+            border-left: 3px solid #16a34a;
+        }
+
+        .se-row.manuel {
+            border-left: 3px solid #4338ca;
+            background: #eef2ff;
+        }
+
+        .se-row.yoksay {
+            border-left: 3px solid #94a3b8;
+            background: #f8fafc;
+            opacity: 0.7;
+        }
+
+        .se-row.eslesemedi {
+            border-left: 3px solid #dc2626;
+            background: #fef2f2;
+        }
+
+    .se-row-actions {
+        display: flex;
+        gap: 4px;
+        align-items: center;
     }
-    .se-row:hover:not(.header) { background: #f8fafc; }
-    .se-row.eslesti { border-left: 3px solid #16a34a; }
-    .se-row.manuel { border-left: 3px solid #4338ca; background: #eef2ff; }
-    .se-row.yoksay { border-left: 3px solid #94a3b8; background: #f8fafc; opacity: 0.7; }
-    .se-row.eslesemedi { border-left: 3px solid #dc2626; background: #fef2f2; }
-    .se-row-actions { display: flex; gap: 4px; align-items: center; }
-    .se-row-actions .kt-input { font-size: 11.5px; }
+
+        .se-row-actions .kt-input {
+            font-size: 11.5px;
+        }
 </style>
 
 <div class="kt-page">
@@ -79,6 +113,7 @@
             <div style="font-size:12px; color:var(--kt-ink-700);">
                 Satırın sağındaki listeden hastaneyi seçin ya da "+" ile yeni hastane ekleyin.
                 Takip edilmeyecek olanlar (örn. deneme hastaneleri) için "Yoksay" kutusunu işaretleyin.
+                Bir hastane sayım uygulamasında birden çok birim olarak geçiyorsa (örn. hastane + semt polikliniği) hepsini aynı hastaneye bağlayabilirsiniz; sayımları toplanır.
                 Kaydettikten sonra Dashboard'dan "Sayımları Yenile"ye basın.
             </div>
         </div>
@@ -104,96 +139,103 @@
         </div>
 
         <div data-sayfala="25" data-satir=".se-row:not(.header)">
-        @if (apiHastaneler != null)
-        {
-            int rowIdx = 0;
-            foreach (dynamic h in apiHastaneler.Cast<dynamic>()
-                .OrderBy(x => (bool)x.ManuelYoksay ? 2 : ((bool)x.Eslesti ? 1 : 0))
-                .ThenBy(x => (string)x.ApiHospitalName))
+            @if (apiHastaneler != null)
             {
-                var rid = $"row{rowIdx++}";
-                bool esl = (bool)h.Eslesti;
-                bool manuel = (bool)h.ManuelEslestirildi;
-                bool yoksay = (bool)h.ManuelYoksay;
-                string apiAd = (string)h.ApiHospitalName;
-                int? curHospitalId = h.InternalHospitalId;
+                int rowIdx = 0;
+                foreach (dynamic h in apiHastaneler.Cast<dynamic>()
+                    .OrderBy(x => (bool)x.ManuelYoksay ? 2 : ((bool)x.Eslesti ? 1 : 0))
+                    .ThenBy(x => (string)x.ApiHospitalName))
+                {
+                    var rid = $"row{rowIdx++}";
+                    bool esl = (bool)h.Eslesti;
+                    bool manuel = (bool)h.ManuelEslestirildi;
+                    bool yoksay = (bool)h.ManuelYoksay;
+                    string apiAd = (string)h.ApiHospitalName;
+                    int? curHospitalId = h.InternalHospitalId;
 
-                string rowClass = yoksay ? "yoksay"
-                                : manuel ? "manuel"
-                                : esl ? "eslesti"
-                                : "eslesemedi";
+                    string rowClass = yoksay ? "yoksay"
+                                    : manuel ? "manuel"
+                                    : esl ? "eslesti"
+                                    : "eslesemedi";
 
-                <div class="se-row @rowClass">
-                    <div>
-                        @if (yoksay)
-                        {
-                            <i class="fas fa-ban" style="color:#94a3b8; font-size:16px;" title="Yoksayıldı"></i>
-                        }
-                        else if (manuel)
-                        {
-                            <i class="fas fa-link" style="color:#4338ca; font-size:16px;" title="Manuel bağlandı"></i>
-                        }
-                        else if (esl)
-                        {
-                            <i class="fas fa-check-circle" style="color:#16a34a; font-size:16px;" title="Otomatik eşleşti"></i>
-                        }
-                        else
-                        {
-                            <i class="fas fa-times-circle" style="color:#dc2626; font-size:16px;" title="Eşleşmedi"></i>
-                        }
-                    </div>
-                    <div style="font-weight:600;">
-                        @apiAd
-                        <div style="font-size:10.5px; color:var(--kt-ink-400);">son sayım: @(((DateTime?)h.ApiSonSayim)?.ToString("dd.MM.yyyy") ?? "—")</div>
-                    </div>
-                    <div>
-                        @if (yoksay)
-                        {
-                            <span style="color:var(--kt-ink-500); font-style:italic;">yoksayıldı</span>
-                        }
-                        else if (esl)
-                        {
-                            <span style="color:var(--kt-ink-900); font-weight:600;">@h.InternalHospitalName</span>
-                            <div style="font-size:10.5px; color:@(((bool)h.BizdeEski) ? "#b45309" : "var(--kt-ink-400)");">
-                                bizdeki son sayım: @(((DateTime?)h.BizdekiSonSayim)?.ToString("dd.MM.yyyy") ?? "yok")@(((bool)h.BizdeEski) ? " — yenisi alınmamış" : "")
-                            </div>
-                        }
-                        else
-                        {
-                            <span style="color:#dc2626; font-style:italic;">—</span>
-                        }
-                    </div>
-                    <div class="text-end" style="font-variant-numeric: tabular-nums;">
-                        <strong>@h.SatirSayisi</strong>
-                    </div>
-                    <div class="se-row-actions">
-                        <form class="eslesme-form" data-api="@apiAd">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="apiHospitalName" value="@apiAd" />
-                            <select name="internalHospitalId" class="kt-input hospital-select" id="@(rid)_select" style="width:150px;">
-                                <option value="">— seç —</option>
-                                @foreach (var hh in hospitals!)
+                    <div class="se-row @rowClass">
+                        <div>
+                            @if (yoksay)
+                            {
+                                <i class="fas fa-ban" style="color:#94a3b8; font-size:16px;" title="Yoksayıldı"></i>
+                            }
+                            else if (manuel)
+                            {
+                                <i class="fas fa-link" style="color:#4338ca; font-size:16px;" title="Manuel bağlandı"></i>
+                            }
+                            else if (esl)
+                            {
+                                <i class="fas fa-check-circle" style="color:#16a34a; font-size:16px;" title="Otomatik eşleşti"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-times-circle" style="color:#dc2626; font-size:16px;" title="Eşleşmedi"></i>
+                            }
+                        </div>
+                        <div style="font-weight:600;">
+                            @apiAd
+                            <div style="font-size:10.5px; color:var(--kt-ink-400);">son sayım: @(((DateTime?)h.ApiSonSayim)?.ToString("dd.MM.yyyy") ?? "—")</div>
+                        </div>
+                        <div>
+                            @if (yoksay)
+                            {
+                                <span style="color:var(--kt-ink-500); font-style:italic;">yoksayıldı</span>
+                            }
+                            else if (esl)
+                            {
+                                <span style="color:var(--kt-ink-900); font-weight:600;">@h.InternalHospitalName</span>
+                                <div style="font-size:10.5px; color:@(((bool)h.BizdeEski) ? "#b45309" : "var(--kt-ink-400)");">
+                                    bizdeki son sayım: @(((DateTime?)h.BizdekiSonSayim)?.ToString("dd.MM.yyyy") ?? "yok")@(((bool)h.BizdeEski) ? " — yenisi alınmamış" : "")
+                                </div>
+                                @if (((List<string>)h.BirlikteSayilanlar).Count > 0)
                                 {
-                                    <option value="@hh.HospitalID" selected="@(curHospitalId == hh.HospitalID)">@hh.HospitalName</option>
+                                    <div style="font-size:10.5px; color:#4338ca; margin-top:2px;">
+                                        <i class="fas fa-layer-group"></i>
+                                        @string.Join(", ", (List<string>)h.BirlikteSayilanlar) ile birlikte sayılıyor — sayımları toplanır
+                                    </div>
                                 }
-                            </select>
-                            <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost"
-                                    onclick="openHastaneModal('@(rid)_select', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(apiAd))')"
-                                    title="Yeni hastane oluştur">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <label style="display:inline-flex; align-items:center; gap:3px; font-size:11px;">
-                                <input type="checkbox" name="yoksay" value="true" @(yoksay ? "checked" : "") /> Yoksay
-                            </label>
-                            <button type="button" class="kt-btn kt-btn-sm kt-btn-primary"
-                                    onclick="kaydetEslesme(this.closest('form'))">
-                                <i class="fas fa-check"></i>
-                            </button>
-                        </form>
+                            }
+                            else
+                            {
+                                <span style="color:#dc2626; font-style:italic;">—</span>
+                            }
+                        </div>
+                        <div class="text-end" style="font-variant-numeric: tabular-nums;">
+                            <strong>@h.SatirSayisi</strong>
+                        </div>
+                        <div class="se-row-actions">
+                            <form class="eslesme-form" data-api="@apiAd">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="apiHospitalName" value="@apiAd" />
+                                <select name="internalHospitalId" class="kt-input hospital-select" id="@(rid)_select" style="width:150px;">
+                                    <option value="">— seç —</option>
+                                    @foreach (var hh in hospitals!)
+                                    {
+                                        <option value="@hh.HospitalID" selected="@(curHospitalId == hh.HospitalID)">@hh.HospitalName</option>
+                                    }
+                                </select>
+                                <button type="button" class="kt-btn kt-btn-sm kt-btn-ghost"
+                                        onclick="openHastaneModal('@(rid)_select', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(apiAd))')"
+                                        title="Yeni hastane oluştur">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <label style="display:inline-flex; align-items:center; gap:3px; font-size:11px;">
+                                    <input type="checkbox" name="yoksay" value="true" @(yoksay ? "checked" : "") /> Yoksay
+                                </label>
+                                <button type="button" class="kt-btn kt-btn-sm kt-btn-primary"
+                                        onclick="kaydetEslesme(this.closest('form'))">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                }
             }
-        }
         </div>
     </div>
 
@@ -230,106 +272,106 @@
 </div>
 
 <script>
-(function () {
-    var targetSelectId = null;
+    (function () {
+        var targetSelectId = null;
 
-    window.openHastaneModal = function (selectId, defaultName) {
-        targetSelectId = selectId;
-        document.getElementById('newHospitalName').value = defaultName || '';
-        document.getElementById('hastaneError').style.display = 'none';
-        document.getElementById('hastaneBackdrop').classList.add('open');
-        setTimeout(() => document.getElementById('newHospitalName').focus(), 100);
-    };
-    window.closeHastaneModal = function () {
-        document.getElementById('hastaneBackdrop').classList.remove('open');
-        targetSelectId = null;
-    };
-    document.getElementById('hastaneBackdrop').addEventListener('click', closeHastaneModal);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHastaneModal(); });
+        window.openHastaneModal = function (selectId, defaultName) {
+            targetSelectId = selectId;
+            document.getElementById('newHospitalName').value = defaultName || '';
+            document.getElementById('hastaneError').style.display = 'none';
+            document.getElementById('hastaneBackdrop').classList.add('open');
+            setTimeout(() => document.getElementById('newHospitalName').focus(), 100);
+        };
+        window.closeHastaneModal = function () {
+            document.getElementById('hastaneBackdrop').classList.remove('open');
+            targetSelectId = null;
+        };
+        document.getElementById('hastaneBackdrop').addEventListener('click', closeHastaneModal);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHastaneModal(); });
 
-    document.getElementById('newHospitalName').addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); saveHastane(); }
-    });
+        document.getElementById('newHospitalName').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); saveHastane(); }
+        });
 
-    window.saveHastane = async function () {
-        var name = document.getElementById('newHospitalName').value.trim();
-        var err = document.getElementById('hastaneError');
-        err.style.display = 'none';
-        if (!name) { err.textContent = 'Hastane adı boş olamaz.'; err.style.display = 'block'; return; }
+        window.saveHastane = async function () {
+            var name = document.getElementById('newHospitalName').value.trim();
+            var err = document.getElementById('hastaneError');
+            err.style.display = 'none';
+            if (!name) { err.textContent = 'Hastane adı boş olamaz.'; err.style.display = 'block'; return; }
 
-        var btn = document.getElementById('btnSaveHastane');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
+            var btn = document.getElementById('btnSaveHastane');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
 
-        try {
-            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-            var fd = new FormData();
-            fd.append('hospitalName', name);
-            fd.append('__RequestVerificationToken', token);
+            try {
+                var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                var fd = new FormData();
+                fd.append('hospitalName', name);
+                fd.append('__RequestVerificationToken', token);
 
-            var res = await fetch('@Url.Action("HastaneHizliEkle")', { method: 'POST', body: fd });
-            var data = await res.json();
+                var res = await fetch('@Url.Action("HastaneHizliEkle")', { method: 'POST', body: fd });
+                var data = await res.json();
 
-            if (!data.success) {
-                err.textContent = data.message || 'Hata';
-                err.style.display = 'block';
-                return;
-            }
-
-            // Tüm select'lere yeni option ekle
-            document.querySelectorAll('.hospital-select').forEach(sel => {
-                var exists = Array.from(sel.options).some(o => o.value == data.hospitalId);
-                if (!exists) {
-                    var opt = document.createElement('option');
-                    opt.value = data.hospitalId;
-                    opt.textContent = data.hospitalName;
-                    sel.appendChild(opt);
+                if (!data.success) {
+                    err.textContent = data.message || 'Hata';
+                    err.style.display = 'block';
+                    return;
                 }
-            });
 
-            // Çağıran satırda seç
-            if (targetSelectId) {
-                var sel = document.getElementById(targetSelectId);
-                if (sel) sel.value = data.hospitalId;
+                // Tüm select'lere yeni option ekle
+                document.querySelectorAll('.hospital-select').forEach(sel => {
+                    var exists = Array.from(sel.options).some(o => o.value == data.hospitalId);
+                    if (!exists) {
+                        var opt = document.createElement('option');
+                        opt.value = data.hospitalId;
+                        opt.textContent = data.hospitalName;
+                        sel.appendChild(opt);
+                    }
+                });
+
+                // Çağıran satırda seç
+                if (targetSelectId) {
+                    var sel = document.getElementById(targetSelectId);
+                    if (sel) sel.value = data.hospitalId;
+                }
+
+                closeHastaneModal();
+                if (data.alreadyExists) alert(data.message);
+            } catch (ex) {
+                err.textContent = 'Sunucu hatası: ' + ex.message;
+                err.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
             }
+        };
 
-            closeHastaneModal();
-            if (data.alreadyExists) alert(data.message);
-        } catch (ex) {
-            err.textContent = 'Sunucu hatası: ' + ex.message;
-            err.style.display = 'block';
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
-        }
-    };
+        // Eşleştirme kaydet
+        window.kaydetEslesme = async function (form) {
+            var fd = new FormData(form);
+            // yoksay checkbox'ı check değilse FormData'ya "false" olarak koy
+            if (!form.querySelector('input[name="yoksay"]').checked) fd.set('yoksay', 'false');
 
-    // Eşleştirme kaydet
-    window.kaydetEslesme = async function (form) {
-        var fd = new FormData(form);
-        // yoksay checkbox'ı check değilse FormData'ya "false" olarak koy
-        if (!form.querySelector('input[name="yoksay"]').checked) fd.set('yoksay', 'false');
-
-        try {
-            var res = await fetch('@Url.Action("SayimEslesmeKaydet")', { method: 'POST', body: fd });
-            var data = await res.json();
-            if (data.success) {
-                // Satırı yeşile/mora çevir
-                var row = form.closest('.se-row');
-                row.className = 'se-row ' + (form.querySelector('input[name="yoksay"]').checked ? 'yoksay' : 'manuel');
-                // Küçük geçici başarı bildirimi
-                var btn = form.querySelector('button[type="button"]:last-of-type');
-                var orig = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check" style="color:#16a34a;"></i>';
-                setTimeout(() => btn.innerHTML = orig, 1500);
-            } else {
-                alert(data.message || 'Kayıt başarısız');
+            try {
+                var res = await fetch('@Url.Action("SayimEslesmeKaydet")', { method: 'POST', body: fd });
+                var data = await res.json();
+                if (data.success) {
+                    // Satırı yeşile/mora çevir
+                    var row = form.closest('.se-row');
+                    row.className = 'se-row ' + (form.querySelector('input[name="yoksay"]').checked ? 'yoksay' : 'manuel');
+                    // Küçük geçici başarı bildirimi
+                    var btn = form.querySelector('button[type="button"]:last-of-type');
+                    var orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check" style="color:#16a34a;"></i>';
+                    setTimeout(() => btn.innerHTML = orig, 1500);
+                } else {
+                    alert(data.message || 'Kayıt başarısız');
+                }
+            } catch (ex) {
+                alert('Hata: ' + ex.message);
             }
-        } catch (ex) {
-            alert('Hata: ' + ex.message);
-        }
-    };
-})();
+        };
+    })();
 </script>
 
 @await Html.PartialAsync("_Sayfalama")

@@ -11,8 +11,9 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
     //  STOK ÖNERİ — hangi hastaneye, hangi üründen, kaç kutu gönderilmeli?
     // ═══════════════════════════════════════════════════════════════════
     //  Excel çıktıları bilerek SADE tutuldu: her dosyada yalnızca karar
-    //  vermek için gereken sütunlar var (ürün, stok, aylık tüketim, kaç ay
-    //  yeter, önerilen kutu). Hesabın ayrıntısı ekranda ve Raporlama'da.
+    //  vermek için gereken sütunlar var. Stok ve tüketim TEST adedidir;
+    //  önerilen sipariş, hastanenin sipariş verdiği birimle (kutu) ve test
+    //  karşılığıyla yazılır.
     // ═══════════════════════════════════════════════════════════════════
     [Area("Lojistik")]
     [Authorize(Roles = "Yönetici,KotaTakip,Lojistik")]
@@ -216,9 +217,8 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
         }
 
         /// <summary>
-        /// Ürün tablosu — 7 sütun (hastane sütunu varsa 8). Miktarlar kutu
-        /// cinsindendir; kutuyla satılmayan üründe adet yazılır ve "Birim"
-        /// sütununda belirtilir.
+        /// Ürün tablosu — 8 sütun (hastane sütunu varsa 9). Stok ve tüketim
+        /// test adedidir; önerilen sipariş kutu (sipariş birimi) ve test olarak.
         /// </summary>
         private static void UrunTablosu(IXLWorksheet ws, int baslikSatiri, List<(string? Hastane, StokHesapSatirVm Satir)> satirlar)
         {
@@ -228,7 +228,8 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
             if (hastaneVar) basliklar.Add("Hastane");
             basliklar.AddRange(new[]
             {
-                "Ürün", "Durum", "Stok", "Aylık Tüketim", "Kaç Ay Yeter", "Önerilen Sipariş", "Birim"
+                "Ürün", "Durum", "Stok (test)", "Aylık Tüketim (test)", "Kaç Ay Yeter",
+                "Önerilen Sipariş", "Sipariş Birimi", "Önerilen (test)"
             });
 
             for (var i = 0; i < basliklar.Count; i++) ws.Cell(baslikSatiri, i + 1).Value = basliklar[i];
@@ -255,9 +256,9 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                     _ => "#f1f5f9"
                 });
 
-                // Stok ve tüketim: kutu birimli üründe kutu, değilse adet
-                ws.Cell(r, c++).Value = s.StokKutu ?? s.HesapGuncelStok;
-                ws.Cell(r, c++).Value = s.AylikKutu ?? s.OrtalamaAylikKullanim;
+                // Stok ve tüketim: test adedi
+                ws.Cell(r, c++).Value = s.HesapGuncelStok;
+                ws.Cell(r, c++).Value = s.OrtalamaAylikKullanim;
 
                 if (s.StokAy.HasValue) ws.Cell(r, c).Value = s.StokAy.Value;
                 else ws.Cell(r, c).Value = "—";
@@ -268,6 +269,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 if (s.OnerilenKutu > 0) oneri.Style.Font.Bold = true;
 
                 ws.Cell(r, c++).Value = s.Birim;
+                ws.Cell(r, c++).Value = s.OnerilenTest;
                 r++;
             }
 

@@ -92,19 +92,22 @@ namespace CRMOzem.Business.Services
                     yoksayNames.Count);
 
 
+                // Katalog (Testler) — referans, referans kökü ve ada göre aranır.
+                // SutCode'u boş testler de alınır: ada göre eşleşebilirler.
                 var testler = await _db.Tests
                     .AsNoTracking()
-                    .Where(t => !string.IsNullOrEmpty(t.SutCode))
-                    .Select(t => new { t.TestID, t.SutCode })
+                    .Select(t => new KatalogSatiri
+                    {
+                        TestID = t.TestID,
+                        TestName = t.TestName,
+                        SutCode = t.SutCode,
+                        Platform = t.Platform
+                    })
                     .ToListAsync(ct);
 
-                var testBySutCode = testler
-                    .Where(t => !string.IsNullOrWhiteSpace(t.SutCode))
-                    .GroupBy(t => ReferansKodu.Normalize(t.SutCode))
-                    .Where(g => g.Key.Length > 0)
-                    .ToDictionary(g => g.Key, g => g.First().TestID);
+                var katalog = new KatalogEslestirici(testler);
 
-                _log.LogInformation("Test lookup hazır: {Count} SutCode normalize edildi.", testBySutCode.Count);
+                _log.LogInformation("Katalog hazır: {Count} test.", testler.Count);
 
 
                 var apiHospitalNames = cevap.Items.Select(i => i.HospitalName).Distinct().ToList();
@@ -145,8 +148,72 @@ namespace CRMOzem.Business.Services
                 }
 
 
+                // ── Katalogda bulunamayan reaktifleri Testler'e ekle ──
+                // Üç aşamalı arama (referans → referans kökü → ad) sonuç vermeyen
+                // reaktifler stok hesabına hiç girmiyordu. Bunlar kataloğa
+                // "Sayımdan eklendi" kategorisiyle eklenir; ad, referans, platform
+                // ve kutu içi adet sayım uygulamasındaki değerlerdir.
+                // Yalnızca REAKTİF ürünler ve yalnızca referansı olanlar eklenir.
+                var eklenecek = new Dictionary<string, Test>();
+                foreach (var item in cevap.Items)
+                {
+                    var hAd = NormalizeName(item.HospitalName);
+                    if (yoksayNames.Contains(hAd) || !hospitalByName.ContainsKey(hAd)) continue;
+
+                    if (UrunTipiTespitHelper.Tespit(item.ProductName, item.ProductType) != CRMOzem.Core.Enums.UrunTipi.Reaktif)
+                        continue;
+
+                    var refNorm = ReferansKodu.Normalize(item.ReferenceNumber);
+                    if (refNorm.Length == 0 || string.IsNullOrWhiteSpace(item.ProductName)) continue;
+                    if (eklenecek.ContainsKey(refNorm)) continue;
+
+                    var (bulunan, _) = katalog.Bul(item.ReferenceNumber, item.ProductName, item.Platform, reaktif: true);
+                    if (bulunan.HasValue) continue;
+
+                    eklenecek[refNorm] = new Test
+                    {
+                        TestName = Kisalt(item.ProductName.Trim(), 100)!,
+                        SutCode = Kisalt(item.ReferenceNumber!.Trim(), 30),
+                        Platform = Kisalt(item.Platform?.Trim(), 50),
+                        Kategori = "Sayımdan eklendi",
+                        GirisTipi = item.BoxTextCount > 1 ? TestGirisTipi.Kutu : TestGirisTipi.Adet,
+                        KutuBasinaAdet = item.BoxTextCount > 1 ? item.BoxTextCount : null
+                    };
+                }
+
+                if (eklenecek.Count > 0)
+                {
+                    _db.Tests.AddRange(eklenecek.Values);
+                    await _db.SaveChangesAsync(ct);   // TestID'ler oluşsun
+
+                    foreach (var t in eklenecek.Values)
+                    {
+                        katalog.Ekle(new KatalogSatiri
+                        {
+                            TestID = t.TestID,
+                            TestName = t.TestName,
+                            SutCode = t.SutCode,
+                            Platform = t.Platform
+                        });
+                        sonuc.EklenenTestler.Add($"{t.TestName} ({t.SutCode})");
+                    }
+
+                    _log.LogInformation("Kataloğa {N} reaktif eklendi: {Liste}",
+                        eklenecek.Count, string.Join(", ", sonuc.EklenenTestler));
+                }
+
+                var kokIle = new HashSet<string>();
+                var adIle = new HashSet<string>();
+
                 var batchTekrari = 0;
                 var aktifSayimlar = new Dictionary<int, HashSet<int>>();
+
+                // Sayım uygulamasındaki İKİ ayrı hastane bizde TEK hastaneye bağlı
+                // olabilir. İkisinde de aynı ürün + sayım no + lot varsa satırlar
+                // aynı kayda düşer; biri diğerini EZMEMELİ, miktarlar TOPLANMALI.
+                // Bu turda her kaydı ilk yazan sayım-hastanesi burada tutulur.
+                var kayitKaynagi = new Dictionary<string, int>();
+                var birlesenHastaneler = new Dictionary<int, HashSet<string>>();
 
 
                 foreach (var item in cevap.Items)
@@ -171,14 +238,18 @@ namespace CRMOzem.Business.Services
                     // Referans numarası katalogda varsa ürün tipi ne tespit edilmiş
                     // olursa olsun eşleştir. (Eskiden yalnızca "reaktif" tespit edilen
                     // ürünler eşleştiriliyor, tire/nokta farkı da eşleşmeyi bozuyordu.)
-                    int? mappedTestId = null;
-                    var normalizedRef = ReferansKodu.Normalize(item.ReferenceNumber);
-                    if (normalizedRef.Length > 0 && testBySutCode.TryGetValue(normalizedRef, out var tid))
+                    var reaktifMi = tipi == CRMOzem.Core.Enums.UrunTipi.Reaktif;
+                    var (mappedTestId, yontem) = katalog.Bul(item.ReferenceNumber, item.ProductName, item.Platform, reaktifMi);
+
+                    if (mappedTestId.HasValue)
                     {
-                        mappedTestId = tid;
-                        if (tipi == CRMOzem.Core.Enums.UrunTipi.Reaktif) sonuc.ReaktifEslesen++;
+                        if (reaktifMi) sonuc.ReaktifEslesen++;
+
+                        var urunAnahtar = $"{item.ProductName} ({item.ReferenceNumber})";
+                        if (yontem == KatalogEslesmeYontemi.ReferansKoku) kokIle.Add(urunAnahtar);
+                        else if (yontem == KatalogEslesmeYontemi.Ad) adIle.Add(urunAnahtar);
                     }
-                    else if (tipi == CRMOzem.Core.Enums.UrunTipi.Reaktif)
+                    else if (reaktifMi)
                     {
                         sonuc.ReaktifEslesemeyen++;
                     }
@@ -192,6 +263,24 @@ namespace CRMOzem.Business.Services
                     }
 
                     var key = BuildKey(internalHospitalId, item.ReferenceNumber, item.SayimNo, item.LotNumber);
+
+                    if (!birlesenHastaneler.TryGetValue(internalHospitalId, out var kaynakAdlari))
+                        birlesenHastaneler[internalHospitalId] = kaynakAdlari = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    kaynakAdlari.Add(item.HospitalName ?? "");
+
+                    // Aynı kayda bu turda BAŞKA bir sayım-hastanesinden satır geldiyse topla
+                    if (kayitKaynagi.TryGetValue(key, out var ilkKaynak) && ilkKaynak != item.HospitalId
+                        && mevcutMap.TryGetValue(key, out var ortak))
+                    {
+                        ortak.BoxCount += item.BoxCount;
+                        ortak.FlaconCount += item.FlaconCount;
+                        ortak.TestCount += item.TestCount;
+                        if (item.SayimTarihi > ortak.SayimTarihi) ortak.SayimTarihi = item.SayimTarihi;
+                        ortak.SayimAktifMi = ortak.SayimAktifMi || item.SayimAktifMi;
+                        sonuc.BirlestirilenSatir++;
+                        continue;
+                    }
+                    kayitKaynagi[key] = item.HospitalId;
 
                     if (mevcutMap.TryGetValue(key, out var existing))
                     {
@@ -253,6 +342,10 @@ namespace CRMOzem.Business.Services
                         sonuc.YeniEklenen++;
                     }
                 }
+
+                sonuc.BirlesenHastaneSayisi = birlesenHastaneler.Values.Count(v => v.Count > 1);
+                sonuc.ReferansKokuyleEslesen = kokIle.OrderBy(x => x).ToList();
+                sonuc.AdlaEslesen = adIle.OrderBy(x => x).ToList();
 
                 if (batchTekrari > 0)
                 {
@@ -404,6 +497,16 @@ namespace CRMOzem.Business.Services
                 else rapor.EslesemeyenSayisi++;
             }
 
+            // Aynı hastanemize bağlı birden çok sayım-hastanesi: birbirlerini göstersinler
+            foreach (var grup in rapor.ApidenGelenHastaneler
+                         .Where(d => d.Eslesti && d.InternalHospitalId.HasValue)
+                         .GroupBy(d => d.InternalHospitalId!.Value)
+                         .Where(g => g.Count() > 1))
+            {
+                foreach (var d in grup)
+                    d.BirlikteSayilanlar = grup.Where(x => x != d).Select(x => x.ApiHospitalName).ToList();
+            }
+
             return rapor;
         }
 
@@ -513,6 +616,9 @@ namespace CRMOzem.Business.Services
 
         private static string BuildKey(int hospitalId, string? referenceNumber, int sayimNo, string? lotNumber = null)
             => $"{hospitalId}|{NormalizeRef(referenceNumber)}|{sayimNo}|{(lotNumber ?? "").Trim().ToUpperInvariant()}";
+
+        private static string? Kisalt(string? s, int uzunluk) =>
+                    string.IsNullOrEmpty(s) || s.Length <= uzunluk ? s : s.Substring(0, uzunluk);
 
         private static string NormalizeName(string? name)
         {

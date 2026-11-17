@@ -708,6 +708,13 @@
         </li>
 
         <li class="nav-item">
+            <a class="nav-link" asp-area="Istatistik" asp-controller="Test" asp-action="Index">
+                <i class="fe fe-list fe-16"></i>
+                <span class="ml-3 item-text">Testler</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a class="nav-link" asp-area="Istatistik" asp-controller="Shipment" asp-action="Index">
                 <i class="fe fe-truck fe-16"></i>
                 <span class="ml-3 item-text">Giden Listesi</span>
@@ -767,7 +774,7 @@
             </a>
         </li>
     }
-     @if (Model.Contains("Birim"))
+    @if (Model.Contains("Birim"))
     {
         <li class="sidebar-group-title">
             <span class="group-icon">📊</span>

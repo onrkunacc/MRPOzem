@@ -383,14 +383,13 @@ namespace CRMOzem.Business.Services
             DateTime? kullanimBilinenSon,
             List<AcikKalem> acikKalemler)
         {
-            // Yalnızca ürünün EN SON sayımı kullanılır. Eski sayımın satırları
-            // hâlâ "aktif" işaretli kalmışsa toplanıp stoğu ikiye katlamasın.
-            if (snaplar.Count > 1)
-            {
-                var sonTarih = snaplar.Max(s => s.SayimTarihi);
-                var sonNo = snaplar.Where(s => s.SayimTarihi == sonTarih).Max(s => s.SayimNo);
-                snaplar = snaplar.Where(s => s.SayimNo == sonNo).ToList();
-            }
+            // Aktif sayım satırlarının TAMAMI toplanır. Bir hastane sayım
+            // uygulamasında birden çok birim olarak sayılıyor olabilir
+            // (örn. "… Devlet Hastanesi" + "… Semt Polk."); her birimin kendi
+            // sayım numarası ve tarihi vardır ve hepsi aynı hastanenin stoğudur.
+            // Yerine yenisi gelen eski sayımları "Sayımları Yenile" kapatır
+            // (SayimAktifMi = false), o yüzden burada ayrıca elenmez.
+            // Sayım tarihi olarak en yenisi alınır.
 
             var ilkSnap = snaplar.OrderByDescending(s => s.SayimTarihi).FirstOrDefault();
 

@@ -27,11 +27,12 @@
         DengeDurumu.Dengeli => "Gönderim ile kullanım dengeli",
         DengeDurumu.Birikiyor => "Kullanılandan fazla gönderilmiş — stok birikiyor",
         DengeDurumu.Eriyor => "Gönderilenden fazla kullanılmış — stok eriyor",
+        DengeDurumu.KontrolEdilmeli => "Fark 3 katı aşıyor — gönderim ya da kullanım kayıtlarını kontrol edin",
         _ => "Bu dönemde kullanım girişi yok"
     };
     string Sayi(decimal d) => d.ToString("N0", tr);
 
-    var enBuyukAy = Math.Max(1m, Model.Aylar.Count == 0 ? 1m : Model.Aylar.Max(a => Math.Max(a.GonderilenKutu, a.KullanilanKutu)));
+    var enBuyukAy = Math.Max(1m, Model.Aylar.Count == 0 ? 1m : Model.Aylar.Max(a => Math.Max(a.GonderilenTest, a.KullanilanTest)));
 }
 
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
@@ -92,8 +93,16 @@
                 <div class="kt-kpi-label">Eldeki Stok</div>
                 <div class="kt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
             </div>
-            <div class="kt-kpi-value">@Sayi(o.StokKutu)</div>
-            <div class="kt-kpi-foot">kutu · @o.UrunSayisi ürün</div>
+            @if (o.StokTest.HasValue)
+            {
+                <div class="kt-kpi-value">@Sayi(o.StokTest.Value)</div>
+                <div class="kt-kpi-foot">test · @o.SayimliUrun ürünün sayımından</div>
+            }
+            else
+            {
+                <div class="kt-kpi-value" style="color:var(--kt-ink-400);">—</div>
+                <div class="kt-kpi-foot">fiziki sayım girilince hesaplanır</div>
+            }
         </div>
         <div class="kt-kpi accent-warn">
             <div class="kt-kpi-head">
@@ -101,23 +110,23 @@
                 <div class="kt-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
             </div>
             <div class="kt-kpi-value">@(o.StokAy.HasValue ? o.StokAy.Value.ToString("0.#", tr) : "—")</div>
-            <div class="kt-kpi-foot">aylık tüketim @o.AylikKutu.ToString("N1", tr) kutu</div>
+            <div class="kt-kpi-foot">aylık tüketim @o.AylikTest.ToString("N0", tr) test</div>
         </div>
         <div class="kt-kpi accent-primary">
             <div class="kt-kpi-head">
                 <div class="kt-kpi-label">Gönderilen</div>
                 <div class="kt-kpi-icon"><i class="fas fa-truck"></i></div>
             </div>
-            <div class="kt-kpi-value">@Sayi(o.GonderilenKutu)</div>
-            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+            <div class="kt-kpi-value">@Sayi(o.GonderilenTest)</div>
+            <div class="kt-kpi-foot">test · son @Model.DonemAy ay</div>
         </div>
         <div class="kt-kpi accent-pos">
             <div class="kt-kpi-head">
                 <div class="kt-kpi-label">Kullanılan</div>
                 <div class="kt-kpi-icon"><i class="fas fa-vial"></i></div>
             </div>
-            <div class="kt-kpi-value">@Sayi(o.KullanilanKutu)</div>
-            <div class="kt-kpi-foot">kutu · son @Model.DonemAy ay</div>
+            <div class="kt-kpi-value">@Sayi(o.KullanilanTest)</div>
+            <div class="kt-kpi-foot">test · son @Model.DonemAy ay</div>
         </div>
     </div>
 
@@ -129,7 +138,7 @@
                 <i class="fas fa-scale-balanced" style="color:var(--kt-ink-400); margin-right:5px;"></i>@DengeText(o.Denge)
                 @if (o.Denge != DengeDurumu.Bilinmiyor)
                 {
-                    <strong style="margin-left:4px;">(@o.FarkKutu.ToString("+#,0;-#,0;0", tr) kutu)</strong>
+                    <strong style="margin-left:4px;">(@o.FarkTest.ToString("+#,0;-#,0;0", tr) test)</strong>
                 }
             </div>
         </div>
@@ -137,15 +146,15 @@
         <div class="rp-grafik">
             @foreach (var a in Model.Aylar)
             {
-                var gh = (a.GonderilenKutu * 100m / enBuyukAy).ToString("0", inv);
-                var kh = (a.KullanilanKutu * 100m / enBuyukAy).ToString("0", inv);
+                var gh = (a.GonderilenTest * 100m / enBuyukAy).ToString("0", inv);
+                var kh = (a.KullanilanTest * 100m / enBuyukAy).ToString("0", inv);
 
                 <div class="rp-ay">
                     <div class="sutunlar">
-                        <div class="sutun g" style="height:@gh%" title="Gönderilen: @Sayi(a.GonderilenKutu) kutu"><span>@Sayi(a.GonderilenKutu)</span></div>
+                        <div class="sutun g" style="height:@gh%" title="Gönderilen: @Sayi(a.GonderilenTest) test"><span>@Sayi(a.GonderilenTest)</span></div>
                         @if (a.KullanimGirildi)
                         {
-                            <div class="sutun k" style="height:@kh%" title="Kullanılan: @Sayi(a.KullanilanKutu) kutu"><span>@Sayi(a.KullanilanKutu)</span></div>
+                            <div class="sutun k" style="height:@kh%" title="Kullanılan: @Sayi(a.KullanilanTest) test"><span>@Sayi(a.KullanilanTest)</span></div>
                         }
                         else
                         {
@@ -158,8 +167,8 @@
         </div>
 
         <div class="rp-aciklama">
-            <span><i class="fas fa-square" style="color:#4338ca;"></i>Gönderilen (kutu)</span>
-            <span><i class="fas fa-square" style="color:#0891b2;"></i>Kullanılan (kutu)</span>
+            <span><i class="fas fa-square" style="color:#4338ca;"></i>Gönderilen (test)</span>
+            <span><i class="fas fa-square" style="color:#0891b2;"></i>Kullanılan (test)</span>
             <span><i class="fas fa-square" style="color:#cbd5e1;"></i>Kullanım girişi yapılmamış ay</span>
         </div>
     </div>
@@ -202,8 +211,17 @@
                                         <div style="font-size:11px; color:var(--kt-ink-400);">@u.ReferenceNumber</div>
                                     }
                                 </td>
-                                <td class="text-right"><strong style="@(u.StokKutu < 0 ? "color:var(--kt-neg);" : "")" title="@(u.StokKutu < 0 ? "Kayıtlara göre eksi: gönderim kaydı eksik ya da kullanım fazla girilmiş" : "")">@u.StokKutu.ToString("0.#", tr)</strong> <span class="text-muted" style="font-size:11px;">@u.Birim</span></td>
-                                <td class="text-right">@u.AylikKutu.ToString("0.#", tr)</td>
+                                <td class="text-right">
+                                    @if (u.StokTest.HasValue)
+                                    {
+                                        <strong style="@(u.StokTest < 0 ? "color:var(--kt-neg);" : "")" title="@(u.StokTest < 0 ? "Sayımdan sonra kaydedilen kullanım, gönderimden fazla" : "")">@u.StokTest.Value.ToString("N0", tr)</strong> <span class="text-muted" style="font-size:11px;">@u.Birim</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Fiziki sayım girilmeden stok hesaplanmaz">sayım yok</span>
+                                    }
+                                </td>
+                                <td class="text-right">@u.AylikTest.ToString("N0", tr)</td>
                                 <td class="text-center">
                                     @if (u.StokAy.HasValue)
                                     {
@@ -214,18 +232,18 @@
                                         <span class="text-muted">—</span>
                                     }
                                 </td>
-                                <td class="text-right">@u.GonderilenKutu.ToString("0.#", tr)</td>
+                                <td class="text-right">@u.GonderilenTest.ToString("N0", tr)</td>
                                 <td class="text-right">
                                     @if (u.KullanimTakipli)
                                     {
-                                        @u.KullanilanKutu.ToString("0.#", tr)
+                                        @u.KullanilanTest.ToString("N0", tr)
                                     }
                                     else
                                     {
                                         <span class="text-muted" title="Bu ürünün kullanımı girilmiyor; tüketim gönderimden tahmin edilir">—</span>
                                     }
                                 </td>
-                                <td><span class="kt-badge @DurumCls(u.Durum)">@DurumText(u.Durum)</span></td>
+                                <td><span class="kt-badge @(u.StokTest.HasValue ? DurumCls(u.Durum) : "kt-badge-secondary")">@(u.StokTest.HasValue ? DurumText(u.Durum) : "Sayım yok")</span></td>
                             </tr>
                         }
                     </tbody>

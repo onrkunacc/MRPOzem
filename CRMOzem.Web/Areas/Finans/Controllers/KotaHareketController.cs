@@ -75,7 +75,9 @@ namespace CRMOzem.Web.Areas.Finans.Controllers
                 HospitalName = h.Hospital?.HospitalName,
                 Aciklama = h.Aciklama,
                 TutarUsd = h.UsdKarsiligi,
-                TutarTl = h.Tutar
+                // TL sütunu: kayıtta saklanan TL karşılığı. (Eskiden girilen ham tutar
+                // yazılıyordu; dolar girilen faturada dolar rakamı ₺ olarak görünüyordu.)
+                TutarTl = h.TLKarsiligi
             }).ToList();
 
             var vm = new KotaHareketDetayVm

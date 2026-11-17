@@ -293,9 +293,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
 
             // 2) Mapping tablosu — DB'de gerçekte ne var
             var tumEslesmeler = await _db.HospitalEslesmeleri.AsNoTracking().ToListAsync(ct);
-            var eslesmeMap = tumEslesmeler
-                .GroupBy(e => (e.ExternalMusteriKodu ?? "").Trim().ToUpperInvariant())
-                .ToDictionary(g => g.Key, g => g.First());
+            var cozucu = new CRMOzem.Business.Helpers.SiparisMusteriCozucu(tumEslesmeler, cevap.Orders);
 
             // 3) Zaten var olan ref'ler
             var mevcutRefler = await _db.SiparisTalepler
@@ -317,7 +315,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 var kod = (o.CustomerCode ?? "").Trim().ToUpperInvariant();
                 if (string.IsNullOrEmpty(kod)) { bosKod++; continue; }
 
-                if (eslesmeMap.TryGetValue(kod, out var e))
+                if (cozucu.Bul(o) is { } e)
                 {
                     if (e.Yoksay || !e.InternalHospitalID.HasValue) yoksay++;
                     else if (o.Items == null || o.Items.Count == 0) eslesenKalemsiz++;
@@ -327,8 +325,9 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
 
                 // Burası eslesmeyenToplam'ın karşılığı
                 eslesmeyen++;
-                if (!eslesmeyenDict.ContainsKey(kod)) eslesmeyenDict[kod] = 0;
-                eslesmeyenDict[kod]++;
+                var anahtar = CRMOzem.Business.Helpers.SiparisMusteriCozucu.Anahtar(o);
+                if (!eslesmeyenDict.ContainsKey(anahtar)) eslesmeyenDict[anahtar] = 0;
+                eslesmeyenDict[anahtar]++;
             }
 
             return Json(new
@@ -337,7 +336,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
 
                 // DB state
                 MappingTablosundaKayitSayisi = tumEslesmeler.Count,
-                MappingTekilKodSayisi = eslesmeMap.Count,
+                OrtakKodlar = cozucu.OrtakKodlar,
                 MevcutSiparisTalepSayisi = mevcutRefler.Count,
 
                 // Sync akışı

@@ -24,6 +24,21 @@ namespace CRMOzem.Business.Interfaces
         public int ReaktifEslesemeyen { get; set; }       // ← YENİ: kaç reaktif eşleşmedi
         public List<string> EslesemeyenHastaneler { get; set; } = new();
 
+        /// <summary>Katalogda bulunamadığı için Testler'e yeni eklenen reaktifler: "Ad (referans)".</summary>
+        public List<string> EklenenTestler { get; set; } = new();
+
+        /// <summary>Referansın kökünden (ambalaj haneleri hariç) eşleşen ürünler.</summary>
+        public List<string> ReferansKokuyleEslesen { get; set; } = new();
+
+        /// <summary>Referansı tutmayıp adından eşleşen ürünler.</summary>
+        public List<string> AdlaEslesen { get; set; } = new();
+
+        /// <summary>Sayım uygulamasında birden çok birimi tek hastanemize bağlı olan hastane sayısı.</summary>
+        public int BirlesenHastaneSayisi { get; set; }
+
+        /// <summary>İki birimde de aynı ürün/sayım/lot olduğu için miktarı toplanan satır.</summary>
+        public int BirlestirilenSatir { get; set; }
+
         /// <summary>Yerine yeni sayım geldiği için pasife alınan eski sayım satırı.</summary>
         public int KapatilanEskiSatir { get; set; }
         public DateTime BaslamaZamani { get; set; } = DateTime.Now;
@@ -59,6 +74,13 @@ namespace CRMOzem.Business.Interfaces
         public string? InternalHospitalName { get; set; }
         public bool ManuelEslestirildi { get; set; }   // true = user manuel bağladı
         public bool ManuelYoksay { get; set; }         // true = user "yoksay" dedi
+
+        /// <summary>
+        /// Aynı hastanemize bağlı DİĞER sayım-hastanelerinin adları. Doluysa bu
+        /// hastane sayım uygulamasında birden çok birim olarak sayılıyor demektir;
+        /// sayımları toplanır.
+        /// </summary>
+        public List<string> BirlikteSayilanlar { get; set; } = new();
 
         /// <summary>Sayım uygulamasındaki son sayım tarihi.</summary>
         public DateTime? ApiSonSayim { get; set; }

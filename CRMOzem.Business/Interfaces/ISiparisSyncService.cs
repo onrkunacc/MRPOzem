@@ -50,6 +50,15 @@ namespace CRMOzem.Business.Interfaces
 
         public List<GelmeyenSiparis> Gelmeyenler { get; set; } = new();
         public List<EslesmeyenMusteri> EslesmeyenMusteriler { get; set; } = new();
+
+        /// <summary>Birden çok kurumun kullandığı müşteri kodları.</summary>
+        public List<string> OrtakKodlar { get; set; } = new();
+
+        /// <summary>
+        /// Yalnızca koda göre yapılmış ve kod ortak olduğu için artık hiçbir
+        /// siparişe uygulanmayan eski eşleştirmeler.
+        /// </summary>
+        public List<string> GecersizEskiEslesmeler { get; set; } = new();
     }
 
     public class GelmeyenSiparis
@@ -133,7 +142,15 @@ namespace CRMOzem.Business.Interfaces
 
     public class EslesmeyenMusteri
     {
+        /// <summary>Eşleştirme anahtarı: "KOD/kullanıcı no" — kaydederken bu kullanılır.</summary>
+        public string Anahtar { get; set; } = "";
+
+        /// <summary>Sipariş yazılımındaki müşteri kodu (gösterim için).</summary>
         public string MusteriKodu { get; set; } = "";
+
+        /// <summary>Bu müşteri kodu başka kurumlarda da kullanılıyor.</summary>
+        public bool OrtakKod { get; set; }
+
         public string? KurumAdi { get; set; }
         public string? MusteriAdi { get; set; }
         public int SiparisSayisi { get; set; }

@@ -288,18 +288,12 @@
                                 <td class="text-right" style="white-space:nowrap;">
                                     @if (stokBiliniyor)
                                     {
+                                        <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
+                                            @s.HesapGuncelStok.ToString("N0", tr) <span class="so-birim">test</span>
+                                        </div>
                                         if (s.KutuBirimli && s.StokKutu.HasValue)
                                         {
-                                            <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
-                                                @Sayi(s.StokKutu.Value) <span class="so-birim">kutu</span>
-                                            </div>
-                                            <div class="so-kucuk">@s.HesapGuncelStok.ToString("N0", tr) test</div>
-                                        }
-                                        else
-                                        {
-                                            <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
-                                                @s.HesapGuncelStok.ToString("N0", tr) <span class="so-birim">adet</span>
-                                            </div>
+                                            <div class="so-kucuk">≈ @Sayi(s.StokKutu.Value) kutu</div>
                                         }
                                         if (s.Yolda > 0)
                                         {

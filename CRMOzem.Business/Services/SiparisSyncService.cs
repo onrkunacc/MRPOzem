@@ -102,10 +102,10 @@ namespace CRMOzem.Business.Services
                 }
 
                 // ── Hastane eşleştirme tablosu ──
+                // Eşleştirme kurum bazında: "müşteri kodu / kullanıcı no".
+                // Müşteri kodu birçok kurumda ortak olabilir (bkz. SiparisMusteriCozucu).
                 var tumEslesmeler = await _db.HospitalEslesmeleri.AsNoTracking().ToListAsync(ct);
-                var eslesmeMap = tumEslesmeler
-                    .GroupBy(e => (e.ExternalMusteriKodu ?? "").Trim().ToUpperInvariant())
-                    .ToDictionary(g => g.Key, g => g.First());
+                var cozucu = new SiparisMusteriCozucu(tumEslesmeler, cevap.Orders);
 
                 var mevcutRefSet = new HashSet<string>(
                     mevcutExternalRefler.Where(x => !string.IsNullOrEmpty(x)),
@@ -137,13 +137,17 @@ namespace CRMOzem.Business.Services
                         continue;
                     }
 
-                    if (!eslesmeMap.TryGetValue(musteriKodu, out var eslesme))
+                    var eslesme = cozucu.Bul(apiOrder);
+                    if (eslesme == null)
                     {
-                        if (!eslesmeyenToplam.TryGetValue(musteriKodu, out var mevcut))
+                        var anahtar = SiparisMusteriCozucu.Anahtar(apiOrder);
+                        if (!eslesmeyenToplam.TryGetValue(anahtar, out var mevcut))
                         {
-                            eslesmeyenToplam[musteriKodu] = new EslesmeyenMusteri
+                            eslesmeyenToplam[anahtar] = new EslesmeyenMusteri
                             {
+                                Anahtar = anahtar,
                                 MusteriKodu = musteriKodu,
+                                OrtakKod = cozucu.OrtakKod(musteriKodu),
                                 KurumAdi = apiOrder.HospitalName,
                                 MusteriAdi = apiOrder.CustomerName,
                                 SiparisSayisi = 1,
@@ -312,9 +316,12 @@ namespace CRMOzem.Business.Services
                 var kayitliSet = new HashSet<string>(kayitli, StringComparer.OrdinalIgnoreCase);
 
                 var eslesmeler = await _db.HospitalEslesmeleri.AsNoTracking().ToListAsync(ct);
-                var eslesmeMap = eslesmeler
-                    .GroupBy(e => (e.ExternalMusteriKodu ?? "").Trim().ToUpperInvariant())
-                    .ToDictionary(g => g.Key, g => g.First());
+                var cozucu = new SiparisMusteriCozucu(eslesmeler, cevap.Orders);
+                sonuc.OrtakKodlar = cozucu.OrtakKodlar.OrderBy(x => x).ToList();
+                sonuc.GecersizEskiEslesmeler = eslesmeler
+                    .Where(cozucu.GecersizEskiEslesme)
+                    .Select(e => e.ExternalMusteriKodu)
+                    .ToList();
 
                 var eskiSinir = DateTime.Now.AddDays(-EskiSiparisGun);
                 var musteriler = new Dictionary<string, EslesmeyenMusteri>(StringComparer.OrdinalIgnoreCase);
@@ -336,15 +343,20 @@ namespace CRMOzem.Business.Services
                         neden = "Müşteri kodu boş";
                         cozum = "Sipariş yazılımında müşteriye kod tanımlanmalı.";
                     }
-                    else if (!eslesmeMap.TryGetValue(kod, out var e))
+                    else if (cozucu.Bul(o) is not { } e)
                     {
-                        neden = "Müşteri kodu hiçbir hastaneyle eşleştirilmemiş";
-                        cozum = "Hastane Eşleşmesi ekranında bu kodu bir hastaneye bağlayın.";
+                        neden = cozucu.OrtakKod(kod)
+                            ? "Kurum hiçbir hastaneye bağlanmamış (müşteri kodu başka kurumlarla ortak)"
+                            : "Müşteri hiçbir hastaneye bağlanmamış";
+                        cozum = "Hastane Eşleştirme ekranında bu kurumu bir hastaneye bağlayın.";
 
-                        if (!musteriler.TryGetValue(kod, out var m))
-                            musteriler[kod] = m = new EslesmeyenMusteri
+                        var anahtar = SiparisMusteriCozucu.Anahtar(o);
+                        if (!musteriler.TryGetValue(anahtar, out var m))
+                            musteriler[anahtar] = m = new EslesmeyenMusteri
                             {
+                                Anahtar = anahtar,
                                 MusteriKodu = kod,
+                                OrtakKod = cozucu.OrtakKod(kod),
                                 KurumAdi = o.HospitalName,
                                 MusteriAdi = o.CustomerName
                             };

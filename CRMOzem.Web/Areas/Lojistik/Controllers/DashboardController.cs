@@ -68,11 +68,24 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 var mesaj = $"Sayımlar alındı: {sonuc.CekilenSatir} satır okundu, " +
                             $"{sonuc.YeniEklenen} yeni, {sonuc.Guncellenen} güncellendi.";
 
+                if (sonuc.BirlesenHastaneSayisi > 0)
+                    mesaj += $" {sonuc.BirlesenHastaneSayisi} hastanenin sayımı birden çok birimden toplandı.";
+
                 if (sonuc.KapatilanEskiSatir > 0)
                     mesaj += $" Yerine yenisi gelen {sonuc.KapatilanEskiSatir} eski sayım satırı kapatıldı.";
 
+                var benzer = sonuc.ReferansKokuyleEslesen.Count + sonuc.AdlaEslesen.Count;
+                if (benzer > 0)
+                    mesaj += $" {benzer} ürün katalogda referans kökü ya da adıyla bulundu (hangileri: Veri Kontrol).";
+
+                if (sonuc.EklenenTestler.Count > 0)
+                    mesaj += $" Katalogda olmayan {sonuc.EklenenTestler.Count} reaktif Testler'e eklendi " +
+                             $"(kategori: \"Sayımdan eklendi\"): {string.Join(", ", sonuc.EklenenTestler.Take(8))}" +
+                             (sonuc.EklenenTestler.Count > 8 ? " …" : ".");
+
                 if (sonuc.ReaktifEslesemeyen > 0)
-                    mesaj += $" {sonuc.ReaktifEslesemeyen} reaktif satırı katalogda bulunamadı.";
+                    mesaj += $" {sonuc.ReaktifEslesemeyen} reaktif satırı referansı boş olduğu için eşleştirilemedi.";
+
 
                 if (sonuc.EslesemeyenHastaneler.Any())
                     mesaj += $" ⚠ {sonuc.EslesemeyenHastaneler.Count} hastane adı eşleşmediği için " +

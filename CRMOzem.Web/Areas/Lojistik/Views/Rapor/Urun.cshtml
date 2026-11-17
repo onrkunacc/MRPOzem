@@ -22,7 +22,7 @@
         _ => "kt-badge-secondary"
     };
 
-    var enBuyuk = Math.Max(1m, Model.Hastaneler.Count == 0 ? 1m : Model.Hastaneler.Max(h => h.StokKutu));
+    var enBuyuk = Math.Max(1m, Model.Hastaneler.Count == 0 ? 1m : Model.Hastaneler.Max(h => h.StokTest));
 }
 
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
@@ -79,7 +79,7 @@
                     <div class="kt-kpi-label">Toplam Stok</div>
                     <div class="kt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
                 </div>
-                <div class="kt-kpi-value">@Model.ToplamStok.ToString("0.#", tr)</div>
+                <div class="kt-kpi-value">@Model.ToplamStok.ToString("N0", tr)</div>
                 <div class="kt-kpi-foot">@Model.Birim · @Model.Hastaneler.Count hastanede</div>
             </div>
             <div class="kt-kpi accent-primary">
@@ -87,7 +87,7 @@
                     <div class="kt-kpi-label">Toplam Aylık Tüketim</div>
                     <div class="kt-kpi-icon"><i class="fas fa-vial"></i></div>
                 </div>
-                <div class="kt-kpi-value">@Model.ToplamAylik.ToString("0.#", tr)</div>
+                <div class="kt-kpi-value">@Model.ToplamAylik.ToString("N0", tr)</div>
                 <div class="kt-kpi-foot">@Model.Birim / ay</div>
             </div>
             <div class="kt-kpi accent-warn">
@@ -139,15 +139,15 @@
                     <tbody>
                         @foreach (var h in Model.Hastaneler)
                         {
-                            var w = (Math.Max(0m, h.StokKutu) * 100m / enBuyuk).ToString("0", inv);
+                            var w = (Math.Max(0m, h.StokTest) * 100m / enBuyuk).ToString("0", inv);
                             <tr style="cursor:pointer;" onclick="window.location.href='@Url.Action("Hastane", new { id = h.HospitalID })'">
                                 <td class="kt-cell-primary">@h.HospitalName</td>
                                 <td style="white-space:nowrap; font-size:12.5px;">
                                     @(h.SonSayimTarihi.HasValue ? h.SonSayimTarihi.Value.ToString("dd.MM.yyyy") : "sayım yok")
                                 </td>
-                                <td class="text-right"><strong>@h.StokKutu.ToString("0.#", tr)</strong> <span class="text-muted" style="font-size:11px;">@Model.Birim</span></td>
+                                <td class="text-right"><strong>@h.StokTest.ToString("N0", tr)</strong> <span class="text-muted" style="font-size:11px;">@Model.Birim</span></td>
                                 <td><div class="rp-bar"><span style="width:@w%"></span></div></td>
-                                <td class="text-right">@h.AylikKutu.ToString("0.#", tr)</td>
+                                <td class="text-right">@h.AylikTest.ToString("N0", tr)</td>
                                 <td class="text-center">
                                     @if (h.StokAy.HasValue)
                                     {

@@ -9,6 +9,8 @@
 
     var hospitals = ViewBag.Hospitals as IEnumerable<dynamic>;
     var apiyeUlasildi = (ViewBag.ApiyeUlasildi as bool?) ?? false;
+    var gecersizEski = new HashSet<string>((ViewBag.GecersizEskiEslesmeler as List<string>) ?? new List<string>(),
+        StringComparer.OrdinalIgnoreCase);
 }
 
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
@@ -83,9 +85,9 @@
                 <table class="kt-table" data-sayfala="25">
                     <thead>
                         <tr>
-                            <th>Müşteri Kodu</th>
-                            <th>Müşteri Adı</th>
                             <th>Sipariş yazılımındaki kurum</th>
+                            <th>Kullanıcı</th>
+                            <th>Müşteri Kodu</th>
                             <th class="text-center">Sipariş #</th>
                             <th>Eşleştir / Yoksay</th>
                         </tr>
@@ -99,16 +101,22 @@
                             var rid = $"row{rowIdx++}";
                             string kurumAdi = (string)(m.KurumAdi ?? "");
                             <tr>
-                                <td><span class="kt-code-badge">@m.MusteriKodu</span></td>
-                                <td>@m.MusteriAdi</td>
                                 <td class="kt-cell-primary">@m.KurumAdi</td>
+                                <td style="font-size:12.5px;">@m.MusteriAdi</td>
+                                <td>
+                                    <span class="kt-code-badge">@m.MusteriKodu</span>
+                                    @if ((bool)m.OrtakKod)
+                                    {
+                                        <div style="font-size:10.5px; color:var(--kt-ink-400); margin-top:2px;" title="Bu müşteri kodu sipariş yazılımında birden çok kurumda kullanılıyor; her kurum ayrı bağlanır.">ortak kod</div>
+                                    }
+                                </td>
                                 <td class="text-center">
                                     <span class="kt-badge kt-badge-warning">@m.SiparisSayisi</span>
                                 </td>
                                 <td>
                                     <form method="post" action="@Url.Action("Ekle")" style="display:flex; gap:6px; align-items:center;">
                                         @Html.AntiForgeryToken()
-                                        <input type="hidden" name="musteriKodu" value="@m.MusteriKodu" />
+                                        <input type="hidden" name="musteriKodu" value="@m.Anahtar" />
                                         <input type="hidden" name="kurumAdi" value="@m.KurumAdi" />
                                         <select name="hospitalId" class="kt-input hospital-select" id="@(rid)_select" style="width:260px;">
                                             <option value="">-- hastane seç --</option>
@@ -167,8 +175,27 @@
                         @foreach (var e in mevcut)
                         {
                             <tr>
-                                <td><span class="kt-code-badge ghost">@e.ExternalMusteriKodu</span></td>
-                                <td style="font-size:12.5px;">@(e.ExternalKurumAdi ?? "—")</td>
+                                @{
+                                    var anahtarParca = (e.ExternalMusteriKodu ?? "").Split('/');
+                                    var gecersiz = gecersizEski.Contains((e.ExternalMusteriKodu ?? "").Trim().ToUpperInvariant());
+                                }
+                                <td>
+                                    <span class="kt-code-badge ghost">@anahtarParca[0]</span>
+                                    @if (anahtarParca.Length > 1)
+                                    {
+                                        <div style="font-size:10.5px; color:var(--kt-ink-400); margin-top:2px;">kullanıcı no @anahtarParca[1]</div>
+                                    }
+                                </td>
+                                <td style="font-size:12.5px;">
+                                    @(e.ExternalKurumAdi ?? "—")
+                                    @if (gecersiz)
+                                    {
+                                        <div style="font-size:11px; color:#b45309; margin-top:3px;">
+                                            <i class="fas fa-triangle-exclamation"></i>
+                                            Eski, yalnızca koda göre eşleştirme. Bu kod birçok kurumda ortak olduğu için artık kullanılmıyor; kurumları yukarıdan ayrı ayrı bağlayın, sonra bu satırı silin.
+                                        </div>
+                                    }
+                                </td>
                                 <td class="kt-cell-primary">
                                     @if (e.Yoksay)
                                     {

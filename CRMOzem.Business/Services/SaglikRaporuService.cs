@@ -33,6 +33,8 @@ namespace CRMOzem.Business.Services
             vm.Kontroller.Add(await K06_UcSapmalar(ct));
             vm.Kontroller.Add(await K07_DonemUyumsuzlugu(ct));
             vm.Kontroller.Add(await K08_KullanimGirisiGeride(ct));
+            vm.Kontroller.Add(await K09_BenzerlikleEslesenler(ct));
+            vm.Kontroller.Add(await K10_SayimdanEklenenTestler(ct));
 
             return vm;
         }
@@ -48,8 +50,8 @@ namespace CRMOzem.Business.Services
                 Kod = "K01",
                 Kategori = "Eşleştirme",
                 Baslik = "Sayımda olup katalogda bulunmayan reaktifler",
-                Aciklama = "Sayımda görünen reaktif ürünün referans numarası Testler listesinde yoksa o ürünün sayımı stok hesabına girmez.",
-                CozumOnerisi = "Testler listesinde ürünün referans (SUT) kodunu kontrol edin. Tire, nokta, boşluk ve baştaki sıfır farkları artık sorun değil; kodun kendisi farklıysa ya da ürün listede hiç yoksa eklenmeli. Düzelttikten sonra Dashboard'dan \"Sayımları Yenile\" deyin.",
+                Aciklama = "Katalogda (Testler) karşılığı olmayan reaktiflerin sayımı stok hesabına girmez. Sayım alınırken katalog referansa, referans köküne ve ada göre aranır; bulunamayan reaktif kataloğa kendiliğinden eklenir.",
+                CozumOnerisi = "Burada ürün görünüyorsa önce Dashboard'dan \"Sayımları Yenile\" deyin: arama ve ekleme o sırada yapılır. Yenilemeden sonra hâlâ kalanların sayım uygulamasındaki referans numarası boştur; referans orada girilmeli.",
                 AksiyonUrl = "/Istatistik/Test/Index",
                 AksiyonText = "Testler listesi"
             };
@@ -315,7 +317,7 @@ namespace CRMOzem.Business.Services
                     var sonTarih = sonMap.TryGetValue(hospitalId, out var dt) ? dt : (DateTime?)null;
                     var hastaneAdi = e.InternalHospital?.HospitalName ?? "—";
                     var gun = sonTarih.HasValue ? ((int)(DateTime.Now - sonTarih.Value).TotalDays).ToString() + " gün önce" : "hiç";
-                    return $"{e.ExternalMusteriKodu} ({hastaneAdi}) · son sipariş: {gun}";
+                    return $"{(string.IsNullOrWhiteSpace(e.ExternalKurumAdi) ? e.ExternalMusteriKodu : e.ExternalKurumAdi)} → {hastaneAdi} · son sipariş: {gun}";
                 })
                 .ToList();
 
@@ -515,6 +517,106 @@ namespace CRMOzem.Business.Services
                     .OrderByDescending(x => x.Sira)
                     .Take(20)
                     .Select(x => x.Metin)
+                    .ToList();
+            }
+
+            k.SureMs = sw.ElapsedMilliseconds;
+            return k;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  K09 — Referansı farklı olduğu halde eşleştirilen ürünler
+        // ═══════════════════════════════════════════════════════════
+        //  Sayımdaki referans katalogdakiyle birebir aynı değil; eşleşme
+        //  referans kökünden (ambalaj haneleri hariç) ya da addan yapıldı.
+        //  Doğru olması beklenir ama bir kez gözle doğrulanmalı.
+        private async Task<SaglikKontrolVm> K09_BenzerlikleEslesenler(CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            var k = new SaglikKontrolVm
+            {
+                Kod = "K09",
+                Kategori = "Eşleştirme",
+                Baslik = "Referansı farklı olduğu halde eşleştirilen ürünler",
+                Aciklama = "Sayımdaki referans katalogdakiyle birebir aynı değil; ürün referansın kökünden (yalnızca ambalaj haneleri farklı) ya da adından eşleştirildi. Bir kez göz atıp doğrulayın.",
+                CozumOnerisi = "Eşleşme yanlışsa Testler listesinde doğru testin referans (SUT) kodunu sayımdaki referansla aynı yapın ya da ürünü ayrı bir test olarak ekleyin; sonra \"Sayımları Yenile\" deyin. Birebir referans her zaman önceliklidir.",
+                AksiyonUrl = "/Istatistik/Test/Index",
+                AksiyonText = "Testler listesi"
+            };
+
+            var ham = await _db.FizikiSayimSnapshotlari
+                .AsNoTracking()
+                .Where(s => s.SayimAktifMi && s.MappedTestID.HasValue)
+                .Select(s => new
+                {
+                    s.ProductName,
+                    s.ReferenceNumber,
+                    TestAdi = s.MappedTest!.TestName,
+                    TestRef = s.MappedTest!.SutCode
+                })
+                .Distinct()
+                .ToListAsync(ct);
+
+            var farkli = ham
+                .Where(x => Helpers.ReferansKodu.Normalize(x.ReferenceNumber) != Helpers.ReferansKodu.Normalize(x.TestRef))
+                .GroupBy(x => (Helpers.ReferansKodu.Normalize(x.ReferenceNumber), x.TestAdi))
+                .Select(g => g.First())
+                .OrderBy(x => x.ProductName)
+                .ToList();
+
+            k.BulguAdeti = farkli.Count;
+            if (farkli.Count == 0)
+            {
+                k.Durum = KontrolDurumu.Gecti;
+            }
+            else
+            {
+                k.Durum = KontrolDurumu.Dikkat;
+                k.BulguDetaylar = farkli
+                    .Take(60)
+                    .Select(x => $"Sayım: {x.ProductName} ({x.ReferenceNumber})  →  Katalog: {x.TestAdi} ({(string.IsNullOrWhiteSpace(x.TestRef) ? "referans yok" : x.TestRef)})")
+                    .ToList();
+            }
+
+            k.SureMs = sw.ElapsedMilliseconds;
+            return k;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  K10 — Sayımdan kataloğa kendiliğinden eklenen testler
+        // ═══════════════════════════════════════════════════════════
+        private async Task<SaglikKontrolVm> K10_SayimdanEklenenTestler(CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            var k = new SaglikKontrolVm
+            {
+                Kod = "K10",
+                Kategori = "Eşleştirme",
+                Baslik = "Sayımdan kataloğa eklenen testler",
+                Aciklama = "Katalogda bulunamadığı için sayım alınırken Testler listesine kendiliğinden eklenen reaktifler. Stok hesabına girerler; kullanım (istatistik) girişleri yoksa tüketimleri gönderimden tahmin edilir.",
+                CozumOnerisi = "Testler listesinde \"Sayımdan eklendi\" kategorisindeki kayıtları gözden geçirin: adı ve kategoriyi düzenleyin. Aynı test listede başka bir adla zaten varsa yenisini silip eski testin referans kodunu düzeltmek daha doğrudur.",
+                AksiyonUrl = "/Istatistik/Test/Index",
+                AksiyonText = "Testler listesi"
+            };
+
+            var eklenenler = await _db.Tests
+                .AsNoTracking()
+                .Where(t => t.Kategori == "Sayımdan eklendi")
+                .OrderBy(t => t.TestName)
+                .Select(t => new { t.TestName, t.SutCode, t.Platform })
+                .ToListAsync(ct);
+
+            k.BulguAdeti = eklenenler.Count;
+            if (eklenenler.Count == 0)
+            {
+                k.Durum = KontrolDurumu.Gecti;
+            }
+            else
+            {
+                k.Durum = KontrolDurumu.Dikkat;
+                k.BulguDetaylar = eklenenler
+                    .Take(60)
+                    .Select(x => $"{x.TestName} · Ref: {x.SutCode}" + (string.IsNullOrWhiteSpace(x.Platform) ? "" : $" · {x.Platform}"))
                     .ToList();
             }
 

@@ -8,7 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace CRMOzem.Web.Areas.Istatistik.Controllers
 {
     [Area("Istatistik")]
-    [Authorize(Roles = "Yönetici,İstatistik")]
+    
+    [Authorize(Roles = "Yönetici,İstatistik,Lojistik")]
     public class TestController : Controller
     {
         private readonly ApplicationDbContext _context;
