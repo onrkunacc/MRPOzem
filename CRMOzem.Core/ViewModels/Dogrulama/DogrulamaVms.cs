@@ -233,6 +233,9 @@ namespace CRMOzem.Core.ViewModels.Dogrulama
 
         // ── Stok ve tüketim ──
         public decimal? HesapGuncelStok { get; set; }
+
+        /// <summary>Kayıtlar tutarsız (sayım + gönderim − kullanım eksi); stok gösterilmez.</summary>
+        public bool KayitTutarsiz { get; set; }
         public decimal? OrtalamaAylikKullanim { get; set; }
         public decimal? StokAy { get; set; }
         public int Yolda { get; set; }

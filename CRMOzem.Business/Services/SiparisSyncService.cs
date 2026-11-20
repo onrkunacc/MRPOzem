@@ -575,9 +575,9 @@ namespace CRMOzem.Business.Services
 
             foreach (var t in testler)
             {
-                var refKey = ReferansKodu.Normalize(t.SutCode);
-                if (refKey.Length > 0 && !k.ByRef.ContainsKey(refKey))
-                    k.ByRef[refKey] = t;
+                // SutCode birden çok referans taşıyabilir: "8P4530, 8P4532"
+                foreach (var refKey in ReferansKodu.Kodlar(t.SutCode))
+                    k.ByRef.TryAdd(refKey, t);
 
                 var adKey = ReferansKodu.AdNormalize(t.TestName);
                 if (adKey.Length >= 4)

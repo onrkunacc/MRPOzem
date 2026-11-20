@@ -212,7 +212,11 @@
                                     }
                                 </td>
                                 <td class="text-right">
-                                    @if (u.StokTest.HasValue)
+                                    @if (u.KayitTutarsiz)
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Sayımdan sonra kaydedilen kullanım, sayım + gönderimden fazla — gönderim kaydı eksik olabilir">kayıt tutarsız</span>
+                                    }
+                                    else if (u.StokTest.HasValue)
                                     {
                                         <strong style="@(u.StokTest < 0 ? "color:var(--kt-neg);" : "")" title="@(u.StokTest < 0 ? "Sayımdan sonra kaydedilen kullanım, gönderimden fazla" : "")">@u.StokTest.Value.ToString("N0", tr)</strong> <span class="text-muted" style="font-size:11px;">@u.Birim</span>
                                     }

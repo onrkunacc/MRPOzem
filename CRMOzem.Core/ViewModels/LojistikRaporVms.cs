@@ -142,6 +142,9 @@ namespace CRMOzem.Core.ViewModels
         public string? ReferenceNumber { get; set; }
         public string Birim { get; set; } = "test";
 
+        /// <summary>Kayıtlar tutarsız (sayım + gönderim − kullanım eksi).</summary>
+        public bool KayitTutarsiz { get; set; }
+
         /// <summary>Fiziki sayımı yoksa null.</summary>
         public decimal? StokTest { get; set; }
         public decimal AylikTest { get; set; }

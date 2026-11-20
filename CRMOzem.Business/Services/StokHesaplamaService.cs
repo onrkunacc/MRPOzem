@@ -87,6 +87,9 @@ namespace CRMOzem.Business.Services
             if (int.TryParse(config["Lojistik:OrtalamaAy"], out var ort) && ort >= 1 && ort <= 12)
                 a.OrtalamaAy = ort;
 
+            if (bool.TryParse(config["Lojistik:SayimsizTahmin"], out var sayimsiz))
+                a.SayimsizTahmin = sayimsiz;
+
             return a;
         }
 
@@ -159,9 +162,8 @@ namespace CRMOzem.Business.Services
             var testByRef = new Dictionary<string, int>();
             foreach (var t in testler)
             {
-                var anahtar = ReferansKodu.Normalize(t.SutCode);
-                if (anahtar.Length > 0 && !testByRef.ContainsKey(anahtar))
-                    testByRef[anahtar] = t.TestID;
+                foreach (var anahtar in ReferansKodu.Kodlar(t.SutCode))
+                    testByRef.TryAdd(anahtar, t.TestID);
             }
 
             // Kullanımı (istatistiği) tutulan ürünler — pratikte reaktifler.
@@ -332,9 +334,56 @@ namespace CRMOzem.Business.Services
                 foreach (var k in kullanimByHastane[hid]) evren.Add(k.TestID);
                 foreach (var e in ekByHastane[hid]) evren.Add(e);
 
+                // ── Platform geçişi: aynı testin diğer platformdaki karşılığı ──
+                // Hastane Architect'ten Alinity'ye geçerken sipariş Alinity ürünü,
+                // İstatistik kullanımı ise hâlâ Architect testine giriliyor olabilir.
+                // Kullanımı olan testler ad çekirdeğine göre gruplanır; kendi
+                // kullanımı olmayan ürün, BAŞKA platformdaki aynı adlı testin
+                // kullanımını tüketim olarak alır.
+                var kullanimliTestler = kullanimByHastane[hid]
+                    .Where(k => ortAylar.Contains(k.Ay) && k.Adet > 0)
+                    .Select(k => k.TestID)
+                    .Distinct()
+                    .Where(testById.ContainsKey)
+                    .GroupBy(t => KatalogEslestirici.AdCekirdek(testById[t].TestName))
+                    .Where(g => g.Key.Length >= 2)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                (Dictionary<DateTime, int>? Aylik, string? Adlar) Esdeger(TestBilgi t)
+                {
+                    if (ortAylar.Count == 0) return (null, null);
+
+                    var kendi = PlatformAilesi(t);
+                    if (kendi.Length == 0) return (null, null);
+
+                    var cekirdek = KatalogEslestirici.AdCekirdek(t.TestName);
+                    if (!kullanimliTestler.TryGetValue(cekirdek, out var adaylar)) return (null, null);
+
+                    var esler = adaylar
+                        .Where(id => id != t.TestID)
+                        .Select(id => testById[id])
+                        .Where(e => PlatformAilesi(e) is { Length: > 0 } p && p != kendi)
+                        .ToList();
+                    if (esler.Count == 0) return (null, null);
+
+                    var aylik = new Dictionary<DateTime, int>();
+                    foreach (var e in esler)
+                        foreach (var kv in AylikTopla(kullanimByKey[(hid, e.TestID)]))
+                        {
+                            aylik.TryGetValue(kv.Key, out var v);
+                            aylik[kv.Key] = v + kv.Value;
+                        }
+
+                    var adlar = string.Join(", ", esler.Select(e =>
+                        string.IsNullOrWhiteSpace(e.Kategori) ? e.TestName : $"{e.TestName} ({e.Kategori})"));
+                    return (aylik, adlar);
+                }
+
                 foreach (var testId in evren)
                 {
                     if (!testById.TryGetValue(testId, out var test)) continue;
+
+                    var (esdegerAylik, esdegerAdlar) = Esdeger(test);
 
                     var satir = SatirHesapla(
                         hid, test, hedefAy, bugun, buAy,
@@ -345,7 +394,8 @@ namespace CRMOzem.Business.Services
                         kullanimToplam.TryGetValue((hid, testId), out var kt) ? kt : 0,
                         takipliTestler.Contains(testId),
                         ortAylar, oncekiAylar, kullanimBilinenSon,
-                        acikByKey[(hid, testId)].ToList());
+                        acikByKey[(hid, testId)].ToList(),
+                        esdegerAylik, esdegerAdlar, panel.SonSayimTarihi);
 
                     panel.Satirlar.Add(satir);
                 }
@@ -381,7 +431,10 @@ namespace CRMOzem.Business.Services
             List<DateTime> ortAylar,
             List<DateTime> oncekiAylar,
             DateTime? kullanimBilinenSon,
-            List<AcikKalem> acikKalemler)
+            List<AcikKalem> acikKalemler,
+            Dictionary<DateTime, int>? esdegerKullanim = null,
+            string? esdegerAdlar = null,
+            DateTime? hastaneSayimTarihi = null)
         {
             // Aktif sayım satırlarının TAMAMI toplanır. Bir hastane sayım
             // uygulamasında birden çok birim olarak sayılıyor olabilir
@@ -461,6 +514,23 @@ namespace CRMOzem.Business.Services
                 }
             }
 
+            // ── Platform geçişi ──
+            // Bu ürünün kendi kullanımı yok ama başka platformdaki aynı testin
+            // kullanımı var (örn. Alinity siparişi, Architect kullanımı).
+            if (ort <= 0 && esdegerKullanim != null && ortAylar.Count > 0)
+            {
+                var toplam = ortAylar.Sum(a => esdegerKullanim.TryGetValue(a, out var v) ? v : 0);
+                if (toplam > 0)
+                {
+                    ort = (decimal)toplam / ortAylar.Count;
+                    satir.TuketimKaynagi = TuketimKaynagi.Esdeger;
+                    satir.OrtalamaAySayisi = ortAylar.Count;
+                    satir.Son3AyKullanim = toplam;
+                    satir.EsdegerTestler = esdegerAdlar;
+                    satir.UrunTipi = UrunTipi.Reaktif;
+                }
+            }
+
             satir.OrtalamaAylikKullanim = Math.Round(ort, 1);
             var gunluk = ort / 30m;
 
@@ -514,7 +584,38 @@ namespace CRMOzem.Business.Services
                      - satir.SayimdanSonraKullanim
                      - satir.TahminiTuketim;
             }
-            else if (satir.TuketimKaynagi == TuketimKaynagi.Kullanim
+            else if (satir.TuketimKaynagi == TuketimKaynagi.Esdeger && hastaneSayimTarihi.HasValue)
+            {
+                // Platform geçişindeki yeni ürün, hastanenin son sayımında yok:
+                // sayım tarihinde stok 0 kabul edilir; sonrasında bu ürünün
+                // gönderimi eklenir, kendi kullanımı (varsa) düşülür. Tüketim
+                // eski platformda sürdüğü için tahmini tüketim düşülmez.
+                satir.StokKaynagi = StokKaynagi.FizikiSayim;
+                satir.SayimdaYokSifir = true;
+
+                var d = hastaneSayimTarihi.Value.Date;
+                if (d > bugun) d = bugun;
+                sayimTarihi = d;
+                satir.SonSayimTarihi = d;
+                satir.SonSayimTestCount = 0;
+
+                var sayimAyi = AyBasi(d);
+                var ayGun = DateTime.DaysInMonth(d.Year, d.Month);
+                var kalanOran = (decimal)(ayGun - d.Day) / ayGun;
+
+                int Sonrasi(Dictionary<DateTime, int> aylik)
+                {
+                    var tam = aylik.Where(kv => kv.Key > sayimAyi).Sum(kv => kv.Value);
+                    var kismi = aylik.TryGetValue(sayimAyi, out var v) ? (int)Math.Round(v * kalanOran) : 0;
+                    return tam + kismi;
+                }
+
+                satir.SayimdanSonraGonderim = Sonrasi(gonderimAylik);
+                satir.SayimdanSonraKullanim = Sonrasi(kullanimAylik);
+                stok = satir.SayimdanSonraGonderim - satir.SayimdanSonraKullanim;
+            }
+            else if (Ayar.SayimsizTahmin
+                     && satir.TuketimKaynagi == TuketimKaynagi.Kullanim
                      && (gonderimTumZaman > 0 || kullanimTumZaman > 0))
             {
                 // Sayım yok: kayıt farkı. Açılış stoku bilinmediği için güven düşük.
@@ -536,6 +637,14 @@ namespace CRMOzem.Business.Services
             satir.HesapGuncelStok = stok;
             var stokPoz = Math.Max(0, stok);
 
+            // Kayıtlar tutarsız mı? Yalnızca GİRİLMİŞ verinin kendisi eksi
+            // veriyorsa (sayım + gönderim − raporlanan kullanım < 0). Eksi sonuç
+            // yalnızca tahmini tüketimden geliyorsa bu gerçek bir uyarıdır
+            // (stok tükenmiş olabilir) ve öneri üretilir.
+            // Tutarsızlıkta stoğu 0 sayıp öneri üretmek (örn. "52 kutu") yanıltıcı olur.
+            var kayitliBakiye = satir.SonSayimTestCount + satir.SayimdanSonraGonderim - satir.SayimdanSonraKullanim;
+            satir.KayitTutarsiz = satir.StokKaynagi != StokKaynagi.Yok && kayitliBakiye < 0;
+
             // ── Yolda: onaylanmış ama gönderim kaydına işlenmemiş ──
             var onayli = acikKalemler
                 .Where(a => a.Durum != SiparisTalepDurumu.Beklemede
@@ -556,7 +665,7 @@ namespace CRMOzem.Business.Services
                 .Sum(a => a.TalepTest);
 
             // ── Yetme süresi ──
-            var stokVar = satir.StokKaynagi != StokKaynagi.Yok;
+            var stokVar = satir.StokKaynagi != StokKaynagi.Yok && !satir.KayitTutarsiz;
 
             if (stokVar && ort > 0)
             {
@@ -579,7 +688,9 @@ namespace CRMOzem.Business.Services
             satir.OnerilenKutu = oneriKutu;
 
             // ── Durum ──
-            satir.Durum = DurumBelirle(satir.StokKaynagi, ort, stok, satir.RunwayGun);
+            satir.Durum = satir.KayitTutarsiz
+                ? StokDurumu.VeriYok
+                : DurumBelirle(satir.StokKaynagi, ort, stok, satir.RunwayGun);
 
             // ═══ 4. SORU — NE KADAR GÜVENİLİR? ═══
             GuvenBelirle(satir, bugun, stok);
@@ -653,7 +764,12 @@ namespace CRMOzem.Business.Services
                 else if (yas > Ayar.SayimEskiGun) Dusur(VeriGuveni.Orta, $"sayım {yas} gün önce");
             }
 
-            if (s.TuketimKaynagi == TuketimKaynagi.Gonderim)
+            if (s.TuketimKaynagi == TuketimKaynagi.Esdeger)
+            {
+                Dusur(VeriGuveni.Dusuk, "platform geçişi: tüketim eşdeğer testin kullanımından alındı");
+                if (s.SayimdaYokSifir) nedenler.Add("ürün son sayımda yok, stok 0 kabul edildi");
+            }
+            else if (s.TuketimKaynagi == TuketimKaynagi.Gonderim)
             {
                 Dusur(VeriGuveni.Orta, "kullanım verisi yok, gönderim ortalaması kullanıldı");
             }
@@ -760,11 +876,16 @@ namespace CRMOzem.Business.Services
             s.HesaplamaOzeti = string.Join(" · ", parcalar);
 
             // ── Satır uyarıları ──
-            if (stok < 0)
-                s.Uyarilar.Add("Hesap stok eksi — gönderim kaydı eksik ya da kullanım fazla girilmiş olabilir.");
+            if (s.KayitTutarsiz)
+                s.Uyarilar.Add($"Kayıtlar tutarsız: sayımdan sonra kaydedilen kullanım, sayım + gönderimden {N(s.SayimdanSonraKullanim - s.SonSayimTestCount - s.SayimdanSonraGonderim)} test fazla. "
+                             + "Büyük olasılıkla gönderim kaydı eksik; öneri hesaplanmadı.");
 
             if (s.Durum == StokDurumu.Durgun)
                 s.Uyarilar.Add("Son raporlanan aylarda hiç kullanım yok ama elde stok var.");
+
+            if (s.TuketimKaynagi == TuketimKaynagi.Esdeger)
+                s.Uyarilar.Add($"Platform geçişi: tüketim {s.EsdegerTestler} kullanımından alındı."
+                    + (s.SayimdaYokSifir ? " Ürün son sayımda yok; stok 0 + sonraki gönderim kabul edildi." : ""));
 
             if (s.Yolda > 0)
                 s.Uyarilar.Add($"{N(s.Yolda)} test onaylandı, gönderim kaydı henüz girilmemiş — öneriden düşüldü.");
@@ -881,6 +1002,24 @@ namespace CRMOzem.Business.Services
         public SiparisKararVm Degerlendir(
             StokHesapSatirVm? s, int talepTest, int oncekiBekleyenTest = 0, int? hedefAy = null)
         {
+            var k = DegerlendirIc(s, talepTest, oncekiBekleyenTest, hedefAy);
+
+            // Platform geçişi: kararın neye dayandığı söylensin; güven düşük
+            // olduğu için kırmızı verilmez.
+            if (s?.TuketimKaynagi == TuketimKaynagi.Esdeger)
+            {
+                if (k.Renk == DogrulamaRengi.Kirmizi) k.Renk = DogrulamaRengi.Sari;
+                k.Gerekce = (k.Gerekce ?? "").TrimEnd()
+                          + $" Platform geçişi: tüketim {s.EsdegerTestler} kullanımından alındı"
+                          + (s.SayimdaYokSifir ? "; ürün son sayımda yok, stok 0 kabul edildi." : ".");
+            }
+
+            return k;
+        }
+
+        private SiparisKararVm DegerlendirIc(
+            StokHesapSatirVm? s, int talepTest, int oncekiBekleyenTest, int? hedefAy)
+        {
             var hedef = hedefAy.GetValueOrDefault(Ayar.HedefAy);
             if (hedef <= 0) hedef = Ayar.HedefAy;
 
@@ -921,8 +1060,8 @@ namespace CRMOzem.Business.Services
                 return k;
             }
 
-            // ── Stok bilinmiyor: yalnızca geçmişle kıyas ──
-            if (s.StokKaynagi == StokKaynagi.Yok)
+            // ── Stok bilinmiyor ya da kayıtlar tutarsız: yalnızca geçmişle kıyas ──
+            if (s.StokKaynagi == StokKaynagi.Yok || s.KayitTutarsiz)
             {
                 var kacAylik = talepTest / ort;
                 k.SiparisSonrasiAy = Math.Round(kacAylik, 1);
@@ -943,7 +1082,13 @@ namespace CRMOzem.Business.Services
                     k.Baslik = "Geçmişe göre çok yüksek";
                 }
 
-                k.Gerekce = $"Sayımı yok. Son 6 ayda aylık ortalama gönderim {M(ort / carpan)} {birim}; "
+                var neden = s.KayitTutarsiz
+                    ? "Kayıtlar tutarsız (sayımdan sonra kullanım, gönderimden fazla), stok hesaplanamadı."
+                    : "Sayımı yok.";
+                var kaynak = s.TuketimKaynagi == TuketimKaynagi.Gonderim
+                    ? "Son 6 ayda aylık ortalama gönderim"
+                    : "Aylık ortalama tüketim";
+                k.Gerekce = $"{neden} {kaynak} {M(ort / carpan)} {birim}; "
                           + $"istenen {M(talepMiktar)} {birim} yaklaşık {Ay(kacAylik)} aylık ihtiyaca denk.";
                 return k;
             }
@@ -1033,6 +1178,15 @@ namespace CRMOzem.Business.Services
         //  YARDIMCILAR
         // ═══════════════════════════════════════════════════════════
         private static DateTime AyBasi(DateTime d) => new DateTime(d.Year, d.Month, 1);
+
+        /// <summary>Testin platform ailesi: "alinity", "architect" ya da bilinmiyorsa "".</summary>
+        private static string PlatformAilesi(TestBilgi t)
+        {
+            var metin = $"{t.Platform} {t.Kategori}".ToLowerInvariant();
+            if (metin.Contains("alinity")) return "alinity";
+            if (metin.Contains("architect")) return "architect";
+            return "";
+        }
 
         private static Dictionary<DateTime, int> AylikTopla(IEnumerable<Hareket> hareketler)
         {

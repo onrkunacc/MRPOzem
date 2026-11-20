@@ -390,7 +390,12 @@
                                 </td>
 
                                 <td class="text-right" style="white-space:nowrap;">
-                                    @if (k.Eslesti && (stokBiliniyor || !bekliyor) && k.OrtalamaAylikKullanim.GetValueOrDefault() > 0)
+                                    @if (k.Eslesti && k.KayitTutarsiz)
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Sayımdan sonra kaydedilen kullanım, sayım + gönderimden fazla — gönderim kaydı eksik olabilir">kayıt tutarsız</span>
+                                        <div class="dg-kucuk">ayda @((k.OrtalamaAylikKullanim ?? 0).ToString("N0", tr)) test</div>
+                                    }
+                                    else if (k.Eslesti && (stokBiliniyor || !bekliyor) && k.OrtalamaAylikKullanim.GetValueOrDefault() > 0)
                                     {
                                         if (k.StokAy.HasValue)
                                         {
@@ -399,7 +404,7 @@
                                             </div>
                                         }
                                         <div class="dg-kucuk">
-                                            @((k.HesapGuncelStok ?? 0).ToString("N0", tr)) test · ayda @((k.OrtalamaAylikKullanim ?? 0).ToString("N0", tr))
+                                            @(Math.Max(0m, k.HesapGuncelStok ?? 0).ToString("N0", tr)) test · ayda @((k.OrtalamaAylikKullanim ?? 0).ToString("N0", tr))
                                         </div>
                                         if (k.Yolda > 0)
                                         {
@@ -527,7 +532,7 @@
                                         <strong style="color:@(e.Durum == StokDurumu.Kritik ? "var(--kt-neg)" : "var(--kt-warn-700)");">
                                             @(e.StokAy.HasValue ? Sayi(e.StokAy.Value) + " ay" : "—")
                                         </strong>
-                                        <div class="dg-kucuk">@e.HesapGuncelStok.ToString("N0", tr) test</div>
+                                        <div class="dg-kucuk">@Math.Max(0, e.HesapGuncelStok).ToString("N0", tr) test</div>
                                     </td>
                                     <td class="text-right">@e.OrtalamaAylikKullanim.ToString("N0", tr)</td>
                                     <td class="text-right"><strong>@e.OnerilenKutu @e.Birim</strong></td>

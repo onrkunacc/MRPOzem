@@ -47,75 +47,285 @@
 @await Html.PartialAsync("~/Views/Shared/_KotaDesignSystem.cshtml")
 
 <style>
-    .gv { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-    .gv::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--kt-ink-400); }
-    .gv-yuksek { color: var(--kt-pos-700); } .gv-yuksek::before { background: var(--kt-pos); }
-    .gv-orta { color: var(--kt-warn-700); } .gv-orta::before { background: var(--kt-warn); }
-    .gv-dusuk { color: var(--kt-neg-700); } .gv-dusuk::before { background: var(--kt-neg); }
-    .gv-yok { color: var(--kt-ink-400); }
+    .gv {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+        .gv::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--kt-ink-400);
+        }
+
+    .gv-yuksek {
+        color: var(--kt-pos-700);
+    }
+
+        .gv-yuksek::before {
+            background: var(--kt-pos);
+        }
+
+    .gv-orta {
+        color: var(--kt-warn-700);
+    }
+
+        .gv-orta::before {
+            background: var(--kt-warn);
+        }
+
+    .gv-dusuk {
+        color: var(--kt-neg-700);
+    }
+
+        .gv-dusuk::before {
+            background: var(--kt-neg);
+        }
+
+    .gv-yok {
+        color: var(--kt-ink-400);
+    }
 
     /* Seçili sekmedeki sayı koyu zeminde okunsun */
-    .kt-chip.active strong { color: inherit; }
+    .kt-chip.active strong {
+        color: inherit;
+    }
 
     .so-serit {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-        gap: 1px; background: var(--kt-border);
-        border: 1px solid var(--kt-border); border-radius: var(--kt-r-md); overflow: hidden;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 1px;
+        background: var(--kt-border);
+        border: 1px solid var(--kt-border);
+        border-radius: var(--kt-r-md);
+        overflow: hidden;
     }
-    .so-serit > div { background: var(--kt-paper); padding: 12px 15px; }
-    .so-serit .et { font-size: 10.5px; font-weight: 700; color: var(--kt-ink-500); text-transform: uppercase; letter-spacing: .05em; }
-    .so-serit .dg { font-size: 14px; font-weight: 700; color: var(--kt-ink-900); margin-top: 3px; }
-    .so-serit .alt { font-size: 11px; color: var(--kt-ink-400); margin-top: 1px; }
+
+        .so-serit > div {
+            background: var(--kt-paper);
+            padding: 12px 15px;
+        }
+
+        .so-serit .et {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--kt-ink-500);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .so-serit .dg {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--kt-ink-900);
+            margin-top: 3px;
+        }
+
+        .so-serit .alt {
+            font-size: 11px;
+            color: var(--kt-ink-400);
+            margin-top: 1px;
+        }
 
     .so-uyari {
-        display: flex; gap: 9px; align-items: flex-start;
-        background: var(--kt-warn-50); border: 1px solid #fde68a; color: var(--kt-warn-700);
-        border-radius: var(--kt-r-sm); padding: 9px 13px; font-size: 12.5px; line-height: 1.5; margin-top: 8px;
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        background: var(--kt-warn-50);
+        border: 1px solid #fde68a;
+        color: var(--kt-warn-700);
+        border-radius: var(--kt-r-sm);
+        padding: 9px 13px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        margin-top: 8px;
     }
 
     /* ── Durum rozetleri ─────────────────────────────────────── */
     .so-durum {
-        display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700;
-        padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        font-size: 11.5px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
     }
-    .so-durum.kritik { background: var(--kt-neg-50); color: var(--kt-neg-700); }
-    .so-durum.dusuk { background: #ffedd5; color: #9a3412; }
-    .so-durum.izleme { background: var(--kt-warn-50); color: var(--kt-warn-700); }
-    .so-durum.yeterli { background: var(--kt-pos-50); color: var(--kt-pos-700); }
-    .so-durum.durgun { background: var(--kt-bg-soft); color: var(--kt-ink-700); }
-    .so-durum.veriyok { background: var(--kt-bg-soft); color: var(--kt-ink-400); }
 
-    tr.so-urun > td { vertical-align: top; }
-    tr.so-urun.kritik > td:first-child { box-shadow: inset 3px 0 0 var(--kt-neg); }
-    tr.so-urun.dusuk > td:first-child { box-shadow: inset 3px 0 0 #f97316; }
+        .so-durum.kritik {
+            background: var(--kt-neg-50);
+            color: var(--kt-neg-700);
+        }
 
-    .so-buyuk { font-size: 16px; font-weight: 700; color: var(--kt-ink-900); line-height: 1.1; }
-    .so-birim { font-size: 11px; color: var(--kt-ink-500); font-weight: 500; }
-    .so-kucuk { font-size: 11px; color: var(--kt-ink-400); margin-top: 2px; }
+        .so-durum.dusuk {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .so-durum.izleme {
+            background: var(--kt-warn-50);
+            color: var(--kt-warn-700);
+        }
+
+        .so-durum.yeterli {
+            background: var(--kt-pos-50);
+            color: var(--kt-pos-700);
+        }
+
+        .so-durum.durgun {
+            background: var(--kt-bg-soft);
+            color: var(--kt-ink-700);
+        }
+
+        .so-durum.veriyok {
+            background: var(--kt-bg-soft);
+            color: var(--kt-ink-400);
+        }
+
+    tr.so-urun > td {
+        vertical-align: top;
+    }
+
+    tr.so-urun.kritik > td:first-child {
+        box-shadow: inset 3px 0 0 var(--kt-neg);
+    }
+
+    tr.so-urun.dusuk > td:first-child {
+        box-shadow: inset 3px 0 0 #f97316;
+    }
+
+    .so-buyuk {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--kt-ink-900);
+        line-height: 1.1;
+    }
+
+    .so-birim {
+        font-size: 11px;
+        color: var(--kt-ink-500);
+        font-weight: 500;
+    }
+
+    .so-kucuk {
+        font-size: 11px;
+        color: var(--kt-ink-400);
+        margin-top: 2px;
+    }
 
     /* ── Yetme süresi çubuğu ─────────────────────────────────── */
-    .so-cubuk { position: relative; height: 7px; background: var(--kt-bg-soft); border-radius: 999px; margin-top: 6px; min-width: 110px; }
-    .so-cubuk > i { display: block; height: 100%; border-radius: 999px; background: var(--kt-pos); }
-    .so-cubuk.kritik > i { background: var(--kt-neg); }
-    .so-cubuk.dusuk > i { background: #f97316; }
-    .so-cubuk.izleme > i { background: var(--kt-warn); }
-    .so-cubuk > b { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; background: var(--kt-ink-900); opacity: .55; }
+    .so-cubuk {
+        position: relative;
+        height: 7px;
+        background: var(--kt-bg-soft);
+        border-radius: 999px;
+        margin-top: 6px;
+        min-width: 110px;
+    }
 
-    .so-nasil { background: none; border: none; padding: 0; margin-top: 4px; cursor: pointer; font-size: 11.5px; color: var(--kt-primary); font-weight: 600; }
-    .so-nasil:hover { text-decoration: underline; }
+        .so-cubuk > i {
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+            background: var(--kt-pos);
+        }
 
-    tr.so-adimlar { display: none; }
-    tr.so-adimlar.acik { display: table-row; }
-    tr.so-adimlar > td { background: var(--kt-bg); padding: 12px 20px 14px 26px; }
+        .so-cubuk.kritik > i {
+            background: var(--kt-neg);
+        }
 
-    .so-adim-tablo { border-collapse: collapse; font-size: 12.5px; }
-    .so-adim-tablo td { padding: 3px 12px 3px 0; color: var(--kt-ink-700); }
-    .so-adim-tablo td.isaret { width: 16px; font-weight: 700; color: var(--kt-ink-500); text-align: center; }
-    .so-adim-tablo td.deger { text-align: right; font-weight: 600; color: var(--kt-ink-900); white-space: nowrap; }
-    .so-adim-tablo td.not { color: var(--kt-ink-400); font-size: 11.5px; }
-    .so-adim-tablo tr.sonuc td { border-top: 1px solid var(--kt-border-strong); padding-top: 5px; font-weight: 700; }
+        .so-cubuk.dusuk > i {
+            background: #f97316;
+        }
 
-    .so-satir-uyari { font-size: 11.5px; color: var(--kt-warn-700); margin-top: 3px; }
+        .so-cubuk.izleme > i {
+            background: var(--kt-warn);
+        }
+
+        .so-cubuk > b {
+            position: absolute;
+            top: -3px;
+            bottom: -3px;
+            left: 50%;
+            width: 2px;
+            background: var(--kt-ink-900);
+            opacity: .55;
+        }
+
+    .so-nasil {
+        background: none;
+        border: none;
+        padding: 0;
+        margin-top: 4px;
+        cursor: pointer;
+        font-size: 11.5px;
+        color: var(--kt-primary);
+        font-weight: 600;
+    }
+
+        .so-nasil:hover {
+            text-decoration: underline;
+        }
+
+    tr.so-adimlar {
+        display: none;
+    }
+
+        tr.so-adimlar.acik {
+            display: table-row;
+        }
+
+        tr.so-adimlar > td {
+            background: var(--kt-bg);
+            padding: 12px 20px 14px 26px;
+        }
+
+    .so-adim-tablo {
+        border-collapse: collapse;
+        font-size: 12.5px;
+    }
+
+        .so-adim-tablo td {
+            padding: 3px 12px 3px 0;
+            color: var(--kt-ink-700);
+        }
+
+            .so-adim-tablo td.isaret {
+                width: 16px;
+                font-weight: 700;
+                color: var(--kt-ink-500);
+                text-align: center;
+            }
+
+            .so-adim-tablo td.deger {
+                text-align: right;
+                font-weight: 600;
+                color: var(--kt-ink-900);
+                white-space: nowrap;
+            }
+
+            .so-adim-tablo td.not {
+                color: var(--kt-ink-400);
+                font-size: 11.5px;
+            }
+
+        .so-adim-tablo tr.sonuc td {
+            border-top: 1px solid var(--kt-border-strong);
+            padding-top: 5px;
+            font-weight: 700;
+        }
+
+    .so-satir-uyari {
+        font-size: 11.5px;
+        color: var(--kt-warn-700);
+        margin-top: 3px;
+    }
 </style>
 
 <div class="kt-page">
@@ -249,7 +459,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @{ var sira = 0; }
+                        @{
+                            var sira = 0;
+                        }
                         @foreach (var s in Model.Satirlar)
                         {
                             sira++;
@@ -286,12 +498,20 @@
                                 </td>
 
                                 <td class="text-right" style="white-space:nowrap;">
-                                    @if (stokBiliniyor)
+                                    @if (s.KayitTutarsiz)
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Sayımdan sonra kaydedilen kullanım, sayım + gönderimden fazla — gönderim kaydı eksik olabilir">kayıt tutarsız</span>
+                                    }
+                                    else if (stokBiliniyor)
                                     {
                                         <div class="so-buyuk" style="color:@(s.HesapGuncelStok <= 0 ? "var(--kt-neg)" : "var(--kt-ink-900)");">
-                                            @s.HesapGuncelStok.ToString("N0", tr) <span class="so-birim">test</span>
+                                            @Math.Max(0, s.HesapGuncelStok).ToString("N0", tr) <span class="so-birim">test</span>
                                         </div>
-                                        if (s.KutuBirimli && s.StokKutu.HasValue)
+                                        if (s.HesapGuncelStok < 0)
+                                        {
+                                            <div class="so-kucuk" style="color:var(--kt-neg);" title="Raporlanmamış günlerin tahmini tüketimine göre">tahminen tükendi</div>
+                                        }
+                                        else if (s.KutuBirimli && s.StokKutu.HasValue)
                                         {
                                             <div class="so-kucuk">≈ @Sayi(s.StokKutu.Value) kutu</div>
                                         }
@@ -311,7 +531,12 @@
                                     {
                                         <div style="font-weight:600;">@s.OrtalamaAylikKullanim.ToString("N0", tr) <span class="so-birim">test</span></div>
                                         <div class="so-kucuk">
-                                            @(s.TuketimKaynagi == TuketimKaynagi.Kullanim ? $"son {s.OrtalamaAySayisi} ay kullanım" : "gönderim ortalaması")
+                                            @(s.TuketimKaynagi switch
+                                            {
+                                                TuketimKaynagi.Kullanim => $"son {s.OrtalamaAySayisi} ay kullanım",
+                                                TuketimKaynagi.Esdeger => "eşdeğer test kullanımı (geçiş)",
+                                                _ => "gönderim ortalaması"
+                                            })
                                         </div>
                                         if (s.TrendYuzde.HasValue && Math.Abs(s.TrendYuzde.Value) >= 15)
                                         {
@@ -393,47 +618,47 @@
 </div>
 
 @section Scripts {
-@await Html.PartialAsync("_Sayfalama")
-<script>
-    (function () {
-        var satirlar = Array.prototype.slice.call(document.querySelectorAll('tr.so-urun'));
-        var cipler = Array.prototype.slice.call(document.querySelectorAll('#durumCipleri .kt-chip'));
-        var ara = document.getElementById('urunAra');
-        var oneri = document.getElementById('yalnizOneri');
-        var tablo = document.getElementById('urunTablo');
-        var yok = document.getElementById('urunYok');
-        var seciliDurum = '';
+    @await Html.PartialAsync("_Sayfalama")
+    <script>
+        (function () {
+            var satirlar = Array.prototype.slice.call(document.querySelectorAll('tr.so-urun'));
+            var cipler = Array.prototype.slice.call(document.querySelectorAll('#durumCipleri .kt-chip'));
+            var ara = document.getElementById('urunAra');
+            var oneri = document.getElementById('yalnizOneri');
+            var tablo = document.getElementById('urunTablo');
+            var yok = document.getElementById('urunYok');
+            var seciliDurum = '';
 
-        function uygula() {
-            var q = ara ? ara.value.trim().toLocaleLowerCase('tr-TR') : '';
-            var yalniz = oneri && oneri.checked;
-            var gorunen = 0;
+            function uygula() {
+                var q = ara ? ara.value.trim().toLocaleLowerCase('tr-TR') : '';
+                var yalniz = oneri && oneri.checked;
+                var gorunen = 0;
 
-            satirlar.forEach(function (tr) {
-                var ok = (!seciliDurum || tr.dataset.durum === seciliDurum)
-                      && (!yalniz || tr.dataset.oneri === '1')
-                      && (!q || (tr.dataset.ara || '').indexOf(q) !== -1);
+                satirlar.forEach(function (tr) {
+                    var ok = (!seciliDurum || tr.dataset.durum === seciliDurum)
+                          && (!yalniz || tr.dataset.oneri === '1')
+                          && (!q || (tr.dataset.ara || '').indexOf(q) !== -1);
 
-                tr.dataset.suz = ok ? '1' : '0';
-                if (ok) gorunen++;
+                    tr.dataset.suz = ok ? '1' : '0';
+                    if (ok) gorunen++;
+                });
+
+                if (tablo) tablo.style.display = gorunen > 0 ? '' : 'none';
+                if (yok) yok.style.display = gorunen > 0 ? 'none' : 'block';
+                if (tablo && window.LjSayfala) window.LjSayfala.yenile(tablo);
+            }
+
+            cipler.forEach(function (c) {
+                c.addEventListener('click', function () {
+                    cipler.forEach(function (x) { x.classList.remove('active'); });
+                    c.classList.add('active');
+                    seciliDurum = c.dataset.durum || '';
+                    uygula();
+                });
             });
 
-            if (tablo) tablo.style.display = gorunen > 0 ? '' : 'none';
-            if (yok) yok.style.display = gorunen > 0 ? 'none' : 'block';
-            if (tablo && window.LjSayfala) window.LjSayfala.yenile(tablo);
-        }
-
-        cipler.forEach(function (c) {
-            c.addEventListener('click', function () {
-                cipler.forEach(function (x) { x.classList.remove('active'); });
-                c.classList.add('active');
-                seciliDurum = c.dataset.durum || '';
-                uygula();
-            });
-        });
-
-        if (ara) ara.addEventListener('input', uygula);
-        if (oneri) oneri.addEventListener('change', uygula);
-    })();
-</script>
+            if (ara) ara.addEventListener('input', uygula);
+            if (oneri) oneri.addEventListener('change', uygula);
+        })();
+    </script>
 }

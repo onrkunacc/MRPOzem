@@ -35,6 +35,7 @@ namespace CRMOzem.Business.Services
             vm.Kontroller.Add(await K08_KullanimGirisiGeride(ct));
             vm.Kontroller.Add(await K09_BenzerlikleEslesenler(ct));
             vm.Kontroller.Add(await K10_SayimdanEklenenTestler(ct));
+            vm.Kontroller.Add(await K11_GonderimKullanimBirimi(ct));
 
             return vm;
         }
@@ -558,7 +559,7 @@ namespace CRMOzem.Business.Services
                 .ToListAsync(ct);
 
             var farkli = ham
-                .Where(x => Helpers.ReferansKodu.Normalize(x.ReferenceNumber) != Helpers.ReferansKodu.Normalize(x.TestRef))
+                .Where(x => !Helpers.ReferansKodu.Kodlar(x.TestRef).Contains(Helpers.ReferansKodu.Normalize(x.ReferenceNumber)))
                 .GroupBy(x => (Helpers.ReferansKodu.Normalize(x.ReferenceNumber), x.TestAdi))
                 .Select(g => g.First())
                 .OrderBy(x => x.ProductName)
@@ -617,6 +618,119 @@ namespace CRMOzem.Business.Services
                 k.BulguDetaylar = eklenenler
                     .Take(60)
                     .Select(x => $"{x.TestName} · Ref: {x.SutCode}" + (string.IsNullOrWhiteSpace(x.Platform) ? "" : $" · {x.Platform}"))
+                    .ToList();
+            }
+
+            k.SureMs = sw.ElapsedMilliseconds;
+            return k;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  K11 — Gönderim ve kullanım aynı birimle mi girilmiş?
+        // ═══════════════════════════════════════════════════════════
+        //  Stok hesabı gönderimi ve kullanımı TEST ADEDİ olarak bekler.
+        //  İki belirti aranır (son 6 tam ay):
+        //   a) Kutuyla satılan üründe gönderim miktarları kutu içi adedin
+        //      katı değil ve çoğu ondan küçük → gönderim KUTU olarak girilmiş.
+        //   b) Aynı ürün, aynı hastane, aynı aylarda kullanım gönderimin
+        //      3 katından fazla → kayıtlar birbirini tutmuyor.
+        private async Task<SaglikKontrolVm> K11_GonderimKullanimBirimi(CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            var k = new SaglikKontrolVm
+            {
+                Kod = "K11",
+                Kategori = "Veri bütünlüğü",
+                Baslik = "Gönderim ve kullanım kayıtları birbirini tutmuyor",
+                Aciklama = "Stok hesabı gönderimi ve kullanımı test adedi olarak bekler. Gönderim kutu olarak girildiyse ya da eksik girildiyse hesaplanan stok eksiye düşer ve Stok Raporu'nda \"Kayıtları kontrol edin\" görünür.",
+                CozumOnerisi = "Listelenen ürünlerin gönderim kayıtlarını açın: miktar kutu olarak girildiyse test adedine çevirin (kutu × kutu içi test). Gönderim eksikse tamamlayın. Kutu içi adet yanlışsa Testler listesinden düzeltin.",
+                AksiyonUrl = "/Istatistik/Shipment/Index",
+                AksiyonText = "Giden listesi"
+            };
+
+            var buAy = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var bas = buAy.AddMonths(-6);
+
+            var testler = await _db.Tests.AsNoTracking()
+                .Select(t => new { t.TestID, t.TestName, t.GirisTipi, t.KutuBasinaAdet })
+                .ToListAsync(ct);
+            var testMap = testler.ToDictionary(t => t.TestID);
+
+            var gonderim = await _db.MonthlyShipments.AsNoTracking()
+                .Where(m => m.Month >= bas && m.Month < buAy && m.SentCount > 0)
+                .Select(m => new { m.HospitalID, m.TestID, m.Month, m.SentCount })
+                .ToListAsync(ct);
+
+            var kullanim = await _db.MonthlyStatistics.AsNoTracking()
+                .Where(m => m.Month >= bas && m.Month < buAy)
+                .Select(m => new { m.HospitalID, m.TestID, m.Month, m.TestCount })
+                .ToListAsync(ct);
+
+            var bulgular = new List<(int Agirlik, string Metin)>();
+
+            // a) Gönderim kutu olarak girilmiş görünüyor
+            foreach (var g in gonderim.GroupBy(x => x.TestID))
+            {
+                if (!testMap.TryGetValue(g.Key, out var t)) continue;
+                if (t.GirisTipi != CRMOzem.Core.Models.TestGirisTipi.Kutu || t.KutuBasinaAdet is not > 1) continue;
+
+                var kutuIci = t.KutuBasinaAdet!.Value;
+                var kayit = g.Count();
+                var kusurlu = g.Count(x => x.SentCount < kutuIci || x.SentCount % kutuIci != 0);
+                if (kayit >= 3 && kusurlu * 2 > kayit)
+                {
+                    bulgular.Add((kusurlu * 10,
+                        $"{t.TestName} · gönderim kutu olarak girilmiş görünüyor: {kayit} kaydın {kusurlu} tanesi " +
+                        $"kutu içi adedin ({kutuIci}) katı değil (örn. {g.First(x => x.SentCount < kutuIci || x.SentCount % kutuIci != 0).SentCount})"));
+                }
+            }
+
+            // b) Aynı aylarda kullanım gönderimin 3 katından fazla (ya da tersi)
+            var kullanimAylari = kullanim
+                .GroupBy(x => x.HospitalID)
+                .ToDictionary(g => g.Key, g => g.Select(x => new DateTime(x.Month.Year, x.Month.Month, 1)).ToHashSet());
+
+            var urunBazinda = kullanim
+                .GroupBy(x => x.TestID)
+                .Select(g =>
+                {
+                    var kul = g.Sum(x => (long)x.TestCount);
+                    var hastaneler = g.Select(x => x.HospitalID).ToHashSet();
+                    var gon = gonderim
+                        .Where(x => x.TestID == g.Key && hastaneler.Contains(x.HospitalID)
+                                 && kullanimAylari[x.HospitalID].Contains(new DateTime(x.Month.Year, x.Month.Month, 1)))
+                        .Sum(x => (long)x.SentCount);
+                    return new { TestID = g.Key, Kullanim = kul, Gonderim = gon, Hastane = hastaneler.Count };
+                })
+                .Where(x => x.Kullanim >= 100)
+                .ToList();
+
+            foreach (var u in urunBazinda)
+            {
+                if (!testMap.TryGetValue(u.TestID, out var t)) continue;
+                if (u.Gonderim == 0)
+                {
+                    bulgular.Add((5, $"{t.TestName} · {u.Hastane} hastanede {u.Kullanim:N0} test kullanılmış, aynı aylarda gönderim kaydı yok"));
+                }
+                else if (u.Kullanim > u.Gonderim * 3)
+                {
+                    bulgular.Add(((int)Math.Min(int.MaxValue / 2, u.Kullanim / Math.Max(1, u.Gonderim)),
+                        $"{t.TestName} · kullanım gönderimin {(decimal)u.Kullanim / u.Gonderim:0.#} katı ({u.Kullanim:N0} test kullanılmış, {u.Gonderim:N0} gönderilmiş)"));
+                }
+            }
+
+            k.BulguAdeti = bulgular.Count;
+            if (bulgular.Count == 0)
+            {
+                k.Durum = KontrolDurumu.Gecti;
+            }
+            else
+            {
+                k.Durum = bulgular.Count > 10 ? KontrolDurumu.Hata : KontrolDurumu.Dikkat;
+                k.BulguDetaylar = bulgular
+                    .OrderByDescending(x => x.Agirlik)
+                    .Take(40)
+                    .Select(x => x.Metin)
                     .ToList();
             }
 

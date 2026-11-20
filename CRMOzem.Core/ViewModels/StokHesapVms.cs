@@ -31,6 +31,16 @@ namespace CRMOzem.Core.ViewModels
         /// </summary>
         public decimal OneriEsigiAy { get; set; } = 0.5m;
 
+        /// <summary>
+        /// Fiziki sayımı olmayan üründe stok, bugüne kadarki gönderim − kullanım
+        /// farkından tahmin edilsin mi? VARSAYILAN: HAYIR.
+        /// Gönderim kayıtları eksikse ya da gönderim ve kullanım farklı birimle
+        /// (kutu / test) girildiyse bu fark anlamsız, çoğu zaman eksi çıkar.
+        /// Sayımı olmayan ürün "Sayım yok" görünür; açmak için
+        /// appsettings → "Lojistik": { "SayimsizTahmin": true }.
+        /// </summary>
+        public bool SayimsizTahmin { get; set; }
+
         /// <summary>Sayım bu günden eskiyse güven "orta"ya iner.</summary>
         public int SayimEskiGun { get; set; } = 120;
 
@@ -193,6 +203,26 @@ namespace CRMOzem.Core.ViewModels
 
         /// <summary>"Nasıl hesaplandı" açılır penceresi için adım adım döküm.</summary>
         public List<HesapAdimVm> Adimlar { get; set; } = new();
+
+        /// <summary>
+        /// Tüketim eşdeğer testten alındıysa (platform geçişi) o testlerin adları,
+        /// örn. "Anti CCP -100 (Architect Küçük Kutu)".
+        /// </summary>
+        public string? EsdegerTestler { get; set; }
+
+        /// <summary>
+        /// Ürün hastanenin son sayımında yoktu; sayım tarihindeki stoğu 0 kabul
+        /// edildi (yalnızca platform geçişindeki yeni ürünler için).
+        /// </summary>
+        public bool SayimdaYokSifir { get; set; }
+
+        /// <summary>
+        /// Hesaplanan stok eksi çıktı: sayımdan sonra kaydedilen kullanım,
+        /// sayım + gönderimden fazla. Gerçek bir eksiklik değil, kayıt
+        /// tutarsızlığıdır (çoğunlukla eksik gönderim kaydı). Bu durumda
+        /// öneri ve "kaç ay yeter" hesaplanmaz.
+        /// </summary>
+        public bool KayitTutarsiz { get; set; }
 
         public List<string> Uyarilar { get; set; } = new();
 

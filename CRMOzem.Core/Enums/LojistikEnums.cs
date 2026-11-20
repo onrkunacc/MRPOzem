@@ -26,7 +26,8 @@
     {
         Yok = 0,
         Kullanim = 1,   // hastanenin raporladığı test kullanımı
-        Gonderim = 2    // kullanım verisi yok: son 6 ayın gönderim ortalaması
+        Gonderim = 2,   // kullanım verisi yok: son 6 ayın gönderim ortalaması
+        Esdeger = 3     // platform geçişi: aynı testin diğer platformdaki (örn. Architect) kullanımı
     }
 
     /// <summary>Sipariş kalemi kataloğumuzdaki ürünle nasıl eşleşti?</summary>

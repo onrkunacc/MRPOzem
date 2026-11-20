@@ -527,6 +527,7 @@ namespace CRMOzem.Business.Services
                 if (satir != null)
                 {
                     kalemVm.StokAy = satir.StokAy;
+                    kalemVm.KayitTutarsiz = satir.KayitTutarsiz;
                     kalemVm.Yolda = satir.Yolda;
                     kalemVm.StokDurumu = satir.Durum;
                     kalemVm.StokKaynagi = satir.StokKaynagi;
@@ -562,9 +563,15 @@ namespace CRMOzem.Business.Services
                     .ToHashSet();
 
                 vm.EksikKritikler = panel.Satirlar
+                    // Yalnızca güvenilir uyarılar: verisi zayıf, kaydı tutarsız ya
+                    // da platform geçişinden tahmin edilen ürün burada gösterilmez.
                     .Where(s => s.TestID.HasValue
                              && (s.Durum == StokDurumu.Kritik || s.Durum == StokDurumu.Dusuk)
                              && s.OnerilenTest > 0
+                             && !s.KayitTutarsiz
+                             && s.Guven != VeriGuveni.Dusuk
+                             && s.Guven != VeriGuveni.Yok
+                             && s.TuketimKaynagi != TuketimKaynagi.Esdeger
                              && !bekleyenTestler.Contains(s.TestID.Value))
                     .Take(20)
                     .ToList();

@@ -172,7 +172,8 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                     UrunAdi = s.TestAdi,
                     ReferenceNumber = s.ReferenceNumber,
                     Birim = "test",
-                    StokTest = stokVar ? s.HesapGuncelStok : null,
+                    StokTest = stokVar ? Math.Max(0, s.HesapGuncelStok) : null,
+                    KayitTutarsiz = s.KayitTutarsiz,
                     AylikTest = s.OrtalamaAylikKullanim,
                     GonderilenTest = gonderimByTest.GetValueOrDefault(tid),
                     KullanilanTest = kullanimByTest.GetValueOrDefault(tid),
@@ -325,7 +326,7 @@ namespace CRMOzem.Web.Areas.Lojistik.Controllers
                 SayimliUrun = sayimli.Count,
                 KritikUrun = p.KritikSayisi,
                 StokTest = sayimli.Count > 0
-                    ? sayimli.Sum(s => (decimal)s.HesapGuncelStok)
+                    ? sayimli.Sum(s => (decimal)Math.Max(0, s.HesapGuncelStok))   // kaydı tutarsız (eksi) ürün toplamı düşürmesin
                     : null,
                 AylikTest = Math.Round(urunler.Sum(s => s.OrtalamaAylikKullanim), 1),
                 SayimliAylikTest = Math.Round(sayimli.Sum(s => s.OrtalamaAylikKullanim), 1),

@@ -30,7 +30,27 @@ namespace CRMOzem.Business.Helpers
         public string? Platform { get; set; }
     }
 
-
+    /// <summary>
+    /// Sayımdaki (ya da siparişteki) bir ürünü Testler kataloğunda arar.
+    ///
+    /// Üç aşama, sırayla — ilk bulan kazanır:
+    ///
+    ///   1. REFERANS        "07P60-30" = "7P6030"            (tire, boşluk, baştaki sıfır önemsiz)
+    ///
+    ///   2. REFERANS KÖKÜ   "7K65-34" ≈ "7K65-25"
+    ///      Abbott referansının son iki hanesi ambalajı gösterir (100 testlik /
+    ///      2000 testlik kit). Kök aynıysa test aynıdır. Yalnızca REAKTİFLER için
+    ///      ve yalnızca iki tarafın da son hanesi 20 ve üstüyse uygulanır: aynı
+    ///      kökün 01–19 arası uzantıları kalibratör ve kontroldür, onlar teste
+    ///      bağlanmamalı. Kök katalogda birden çok farklı teste gidiyorsa
+    ///      (belirsiz) bu aşama atlanır.
+    ///
+    ///   3. AD              "FT4 - 2000" = "FT4",  "AFP (2 x 100T)" = "AFP",
+    ///                      "Alinity TSH 1200" = "TSH"
+    ///      Ad çekirdeği birebir aynı olmalı — benzerlik (yaklaşık eşleşme) YOK.
+    ///      Aynı çekirdek birden çok teste gidiyorsa platformu uyan seçilir;
+    ///      o da ayırmıyorsa eşleştirilmez.
+    /// </summary>
     public class KatalogEslestirici
     {
         private readonly Dictionary<string, int> _ref = new();
@@ -45,8 +65,8 @@ namespace CRMOzem.Business.Helpers
         /// <summary>Kataloğa sonradan eklenen bir testi aramaya dahil eder.</summary>
         public void Ekle(KatalogSatiri t)
         {
-            var r = ReferansKodu.Normalize(t.SutCode);
-            if (r.Length > 0)
+            // SutCode birden çok referans taşıyabilir: "8P4530, 8P4532"
+            foreach (var r in ReferansKodu.Kodlar(t.SutCode))
             {
                 _ref.TryAdd(r, t.TestID);
 
@@ -187,6 +207,7 @@ namespace CRMOzem.Business.Helpers
 
         private static bool AmbalajEkiMi(string sozcuk)
         {
+            sozcuk = sozcuk.TrimStart('-', '–');   // "Anti CCP -100"
             if (sozcuk.Length == 0) return true;
             if (sozcuk.Equals("test", StringComparison.OrdinalIgnoreCase)
                 || sozcuk.Equals("tests", StringComparison.OrdinalIgnoreCase)) return true;

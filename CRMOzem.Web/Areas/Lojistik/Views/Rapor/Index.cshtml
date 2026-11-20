@@ -204,7 +204,11 @@
                                     }
                                 </td>
                                 <td class="text-right">
-                                    @if (h.StokTest.HasValue)
+                                    @if (h.StokTest < 0)
+                                    {
+                                        <span style="color:var(--kt-warn-700); font-size:12.5px;" title="Sayımdan sonra kaydedilen kullanım, sayım + gönderimden fazla — gönderim kaydı eksik olabilir">kayıt tutarsız</span>
+                                    }
+                                    else if (h.StokTest.HasValue)
                                     {
                                         <strong style="@(h.StokTest < 0 ? "color:var(--kt-neg);" : "")" title="@(h.StokTest < 0 ? "Sayımdan sonra kaydedilen kullanım, gönderimden fazla" : "")">@Sayi(h.StokTest.Value)</strong> <span class="text-muted" style="font-size:11px;">test</span>
                                     }
